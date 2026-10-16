@@ -30,6 +30,7 @@
   const btnCollapseCode = document.getElementById("btnCollapseCode");
 
   const presetSelect = document.getElementById("presetSelect");
+  const btnNewSprite = document.getElementById("btnNewSprite");
   const codeEditor = document.getElementById("codeEditor");
   const tabJson = document.getElementById("tabJson");
   const tabGrid = document.getElementById("tabGrid");
@@ -78,6 +79,7 @@
   const inputOutlineColor = document.getElementById("inputOutlineColor");
   const chkAutoShading = document.getElementById("chkAutoShading");
   const inputShadingStrength = document.getElementById("inputShadingStrength");
+  const chkSdfShading = document.getElementById("chkSdfShading");
 
   const selPalettePreset = document.getElementById("selPalettePreset");
   const paletteList = document.getElementById("paletteList");
@@ -207,6 +209,53 @@
     }
   });
 
+  function createNewCleanSprite() {
+    pushUndoState();
+    stopAnim();
+    currentFrame = 0;
+    selectedLayerIndex = -1;
+    const w = PixelDSLRenderer.clampSize(currentSpec.width, 32);
+    const h = PixelDSLRenderer.clampSize(currentSpec.height, 32);
+    currentSpec = {
+      name: `new_sprite_${w}x${h}`,
+      width: w,
+      height: h,
+      symmetry: "none",
+      rle: false,
+      palettePreset: "endesga32",
+      ramps: {
+        "S": { "base": "#3e8948", "light": "L", "dark": "B", "outline": "O" }
+      },
+      palette: {
+        ".": "transparent",
+        "O": "#14182e",
+        "S": "#3e8948",
+        "L": "#73d95c",
+        "B": "#265c42",
+        "w": "#ffffff"
+      },
+      postProcess: {
+        autoOutline: false,
+        outlineColor: "#14182e",
+        autoShading: false,
+        shadingStrength: 0.16,
+        sdfShading: false
+      },
+      layers: [],
+      frames: [],
+      grid: Array.from({ length: h }, () => ".".repeat(w))
+    };
+    activeSymbol = "S";
+    setTool("brush");
+    syncEditorFromSpec();
+    syncInspectorFromSpec();
+    renderAll();
+  }
+
+  if (btnNewSprite) {
+    btnNewSprite.addEventListener("click", createNewCleanSprite);
+  }
+
   function initPresets() {
     presetSelect.innerHTML = "";
     for (const [key, item] of Object.entries(window.PIXEL_PRESETS)) {
@@ -291,6 +340,7 @@
     inputOutlineColor.value = (post.outlineColor || "#14182e").slice(0, 7);
     chkAutoShading.checked = Boolean(post.autoShading);
     inputShadingStrength.value = Math.round((Number(post.shadingStrength ?? 0.16)) * 100);
+    if (chkSdfShading) chkSdfShading.checked = Boolean(post.sdfShading);
 
     renderLayersList();
     renderPaletteList();
@@ -501,6 +551,50 @@
               wrap.appendChild(inp);
               propsGrid.appendChild(wrap);
             }
+          }
+
+          // SDF Metaball Smooth Blend & 3D Dome toggle for shape layers
+          if (layer.op === "ellipse" || layer.op === "rect" || layer.op === "polygon") {
+            const blendWrap = document.createElement("div");
+            blendWrap.className = "layer-prop-field";
+            blendWrap.title = "SDF Metaball Smooth Union radius with adjacent same-fill layers (0 = off)";
+            blendWrap.innerHTML = `<span>sBlend</span>`;
+            const blendInp = document.createElement("input");
+            blendInp.type = "number";
+            blendInp.step = "0.5";
+            blendInp.min = "0";
+            blendInp.max = "12";
+            blendInp.value = layer.smoothBlend ?? 0;
+            blendInp.addEventListener("change", () => {
+              pushUndoState();
+              const val = Number(blendInp.value);
+              if (val > 0) layer.smoothBlend = val;
+              else delete layer.smoothBlend;
+              syncEditorFromSpec();
+              renderAll();
+            });
+            blendWrap.appendChild(blendInp);
+            propsGrid.appendChild(blendWrap);
+
+            const sdfWrap = document.createElement("div");
+            sdfWrap.className = "layer-prop-field";
+            sdfWrap.title = "Enable 3D SDF Heightmap Normal Shading + Bayer 2×2 Dithering on this layer";
+            sdfWrap.innerHTML = `<span>3D SDF</span>`;
+            const sdfChk = document.createElement("input");
+            sdfChk.type = "checkbox";
+            sdfChk.checked = Boolean(layer.sdf);
+            sdfChk.style.width = "16px";
+            sdfChk.style.height = "16px";
+            sdfChk.style.margin = "2px auto";
+            sdfChk.addEventListener("change", () => {
+              pushUndoState();
+              if (sdfChk.checked) layer.sdf = true;
+              else delete layer.sdf;
+              syncEditorFromSpec();
+              renderAll();
+            });
+            sdfWrap.appendChild(sdfChk);
+            propsGrid.appendChild(sdfWrap);
           }
         }
         item.appendChild(propsGrid);
@@ -1174,6 +1268,7 @@
     currentSpec.postProcess.outlineColor = inputOutlineColor.value;
     currentSpec.postProcess.autoShading = chkAutoShading.checked;
     currentSpec.postProcess.shadingStrength = Number(inputShadingStrength.value) / 100;
+    if (chkSdfShading) currentSpec.postProcess.sdfShading = chkSdfShading.checked;
     syncEditorFromSpec();
     renderAll();
   }
@@ -1182,6 +1277,7 @@
   inputOutlineColor.addEventListener("change", updatePostProcess);
   chkAutoShading.addEventListener("change", updatePostProcess);
   inputShadingStrength.addEventListener("change", updatePostProcess);
+  if (chkSdfShading) chkSdfShading.addEventListener("change", updatePostProcess);
 
   selPalettePreset.addEventListener("change", () => {
     pushUndoState();

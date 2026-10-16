@@ -8,7 +8,10 @@
 
 - **Dual Encoding Modes (`8×8` to `128×128`)**:
   - **Symbolic Matrix (`grid`)**: Direct character-per-pixel encoding (ideal for `8×8`, `16×16`, `24×24`, `32×32`) with optional RLE compression (`rle: true`) and auto row-padding.
-  - **Procedural Pixel Layers (`layers` + `stamp`)**: Integer-rasterized Bresenham primitives (`ellipse` with rotation & dithering, `rect`, `polygon`, `line`, `curve`, `stamp`, `pixels`) with symmetry mirroring (`mirror: "x" | "y" | "quad"`), ideal for `32×32` up to `128×128`.
+  - **Procedural & SDF Pixel Layers (`layers` + `stamp`)**: Integer-rasterized Bresenham primitives (`ellipse` with rotation & dithering, `rect`, `polygon`, `line`, `curve`, `stamp`, `pixels`) with symmetry mirroring (`mirror: "x" | "y" | "quad"`), ideal for `32×32` up to `128×128`.
+- **Signed Distance Field (SDF) Metaballs & 3D Volume Shading**:
+  - **Smooth Union (`smoothBlend`)**: Smoothly fuse adjacent shape layers sharing the same fill via polynomial SDF `smin` (metaballs) with a single unified `1px` pixel-art outline.
+  - **3D Heightmap Normal Shading (`sdf: true` / `postProcess.sdfShading: true`)**: Automatically computes a 3D spherical dome heightmap from the 2D SDF, evaluates surface normals, and applies quantized 5-tone pixel-art lighting with Bayer `2×2` ordered dithering.
 - **Smart Color Ramps & Retro Palettes**:
   - Define a single base HEX color in `"ramps"` and automatically generate warm-shifted highlights, cool-shifted shadows, and deep tinted outlines.
   - Built-in palettes: **Endesga 32**, **PICO-8**, and **GameBoy**.
@@ -17,7 +20,8 @@
   - Export horizontal **Sprite Sheets** (`_sheet.png`) in 1 click or via CLI.
 - **Interactive Web Studio (`index.html`)**:
   - Works out of the box by opening `index.html` in any browser (zero build step, zero server required).
-  - Collapsible Code Drawer + Visual Frame Timeline Strip (with **Onion Skinning**) + Interactive **Layers Stack Inspector**.
+  - **`📄 + New Sprite`** button to start a clean blank sprite canvas at any resolution in one click.
+  - Collapsible Code Drawer + Visual Frame Timeline Strip (with **Onion Skinning**) + Interactive **Layers Stack Inspector** (including per-layer `sBlend` and `3D SDF` controls).
   - Two-way sync between Canvas and ASCII Grid when drawing manually.
 - **Zero-Dependency Python CLI (`pixeldsl.py`)**:
   - Uses only Python 3 standard library (`json`, `zlib`, `struct`, `math`).
@@ -43,8 +47,9 @@
 
 ### 1. Web Studio
 Open [`index.html`](./index.html) directly in your browser.
+- Click **`📄 + New Sprite`** in the top bar to start a clean blank sprite, or pick an existing sprite from the dropdown (including **👑 SDF Slime King 48×48**).
 - Toggle the left code editor with **`⟨⟩ Code`**.
-- Inspect, hide/show (`👁`), reorder (`↑`/`↓`), or tweak individual layers in the **Layers Stack** panel.
+- Inspect, hide/show (`👁`), reorder (`↑`/`↓`), or tweak individual layers (including `sBlend` and `3D SDF`) in the **Layers Stack** panel.
 - Scrub or play animation frames in the bottom **Timeline Bar**.
 
 ### 2. Headless CLI Generation (for Any LLM CLI)

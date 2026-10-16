@@ -360,6 +360,90 @@ window.PIXEL_PRESETS = {
       ],
       grid: []
     }
+  },
+
+  sdf_slime_king_48x48: {
+    label: "👑 SDF Slime King 48×48 (Metaballs + 3D Volume)",
+    prompt: "48x48 slime king boss sprite with smooth SDF metaball body and 3D volume shading",
+    data: {
+      name: "sdf_slime_king_48x48",
+      width: 48,
+      height: 48,
+      symmetry: "none",
+      rle: false,
+      ramps: {
+        "G": { "base": "#37b24d", "light": "L", "dark": "D", "outline": "O" },
+        "Y": { "base": "#f59f00", "light": "W", "dark": "B", "outline": "O" }
+      },
+      palette: {
+        ".": "transparent",
+        "O": "#14182e",
+        "G": "#37b24d",
+        "L": "#74e368",
+        "D": "#1f6e3c",
+        "Y": "#f59f00",
+        "W": "#fff3bf",
+        "B": "#b45309",
+        "R": "#f03e3e",
+        "e": "#101224",
+        "w": "#ffffff",
+        "s": "#10122455"
+      },
+      postProcess: {
+        autoOutline: false,
+        outlineColor: "#14182e",
+        autoShading: false,
+        shadingStrength: 0.16,
+        sdfShading: true
+      },
+      layers: [
+        { "id": "shadow", "op": "ellipse", "cx": 24, "cy": 41, "rx": 18, "ry": 5, "fill": "s" },
+        { "id": "crown_base", "op": "rect", "x": 16, "y": 8, "w": 16, "h": 6, "rx": 1, "fill": "Y", "outline": "O", "sdf": true },
+        { "id": "crown_spikes", "op": "polygon", "points": [[16, 9], [19, 3], [24, 8], [29, 3], [32, 9]], "fill": "Y", "outline": "O", "sdf": true },
+        { "id": "crown_gem", "op": "ellipse", "cx": 24, "cy": 9, "rx": 2, "ry": 2, "fill": "R", "outline": "O" },
+        { "id": "slime_core", "op": "ellipse", "cx": 24, "cy": 27, "rx": 14, "ry": 12, "fill": "G", "outline": "O", "sdf": true, "smoothBlend": 3.5 },
+        { "id": "slime_lobes", "op": "ellipse", "cx": 12, "cy": 33, "rx": 7, "ry": 6, "fill": "G", "outline": "O", "mirror": "x", "sdf": true, "smoothBlend": 3.5 },
+        { "id": "slime_top", "op": "ellipse", "cx": 24, "cy": 18, "rx": 9, "ry": 6, "fill": "G", "outline": "O", "sdf": true, "smoothBlend": 3.0 },
+        {
+          "id": "face",
+          "op": "stamp",
+          "x": 17,
+          "y": 24,
+          "grid": [
+            ".ee........ee.",
+            "ewwe......ewwe",
+            "eeee......eeee",
+            ".....OOOO.....",
+            "....OwwwwO...."
+          ]
+        }
+      ],
+      frames: [
+        {
+          "layers": {
+            "slime_core": { "drx": 2, "dry": -1, "dy": 1 },
+            "slime_lobes": { "dx": -1, "dy": 1 },
+            "slime_top": { "dy": 2 },
+            "crown_base": { "dy": 2 },
+            "crown_spikes": { "dy": 2 },
+            "crown_gem": { "dy": 2 },
+            "face": { "dy": 1 }
+          }
+        },
+        {
+          "layers": {
+            "slime_core": { "drx": -1, "dry": 2, "dy": -2 },
+            "slime_lobes": { "dx": 1, "dy": -1 },
+            "slime_top": { "dy": -2 },
+            "crown_base": { "dy": -3 },
+            "crown_spikes": { "dy": -3 },
+            "crown_gem": { "dy": -3 },
+            "face": { "dy": -2 }
+          }
+        }
+      ],
+      grid: []
+    }
   }
 };
 
@@ -370,20 +454,23 @@ window.SKILL_PROMPT_TEMPLATE = function(userRequest, width, height, mode) {
 - The "grid" array must contain exactly ${height} strings.
 - Each string must contain exactly ${width} single-character keys from "palette" (where "." is transparent).
 - Count characters in every row carefully (strictly ${width} chars per row).`
-    : `MODE: Hybrid Procedural Pixel Layers ("layers" + "stamp" + optional "frames").
+    : `MODE: Hybrid Procedural & SDF Pixel Layers ("layers" + "stamp" + optional "frames").
 - Canvas size: ${width}x${height} pixels.
 - Build the silhouette in "layers" using integer primitives with an "id" field:
-  * { "id": "body", "op": "ellipse", "cx": X, "cy": Y, "rx": RX, "ry": RY, "angle": 0, "fill": "S", "outline": "O", "dither": "none|checker|sparse|scales", "ditherColor": "B", "mirror": "none|x|y|quad" }
-  * { "id": "box", "op": "rect", "x": X, "y": Y, "w": W, "h": H, "rx": 0, "fill": "S", "outline": "O", "mirror": "none|x" }
-  * { "id": "tail", "op": "polygon", "points": [[x1,y1],[x2,y2],[x3,y3]], "fill": "S", "outline": "O", "mirror": "none|x" }
+  * { "id": "body", "op": "ellipse", "cx": X, "cy": Y, "rx": RX, "ry": RY, "angle": 0, "fill": "S", "outline": "O", "sdf": true, "smoothBlend": 2.5, "dither": "none|checker|sparse|scales", "ditherColor": "B", "mirror": "none|x|y|quad" }
+  * { "id": "box", "op": "rect", "x": X, "y": Y, "w": W, "h": H, "rx": 1, "fill": "S", "outline": "O", "sdf": true, "smoothBlend": 0, "mirror": "none|x" }
+  * { "id": "tail", "op": "polygon", "points": [[x1,y1],[x2,y2],[x3,y3]], "fill": "S", "outline": "O", "sdf": true, "mirror": "none|x" }
   * { "id": "seam", "op": "line", "x1": X1, "y1": Y1, "x2": X2, "y2": Y2, "thickness": 1, "color": "O", "mirror": "none|x" }
   * { "id": "leg", "op": "curve", "points": [[x1,y1],[cx,cy],[x2,y2]], "thickness": 1, "color": "O", "mirror": "none|x" }
   * { "id": "eyes", "op": "stamp", "x": X, "y": Y, "grid": ["..ee..", ".ewwe."] }
   * { "id": "glint", "op": "pixels", "color": "w", "points": [[x,y]] }
+- SDF METABALLS & 3D VOLUME SHADING:
+  * Set "smoothBlend": 2.0..5.0 on consecutive shape layers sharing the same "fill" to smoothly fuse them via polynomial SDF smooth-min (metaballs) with a single unified pixel outline!
+  * Set "sdf": true on a layer (or "postProcess": { "sdfShading": true } globally) to automatically compute 3D spherical heightmap normals, quantized 5-band pixel-art tones, and Bayer 2x2 ordered dithering.
 - Use "mirror": "x" for symmetrical limbs/wings/details.
 - For animations, add "frames": [{ "layers": { "leg": { "dx": 0, "dy": -1, "dAngle": 15 } } }].`;
 
-  return `You are a 2D pixel-art asset generator following the PixelDSL v2 specification (SKILL.md).
+  return `You are a 2D pixel-art asset generator following the PixelDSL v2.5 specification (SKILL.md).
 Convert the user request into a valid JSON sprite definition without any surrounding explanation (JSON only).
 
 USER REQUEST: "${userRequest}"
@@ -415,7 +502,8 @@ OUTPUT FORMAT (strictly valid JSON):
     "autoOutline": false,
     "outlineColor": "#14182e",
     "autoShading": false,
-    "shadingStrength": 0.16
+    "shadingStrength": 0.16,
+    "sdfShading": false
   },
   "layers": [],
   "frames": [],

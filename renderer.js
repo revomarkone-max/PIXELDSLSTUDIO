@@ -1,4 +1,4 @@
-// PixelDSL Engine v2: Parser, Color Ramp Generator, Named Layers, Multi-Frame Sprite Sheets, and AI Diagnostics
+// PixelDSL Engine v2.5: Parser, SDF Smooth Union (Metaballs), 3D Heightmap Normal Shading, Auto-Ramps, Layers, and Sprite Sheets
 
 const BUILTIN_PALETTES = {
   pico8: {
@@ -23,6 +23,12 @@ const BUILTIN_PALETTES = {
     "m": "#8b9bb4", "d": "#5a6988", "n": "#3a4466", "p": "#b55088"
   }
 };
+
+// 2x2 Bayer matrix for crisp pixel-art tonal transitions in SDF 3D shading
+const BAYER_2X2 = [
+  [-0.06,  0.02],
+  [ 0.06, -0.02]
+];
 
 class PixelDSLRenderer {
   static clampSize(val, fallback = 32) {
@@ -103,6 +109,37 @@ class PixelDSLRenderer {
       255
     );
     return { base: baseHex, light, dark, outline };
+  }
+
+  // Derive 4 discrete RGBA tones from a single RGBA color for SDF 3D Volume Shading
+  static deriveSdfShadingTones(baseRGBA) {
+    const [r, g, b, a] = baseRGBA;
+    const deepShadow = [
+      Math.max(0, Math.round(r * 0.56 - 6)),
+      Math.max(0, Math.round(g * 0.60 - 4)),
+      Math.max(0, Math.min(255, Math.round(b * 0.74 + 12))),
+      a
+    ];
+    const shadow = [
+      Math.max(0, Math.round(r * 0.76 - 3)),
+      Math.max(0, Math.round(g * 0.79 - 2)),
+      Math.max(0, Math.min(255, Math.round(b * 0.88 + 6))),
+      a
+    ];
+    const base = [r, g, b, a];
+    const highlight = [
+      Math.min(255, Math.round(r + (255 - r) * 0.30 + 10)),
+      Math.min(255, Math.round(g + (255 - g) * 0.34 + 12)),
+      Math.min(255, Math.round(b + (255 - b) * 0.16)),
+      a
+    ];
+    const specular = [
+      Math.min(255, Math.round(r + (255 - r) * 0.62 + 18)),
+      Math.min(255, Math.round(g + (255 - g) * 0.65 + 18)),
+      Math.min(255, Math.round(b + (255 - b) * 0.45 + 8)),
+      a
+    ];
+    return { deepShadow, shadow, base, highlight, specular };
   }
 
   static resolveFullPalette(spec) {
@@ -186,6 +223,112 @@ class PixelDSLRenderer {
     return false;
   }
 
+  // Polynomial Smooth Minimum for SDF Metaball blending
+  static smin(a, b, k) {
+    if (!k || k <= 0) return Math.min(a, b);
+    const h = Math.max(k - Math.abs(a - b), 0.0) / k;
+    return Math.min(a, b) - h * h * k * 0.25;
+  }
+
+  // Compute exact 2D Signed Distance Field (negative inside, positive outside) for a shape layer
+  static computeLayerSDF(layer, width, height) {
+    const op = (layer.op || "").toLowerCase();
+    const sdf = new Float32Array(width * height).fill(1e4);
+
+    if (op === "ellipse") {
+      const cx = Number(layer.cx ?? width / 2);
+      const cy = Number(layer.cy ?? height / 2);
+      const rx = Math.max(0.5, Number(layer.rx ?? 4));
+      const ry = Math.max(0.5, Number(layer.ry ?? 4));
+      const rad = ((Number(layer.angle) || 0) * Math.PI) / 180;
+      const cosA = Math.cos(-rad);
+      const sinA = Math.sin(-rad);
+      const scale = Math.min(rx, ry);
+
+      for (let y = 0; y < height; y++) {
+        for (let x = 0; x < width; x++) {
+          const dx = x - cx;
+          const dy = y - cy;
+          const lx = dx * cosA - dy * sinA;
+          const ly = dx * sinA + dy * cosA;
+          const q = Math.sqrt((lx * lx) / (rx * rx) + (ly * ly) / (ry * ry));
+          sdf[y * width + x] = (q - 1.0) * scale;
+        }
+      }
+    } else if (op === "rect") {
+      const x0 = Number(layer.x ?? 0);
+      const y0 = Number(layer.y ?? 0);
+      const w = Math.max(1, Number(layer.w ?? 4));
+      const h = Math.max(1, Number(layer.h ?? 4));
+      const r = Math.max(0, Number(layer.rx ?? 0));
+      const cx = x0 + (w - 1) * 0.5;
+      const cy = y0 + (h - 1) * 0.5;
+      const bx = Math.max(0.1, w * 0.5 - r);
+      const by = Math.max(0.1, h * 0.5 - r);
+
+      for (let y = 0; y < height; y++) {
+        for (let x = 0; x < width; x++) {
+          const qx = Math.abs(x - cx) - bx;
+          const qy = Math.abs(y - cy) - by;
+          const outDist = Math.sqrt(Math.max(qx, 0) ** 2 + Math.max(qy, 0) ** 2);
+          const inDist = Math.min(Math.max(qx, qy), 0);
+          sdf[y * width + x] = outDist + inDist - r;
+        }
+      }
+    } else if (op === "polygon" && Array.isArray(layer.points) && layer.points.length >= 3) {
+      const pts = layer.points;
+      const n = pts.length;
+      for (let y = 0; y < height; y++) {
+        for (let x = 0; x < width; x++) {
+          let inside = false;
+          let minDistSq = 1e9;
+          for (let i = 0, j = n - 1; i < n; j = i++) {
+            const xi = pts[i][0], yi = pts[i][1];
+            const xj = pts[j][0], yj = pts[j][1];
+            const vx = xj - xi, vy = yj - yi;
+            const wx = x - xi, wy = y - yi;
+            const lenSq = vx * vx + vy * vy || 1e-7;
+            const t = Math.max(0, Math.min(1, (wx * vx + wy * vy) / lenSq));
+            const dx = wx - vx * t;
+            const dy = wy - vy * t;
+            minDistSq = Math.min(minDistSq, dx * dx + dy * dy);
+
+            const intersect = ((yi > y) !== (yj > y)) &&
+              (x < ((xj - xi) * (y - yi)) / ((yj - yi) || 1e-7) + xi);
+            if (intersect) inside = !inside;
+          }
+          const dist = Math.sqrt(minDistSq);
+          sdf[y * width + x] = inside ? -dist : dist;
+        }
+      }
+    }
+
+    // Apply mirror with optional smooth blend across symmetry axes
+    const mirror = layer.mirror || "none";
+    const smoothK = Number(layer.smoothBlend || 0);
+    if (mirror !== "none") {
+      const mirrored = new Float32Array(sdf);
+      for (let y = 0; y < height; y++) {
+        for (let x = 0; x < width; x++) {
+          let d = sdf[y * width + x];
+          if (mirror === "x" || mirror === "quad") {
+            d = this.smin(d, sdf[y * width + (width - 1 - x)], smoothK);
+          }
+          if (mirror === "y" || mirror === "quad") {
+            d = this.smin(d, sdf[(height - 1 - y) * width + x], smoothK);
+          }
+          if (mirror === "quad") {
+            d = this.smin(d, sdf[(height - 1 - y) * width + (width - 1 - x)], smoothK);
+          }
+          mirrored[y * width + x] = d;
+        }
+      }
+      return mirrored;
+    }
+
+    return sdf;
+  }
+
   static applyFrameOverrides(spec, frameIndex = 0) {
     const frames = Array.isArray(spec.frames) ? spec.frames : [];
     if (frameIndex <= 0 || frameIndex > frames.length) {
@@ -245,6 +388,8 @@ class PixelDSLRenderer {
     const width = this.clampSize(spec.width || (spec.size && spec.size[0]), 32);
     const height = this.clampSize(spec.height || (spec.size && spec.size[1]), 32);
     const paletteRaw = this.resolveFullPalette(spec);
+    const post = spec.postProcess || {};
+    const globalSdfShading = Boolean(post.sdfShading);
 
     const paletteRGBA = { ".": [0, 0, 0, 0], " ": [0, 0, 0, 0] };
     for (const [key, val] of Object.entries(paletteRaw)) {
@@ -289,23 +434,14 @@ class PixelDSLRenderer {
       }
     };
 
-    const applyMaskWithMirror = (mask, layer) => {
-      const mirror = layer.mirror || "none";
+    // Rasterize a 2D SDF field with optional 3D Heightmap Normal Lighting & quantized pixel-art bands
+    const rasterizeSdfField = (sdfField, layer) => {
       const fullMask = new Uint8Array(width * height);
-      for (let y = 0; y < height; y++) {
-        for (let x = 0; x < width; x++) {
-          if (mask[y * width + x]) {
-            fullMask[y * width + x] = 1;
-            if (mirror === "x" || mirror === "quad") {
-              fullMask[y * width + (width - 1 - x)] = 1;
-            }
-            if (mirror === "y" || mirror === "quad") {
-              fullMask[(height - 1 - y) * width + x] = 1;
-            }
-            if (mirror === "quad") {
-              fullMask[(height - 1 - y) * width + (width - 1 - x)] = 1;
-            }
-          }
+      let maxDepth = 1.0;
+      for (let i = 0; i < width * height; i++) {
+        if (sdfField[i] <= 0.0) {
+          fullMask[i] = 1;
+          if (-sdfField[i] > maxDepth) maxDepth = -sdfField[i];
         }
       }
 
@@ -313,10 +449,30 @@ class PixelDSLRenderer {
       const outlineRGBA = layer.outline ? resolveColor(layer.outline) : null;
       const ditherRGBA = layer.ditherColor ? resolveColor(layer.ditherColor) : fillRGBA;
       const ditherMode = layer.dither || "none";
+      const useSdf3D = Boolean(layer.sdf || globalSdfShading) && fillRGBA[3] >= 200;
+
+      // Precompute 3D heightmap z(x, y) if SDF 3D shading is enabled
+      let heightField = null;
+      let tones = null;
+      if (useSdf3D) {
+        tones = this.deriveSdfShadingTones(fillRGBA);
+        heightField = new Float32Array(width * height);
+        for (let i = 0; i < width * height; i++) {
+          if (fullMask[i]) {
+            const t = Math.max(0, Math.min(1, -sdfField[i] / maxDepth));
+            // Spherical dome profile: z = sqrt(1 - (1 - t)^2) * maxDepth
+            heightField[i] = Math.sqrt(Math.max(0, 1 - (1 - t) * (1 - t))) * maxDepth;
+          }
+        }
+      }
+
+      // Light vector from top-left-front: L = normalize(-0.52, -0.62, 0.58)
+      const lx = -0.52, ly = -0.62, lz = 0.58;
 
       for (let y = 0; y < height; y++) {
         for (let x = 0; x < width; x++) {
-          if (!fullMask[y * width + x]) continue;
+          const idx = y * width + x;
+          if (!fullMask[idx]) continue;
 
           const isEdge =
             x === 0 || x === width - 1 || y === 0 || y === height - 1 ||
@@ -328,13 +484,42 @@ class PixelDSLRenderer {
           if (outlineRGBA && outlineRGBA[3] > 0 && isEdge) {
             blendPixel(x, y, outlineRGBA, layer.outline);
           } else if (fillRGBA[3] > 0) {
-            const useDither = this.checkDither(ditherMode, x, y);
-            blendPixel(
-              x,
-              y,
-              useDither ? ditherRGBA : fillRGBA,
-              useDither ? (layer.ditherColor || layer.fill) : layer.fill
-            );
+            if (useSdf3D && heightField) {
+              const zL = x > 0 ? heightField[y * width + (x - 1)] : 0;
+              const zR = x < width - 1 ? heightField[y * width + (x + 1)] : 0;
+              const zU = y > 0 ? heightField[(y - 1) * width + x] : 0;
+              const zD = y < height - 1 ? heightField[(y + 1) * width + x] : 0;
+
+              let nx = -(zR - zL) * 0.65;
+              let ny = -(zD - zU) * 0.65;
+              let nz = 1.0;
+              const invLen = 1.0 / Math.sqrt(nx * nx + ny * ny + nz * nz);
+              nx *= invLen; ny *= invLen; nz *= invLen;
+
+              // Lambertian + Bayer 2x2 dither offset
+              const bayer = BAYER_2X2[y & 1][x & 1];
+              const intensity = (nx * lx + ny * ly + nz * lz) + bayer;
+
+              let chosenRGBA = tones.base;
+              if (intensity > 0.86) chosenRGBA = tones.specular;
+              else if (intensity > 0.66) chosenRGBA = tones.highlight;
+              else if (intensity < 0.25) chosenRGBA = tones.deepShadow;
+              else if (intensity < 0.44) chosenRGBA = tones.shadow;
+
+              // Optional explicit dither pattern overlay on top of SDF volume
+              if (ditherMode !== "none" && this.checkDither(ditherMode, x, y)) {
+                chosenRGBA = ditherRGBA;
+              }
+              blendPixel(x, y, chosenRGBA, layer.fill);
+            } else {
+              const useDither = this.checkDither(ditherMode, x, y);
+              blendPixel(
+                x,
+                y,
+                useDither ? ditherRGBA : fillRGBA,
+                useDither ? (layer.ditherColor || layer.fill) : layer.fill
+              );
+            }
           }
         }
       }
@@ -373,70 +558,35 @@ class PixelDSLRenderer {
     };
 
     const layers = Array.isArray(spec.layers) ? spec.layers : [];
-    for (const layer of layers) {
-      if (!layer || !layer.op || layer.hidden) continue;
+    let i = 0;
+    while (i < layers.length) {
+      const layer = layers[i];
+      if (!layer || !layer.op || layer.hidden) {
+        i++;
+        continue;
+      }
       const op = layer.op.toLowerCase();
 
-      if (op === "ellipse") {
-        const mask = new Uint8Array(width * height);
-        const cx = Number(layer.cx ?? width / 2);
-        const cy = Number(layer.cy ?? height / 2);
-        const rx = Math.max(0.5, Number(layer.rx ?? 4));
-        const ry = Math.max(0.5, Number(layer.ry ?? 4));
-        const rad = ((Number(layer.angle) || 0) * Math.PI) / 180;
-        const cosA = Math.cos(-rad);
-        const sinA = Math.sin(-rad);
-
-        for (let y = 0; y < height; y++) {
-          for (let x = 0; x < width; x++) {
-            const dx = x - cx;
-            const dy = y - cy;
-            const rxLocal = dx * cosA - dy * sinA;
-            const ryLocal = dx * sinA + dy * cosA;
-            const d = (rxLocal * rxLocal) / (rx * rx) + (ryLocal * ryLocal) / (ry * ry);
-            if (d <= 1.0) {
-              mask[y * width + x] = 1;
-            }
+      if (op === "ellipse" || op === "rect" || op === "polygon") {
+        let combinedSdf = this.computeLayerSDF(layer, width, height);
+        // Check if subsequent layers have smoothBlend > 0 and same fill/group to metaball-merge them!
+        while (
+          i + 1 < layers.length &&
+          layers[i + 1] &&
+          !layers[i + 1].hidden &&
+          ["ellipse", "rect", "polygon"].includes((layers[i + 1].op || "").toLowerCase()) &&
+          Number(layers[i + 1].smoothBlend) > 0 &&
+          layers[i + 1].fill === layer.fill
+        ) {
+          const nextLayer = layers[i + 1];
+          const nextSdf = this.computeLayerSDF(nextLayer, width, height);
+          const k = Number(nextLayer.smoothBlend);
+          for (let p = 0; p < width * height; p++) {
+            combinedSdf[p] = this.smin(combinedSdf[p], nextSdf[p], k);
           }
+          i++;
         }
-        applyMaskWithMirror(mask, layer);
-      } else if (op === "rect") {
-        const mask = new Uint8Array(width * height);
-        const x0 = Math.round(Number(layer.x ?? 0));
-        const y0 = Math.round(Number(layer.y ?? 0));
-        const w = Math.round(Number(layer.w ?? 4));
-        const h = Math.round(Number(layer.h ?? 4));
-        const rx = Math.max(0, Math.round(Number(layer.rx ?? 0)));
-
-        for (let y = y0; y < y0 + h; y++) {
-          for (let x = x0; x < x0 + w; x++) {
-            if (x < 0 || x >= width || y < 0 || y >= height) continue;
-            if (rx > 0) {
-              const cx = x < x0 + rx ? x0 + rx : x >= x0 + w - rx ? x0 + w - rx - 1 : x;
-              const cy = y < y0 + rx ? y0 + rx : y >= y0 + h - rx ? y0 + h - rx - 1 : y;
-              if ((x - cx) * (x - cx) + (y - cy) * (y - cy) > rx * rx) continue;
-            }
-            mask[y * width + x] = 1;
-          }
-        }
-        applyMaskWithMirror(mask, layer);
-      } else if (op === "polygon" && Array.isArray(layer.points) && layer.points.length >= 3) {
-        const mask = new Uint8Array(width * height);
-        const pts = layer.points;
-        for (let y = 0; y < height; y++) {
-          for (let x = 0; x < width; x++) {
-            let inside = false;
-            for (let i = 0, j = pts.length - 1; i < pts.length; j = i++) {
-              const xi = pts[i][0], yi = pts[i][1];
-              const xj = pts[j][0], yj = pts[j][1];
-              const intersect = ((yi > y) !== (yj > y)) &&
-                (x < ((xj - xi) * (y - yi)) / ((yj - yi) || 1e-7) + xi);
-              if (intersect) inside = !inside;
-            }
-            if (inside) mask[y * width + x] = 1;
-          }
-        }
-        applyMaskWithMirror(mask, layer);
+        rasterizeSdfField(combinedSdf, layer);
       } else if (op === "line") {
         const rgba = resolveColor(layer.color || layer.fill || "O");
         drawBresenhamLine(
@@ -490,6 +640,7 @@ class PixelDSLRenderer {
           }
         }
       }
+      i++;
     }
 
     let warnings = [];
@@ -543,7 +694,6 @@ class PixelDSLRenderer {
       }
     }
 
-    const post = spec.postProcess || {};
     if (post.autoShading) {
       const strength = Number(post.shadingStrength ?? 0.16);
       const copy = new Uint8ClampedArray(buffer);
@@ -619,7 +769,6 @@ class PixelDSLRenderer {
     };
   }
 
-  // AI Self-Diagnostics for blind CLI generation and studio inspection
   static analyze(width, height, buffer) {
     let activeCount = 0;
     let sumX = 0, sumY = 0;

@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-PixelDSL CLI v2 — Blind 2D Pixel-Art Asset Compiler (8x8 .. 128x128) for any LLM CLI.
+PixelDSL CLI v2.5 — Blind 2D Pixel-Art Asset Compiler (8x8 .. 128x128) for any LLM CLI.
 Zero external dependencies (uses only Python 3 standard library: json, zlib, struct, math).
 
 Features:
 - Accepts JSON from a file path, --json inline string, or standard input (stdin).
-- Supports symbolic grids (grid), integer primitive layers (layers), auto color ramps (ramps),
-  retro palettes (endesga32, pico8, gameboy), and multi-frame animations (frames -> Sprite Sheet).
+- Supports symbolic grids (grid), integer/SDF primitive layers (layers), SDF Smooth Union (smoothBlend),
+  3D Heightmap Normal Shading (sdfShading), auto color ramps (ramps), retro palettes, and multi-frame animations.
 - Prints an AI self-diagnostics report to stdout (fill %, center balance, edge clipping check)
   along with a TrueColor ANSI terminal preview using half-blocks (▀).
 - Automatically saves canonical JSON to sprites/, exports 1:1 PNG and _sheet.png to game_ready/,
@@ -47,6 +47,11 @@ BUILTIN_PALETTES = {
         "m": "#8b9bb4", "d": "#5a6988", "n": "#3a4466", "p": "#b55088"
     }
 }
+
+BAYER_2X2 = (
+    (-0.06, 0.02),
+    (0.06, -0.02)
+)
 
 
 def clamp_size(val, fallback=32):
@@ -110,6 +115,42 @@ def generate_color_ramp(base_hex):
         255
     )
     return {"base": base_hex, "light": light, "dark": dark, "outline": outline}
+
+
+def derive_sdf_shading_tones(base_rgba):
+    r, g, b, a = base_rgba
+    deep_shadow = (
+        max(0, int(round(r * 0.56 - 6))),
+        max(0, int(round(g * 0.60 - 4))),
+        max(0, min(255, int(round(b * 0.74 + 12)))),
+        a
+    )
+    shadow = (
+        max(0, int(round(r * 0.76 - 3))),
+        max(0, int(round(g * 0.79 - 2))),
+        max(0, min(255, int(round(b * 0.88 + 6)))),
+        a
+    )
+    base = (r, g, b, a)
+    highlight = (
+        min(255, int(round(r + (255 - r) * 0.30 + 10))),
+        min(255, int(round(g + (255 - g) * 0.34 + 12))),
+        min(255, int(round(b + (255 - b) * 0.16))),
+        a
+    )
+    specular = (
+        min(255, int(round(r + (255 - r) * 0.62 + 18))),
+        min(255, int(round(g + (255 - g) * 0.65 + 18))),
+        min(255, int(round(b + (255 - b) * 0.45 + 8))),
+        a
+    )
+    return {
+        "deepShadow": deep_shadow,
+        "shadow": shadow,
+        "base": base,
+        "highlight": highlight,
+        "specular": specular
+    }
 
 
 def resolve_full_palette(spec):
@@ -189,6 +230,97 @@ def check_dither(pattern, x, y):
     return False
 
 
+def smin(a, b, k):
+    if not k or k <= 0:
+        return min(a, b)
+    h = max(k - abs(a - b), 0.0) / float(k)
+    return min(a, b) - h * h * k * 0.25
+
+
+def compute_layer_sdf(layer, width, height):
+    op = str(layer.get("op", "")).lower()
+    sdf = [1e4] * (width * height)
+
+    if op == "ellipse":
+        cx = float(layer.get("cx", width / 2.0))
+        cy = float(layer.get("cy", height / 2.0))
+        rx = max(0.5, float(layer.get("rx", 4.0)))
+        ry = max(0.5, float(layer.get("ry", 4.0)))
+        rad = math.radians(float(layer.get("angle", 0.0)))
+        cos_a = math.cos(-rad)
+        sin_a = math.sin(-rad)
+        scale = min(rx, ry)
+        for y in range(height):
+            for x in range(width):
+                dx = x - cx
+                dy = y - cy
+                lx = dx * cos_a - dy * sin_a
+                ly = dx * sin_a + dy * cos_a
+                q = math.sqrt((lx * lx) / (rx * rx) + (ly * ly) / (ry * ry))
+                sdf[y * width + x] = (q - 1.0) * scale
+
+    elif op == "rect":
+        x0 = float(layer.get("x", 0))
+        y0 = float(layer.get("y", 0))
+        w = max(1.0, float(layer.get("w", 4)))
+        h = max(1.0, float(layer.get("h", 4)))
+        r = max(0.0, float(layer.get("rx", 0)))
+        cx = x0 + (w - 1.0) * 0.5
+        cy = y0 + (h - 1.0) * 0.5
+        bx = max(0.1, w * 0.5 - r)
+        by = max(0.1, h * 0.5 - r)
+        for y in range(height):
+            for x in range(width):
+                qx = abs(x - cx) - bx
+                qy = abs(y - cy) - by
+                out_dist = math.sqrt(max(qx, 0.0) ** 2 + max(qy, 0.0) ** 2)
+                in_dist = min(max(qx, qy), 0.0)
+                sdf[y * width + x] = out_dist + in_dist - r
+
+    elif op == "polygon" and isinstance(layer.get("points"), list) and len(layer["points"]) >= 3:
+        pts = layer["points"]
+        n = len(pts)
+        for y in range(height):
+            for x in range(width):
+                inside = False
+                min_dist_sq = 1e9
+                j = n - 1
+                for i in range(n):
+                    xi, yi = float(pts[i][0]), float(pts[i][1])
+                    xj, yj = float(pts[j][0]), float(pts[j][1])
+                    vx, vy = xj - xi, yj - yi
+                    wx, wy = x - xi, y - yi
+                    len_sq = vx * vx + vy * vy or 1e-7
+                    t = max(0.0, min(1.0, (wx * vx + wy * vy) / len_sq))
+                    dx = wx - vx * t
+                    dy = wy - vy * t
+                    min_dist_sq = min(min_dist_sq, dx * dx + dy * dy)
+                    denom = (yj - yi) if (yj - yi) != 0 else 1e-7
+                    if ((yi > y) != (yj > y)) and (x < (xj - xi) * (y - yi) / denom + xi):
+                        inside = not inside
+                    j = i
+                dist = math.sqrt(min_dist_sq)
+                sdf[y * width + x] = -dist if inside else dist
+
+    mirror = layer.get("mirror", "none")
+    smooth_k = float(layer.get("smoothBlend", 0.0) or 0.0)
+    if mirror != "none":
+        mirrored = list(sdf)
+        for y in range(height):
+            for x in range(width):
+                d = sdf[y * width + x]
+                if mirror in ("x", "quad"):
+                    d = smin(d, sdf[y * width + (width - 1 - x)], smooth_k)
+                if mirror in ("y", "quad"):
+                    d = smin(d, sdf[(height - 1 - y) * width + x], smooth_k)
+                if mirror == "quad":
+                    d = smin(d, sdf[(height - 1 - y) * width + (width - 1 - x)], smooth_k)
+                mirrored[y * width + x] = d
+        return mirrored
+
+    return sdf
+
+
 def apply_frame_overrides(spec, frame_index=0):
     frames = spec.get("frames")
     if not isinstance(frames, list) or frame_index <= 0 or frame_index > len(frames):
@@ -255,6 +387,8 @@ def render_sprite(spec_input, frame_index=0):
     width = clamp_size(spec.get("width") or size_arr[0], 32)
     height = clamp_size(spec.get("height") or size_arr[1], 32)
     palette_raw = resolve_full_palette(spec)
+    post = spec.get("postProcess") if isinstance(spec.get("postProcess"), dict) else {}
+    global_sdf_shading = bool(post.get("sdfShading"))
 
     palette_rgba = {".": (0, 0, 0, 0), " ": (0, 0, 0, 0)}
     for k, v in palette_raw.items():
@@ -296,19 +430,14 @@ def render_sprite(spec_input, frame_index=0):
         if sym:
             symbol_buffer[iy * width + ix] = sym
 
-    def apply_mask_with_mirror(mask, layer):
-        mirror = layer.get("mirror", "none")
+    def rasterize_sdf_field(sdf_field, layer):
         full_mask = bytearray(width * height)
-        for y in range(height):
-            for x in range(width):
-                if mask[y * width + x]:
-                    full_mask[y * width + x] = 1
-                    if mirror in ("x", "quad"):
-                        full_mask[y * width + (width - 1 - x)] = 1
-                    if mirror in ("y", "quad"):
-                        full_mask[(height - 1 - y) * width + x] = 1
-                    if mirror == "quad":
-                        full_mask[(height - 1 - y) * width + (width - 1 - x)] = 1
+        max_depth = 1.0
+        for i in range(width * height):
+            if sdf_field[i] <= 0.0:
+                full_mask[i] = 1
+                if -sdf_field[i] > max_depth:
+                    max_depth = -sdf_field[i]
 
         fill_rgba = resolve_color(layer.get("fill"))
         outline_key = layer.get("outline")
@@ -316,10 +445,24 @@ def render_sprite(spec_input, frame_index=0):
         dither_key = layer.get("ditherColor")
         dither_rgba = resolve_color(dither_key) if dither_key else fill_rgba
         dither_mode = layer.get("dither", "none")
+        use_sdf_3d = bool(layer.get("sdf") or global_sdf_shading) and fill_rgba[3] >= 200
+
+        height_field = None
+        tones = None
+        if use_sdf_3d:
+            tones = derive_sdf_shading_tones(fill_rgba)
+            height_field = [0.0] * (width * height)
+            for i in range(width * height):
+                if full_mask[i]:
+                    t = max(0.0, min(1.0, -sdf_field[i] / max_depth))
+                    height_field[i] = math.sqrt(max(0.0, 1.0 - (1.0 - t) ** 2)) * max_depth
+
+        lx, ly, lz = -0.52, -0.62, 0.58
 
         for y in range(height):
             for x in range(width):
-                if not full_mask[y * width + x]:
+                idx = y * width + x
+                if not full_mask[idx]:
                     continue
                 is_edge = (
                     x == 0 or x == width - 1 or y == 0 or y == height - 1 or
@@ -331,12 +474,43 @@ def render_sprite(spec_input, frame_index=0):
                 if outline_rgba and outline_rgba[3] > 0 and is_edge:
                     blend_pixel(x, y, outline_rgba, outline_key)
                 elif fill_rgba[3] > 0:
-                    use_dither = check_dither(dither_mode, x, y)
-                    blend_pixel(
-                        x, y,
-                        dither_rgba if use_dither else fill_rgba,
-                        (dither_key or layer.get("fill")) if use_dither else layer.get("fill")
-                    )
+                    if use_sdf_3d and height_field:
+                        z_l = height_field[y * width + (x - 1)] if x > 0 else 0.0
+                        z_r = height_field[y * width + (x + 1)] if x < width - 1 else 0.0
+                        z_u = height_field[(y - 1) * width + x] if y > 0 else 0.0
+                        z_d = height_field[(y + 1) * width + x] if y < height - 1 else 0.0
+
+                        nx = -(z_r - z_l) * 0.65
+                        ny = -(z_d - z_u) * 0.65
+                        nz = 1.0
+                        inv_len = 1.0 / math.sqrt(nx * nx + ny * ny + nz * nz)
+                        nx *= inv_len
+                        ny *= inv_len
+                        nz *= inv_len
+
+                        bayer = BAYER_2X2[y & 1][x & 1]
+                        intensity = (nx * lx + ny * ly + nz * lz) + bayer
+
+                        chosen_rgba = tones["base"]
+                        if intensity > 0.86:
+                            chosen_rgba = tones["specular"]
+                        elif intensity > 0.66:
+                            chosen_rgba = tones["highlight"]
+                        elif intensity < 0.25:
+                            chosen_rgba = tones["deepShadow"]
+                        elif intensity < 0.44:
+                            chosen_rgba = tones["shadow"]
+
+                        if dither_mode != "none" and check_dither(dither_mode, x, y):
+                            chosen_rgba = dither_rgba
+                        blend_pixel(x, y, chosen_rgba, layer.get("fill"))
+                    else:
+                        use_dither = check_dither(dither_mode, x, y)
+                        blend_pixel(
+                            x, y,
+                            dither_rgba if use_dither else fill_rgba,
+                            (dither_key or layer.get("fill")) if use_dither else layer.get("fill")
+                        )
 
     def plot_point_with_mirror(x, y, thickness, rgba, sym, mirror):
         r = max(1, int(round(thickness or 1)))
@@ -376,67 +550,31 @@ def render_sprite(spec_input, frame_index=0):
                 iy0 += sy
 
     layers = spec.get("layers") if isinstance(spec.get("layers"), list) else []
-    for layer in layers:
+    i = 0
+    while i < len(layers):
+        layer = layers[i]
         if not isinstance(layer, dict) or not layer.get("op") or layer.get("hidden"):
+            i += 1
             continue
         op = str(layer["op"]).lower()
 
-        if op == "ellipse":
-            mask = bytearray(width * height)
-            cx = float(layer.get("cx", width / 2.0))
-            cy = float(layer.get("cy", height / 2.0))
-            rx = max(0.5, float(layer.get("rx", 4.0)))
-            ry = max(0.5, float(layer.get("ry", 4.0)))
-            rad = math.radians(float(layer.get("angle", 0.0)))
-            cos_a = math.cos(-rad)
-            sin_a = math.sin(-rad)
-            for y in range(height):
-                for x in range(width):
-                    dx = x - cx
-                    dy = y - cy
-                    rx_local = dx * cos_a - dy * sin_a
-                    ry_local = dx * sin_a + dy * cos_a
-                    if (rx_local * rx_local) / (rx * rx) + (ry_local * ry_local) / (ry * ry) <= 1.0:
-                        mask[y * width + x] = 1
-            apply_mask_with_mirror(mask, layer)
-
-        elif op == "rect":
-            mask = bytearray(width * height)
-            x0 = int(round(float(layer.get("x", 0))))
-            y0 = int(round(float(layer.get("y", 0))))
-            w = int(round(float(layer.get("w", 4))))
-            h = int(round(float(layer.get("h", 4))))
-            rx = max(0, int(round(float(layer.get("rx", 0)))))
-            for y in range(y0, y0 + h):
-                for x in range(x0, x0 + w):
-                    if x < 0 or x >= width or y < 0 or y >= height:
-                        continue
-                    if rx > 0:
-                        cx = x0 + rx if x < x0 + rx else (x0 + w - rx - 1 if x >= x0 + w - rx else x)
-                        cy = y0 + rx if y < y0 + rx else (y0 + h - rx - 1 if y >= y0 + h - rx else y)
-                        if (x - cx) ** 2 + (y - cy) ** 2 > rx ** 2:
-                            continue
-                    mask[y * width + x] = 1
-            apply_mask_with_mirror(mask, layer)
-
-        elif op == "polygon" and isinstance(layer.get("points"), list) and len(layer["points"]) >= 3:
-            mask = bytearray(width * height)
-            pts = layer["points"]
-            n_pts = len(pts)
-            for y in range(height):
-                for x in range(width):
-                    inside = False
-                    j = n_pts - 1
-                    for i in range(n_pts):
-                        xi, yi = pts[i][0], pts[i][1]
-                        xj, yj = pts[j][0], pts[j][1]
-                        denom = (yj - yi) if (yj - yi) != 0 else 1e-7
-                        if ((yi > y) != (yj > y)) and (x < (xj - xi) * (y - yi) / denom + xi):
-                            inside = not inside
-                        j = i
-                    if inside:
-                        mask[y * width + x] = 1
-            apply_mask_with_mirror(mask, layer)
+        if op in ("ellipse", "rect", "polygon"):
+            combined_sdf = compute_layer_sdf(layer, width, height)
+            while (
+                i + 1 < len(layers) and
+                isinstance(layers[i + 1], dict) and
+                not layers[i + 1].get("hidden") and
+                str(layers[i + 1].get("op", "")).lower() in ("ellipse", "rect", "polygon") and
+                float(layers[i + 1].get("smoothBlend", 0) or 0) > 0 and
+                layers[i + 1].get("fill") == layer.get("fill")
+            ):
+                next_layer = layers[i + 1]
+                next_sdf = compute_layer_sdf(next_layer, width, height)
+                k = float(next_layer.get("smoothBlend", 0))
+                for p in range(width * height):
+                    combined_sdf[p] = smin(combined_sdf[p], next_sdf[p], k)
+                i += 1
+            rasterize_sdf_field(combined_sdf, layer)
 
         elif op == "line":
             col_key = layer.get("color") or layer.get("fill") or "O"
@@ -486,6 +624,8 @@ def render_sprite(spec_input, frame_index=0):
                 if isinstance(pt, list) and len(pt) >= 2:
                     plot_point_with_mirror(pt[0], pt[1], 1, rgba, col_key, mirror)
 
+        i += 1
+
     warnings = []
     if not spec.get("hideGrid") and isinstance(spec.get("grid"), list) and len(spec["grid"]) > 0:
         norm_rows, warnings = normalize_grid(
@@ -521,15 +661,14 @@ def render_sprite(spec_input, frame_index=0):
                     buffer[dst_idx:dst_idx + 4] = buffer[src_idx:src_idx + 4]
                     symbol_buffer[dst_y * width + x] = symbol_buffer[y * width + x]
 
-    post = spec.get("postProcess") if isinstance(spec.get("postProcess"), dict) else {}
     if post.get("autoShading"):
         strength = float(post.get("shadingStrength", 0.16))
         copy_buf = bytearray(buffer)
 
-        def is_dark_outline(i):
-            if copy_buf[i + 3] < 200:
+        def is_dark_outline(idx_val):
+            if copy_buf[idx_val + 3] < 200:
                 return True
-            return (copy_buf[i] + copy_buf[i + 1] + copy_buf[i + 2]) < 110
+            return (copy_buf[idx_val] + copy_buf[idx_val + 1] + copy_buf[idx_val + 2]) < 110
 
         def same_col(i1, i2):
             return copy_buf[i1:i1 + 4] == copy_buf[i2:i2 + 4]
@@ -642,7 +781,7 @@ def write_png(filepath, width, height, rgba_bytes):
     raw_scanlines = bytearray()
     stride = width * 4
     for y in range(height):
-        raw_scanlines.append(0)  # Filter type 0 (None)
+        raw_scanlines.append(0)
         row_start = y * stride
         raw_scanlines.extend(rgba_bytes[row_start:row_start + stride])
 
@@ -842,7 +981,7 @@ def process_spec(spec, base_dir, no_ansi=False, sync_web=True):
 
 def main():
     parser = argparse.ArgumentParser(
-        description="PixelDSL CLI v2 — 2D Pixel-Art Asset Compiler (8x8..128x128) for LLM CLIs."
+        description="PixelDSL CLI v2.5 — 2D Pixel-Art Asset Compiler (8x8..128x128) with SDF & 3D Volume Shading."
     )
     parser.add_argument(
         "input",

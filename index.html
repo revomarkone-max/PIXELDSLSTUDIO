@@ -21,6 +21,10 @@
       <label for="presetSelect" style="color: var(--text-muted); font-size: 12px;">Sprite:</label>
       <select id="presetSelect" title="Select sprite from library (presets.js)"></select>
 
+      <button id="btnNewSprite" class="btn" title="Create a clean blank sprite canvas">
+        📄 + New Sprite
+      </button>
+
       <button id="btnOpenPromptModal" class="btn btn-accent-outline" title="Generate LLM Prompt or copy SKILL.md CLI instructions">
         📋 Prompt / SKILL.md
       </button>
@@ -288,6 +292,13 @@
               style="width: 90px; accent-color: var(--accent);"
               title="Auto pixel-art shading intensity"
             />
+          </div>
+
+          <div class="control-row">
+            <label style="display: flex; align-items: center; gap: 6px; cursor: pointer;" title="Compute 3D spherical heightmap normals, quantized 5-tone pixel-art lighting, and Bayer 2×2 ordered dithering on shape layers">
+              <input type="checkbox" id="chkSdfShading" />
+              <span>3D SDF Volume Shading</span>
+            </label>
           </div>
         </div>
       </details>

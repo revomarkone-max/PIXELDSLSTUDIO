@@ -72,7 +72,8 @@ EOF
     "autoOutline": false,
     "outlineColor": "#14182e",
     "autoShading": true,
-    "shadingStrength": 0.15
+    "shadingStrength": 0.15,
+    "sdfShading": false
   },
   "layers": [],
   "frames": [],
@@ -90,17 +91,21 @@ EOF
 
 ---
 
-## 4. Named Layers (`layers`) and Multi-Frame Animation (`frames`)
+## 4. Named Layers (`layers`), SDF Metaballs (`smoothBlend`), and 3D SDF Volume Shading (`sdf`)
 
 Assign a descriptive `"id"` to each layer (`"head"`, `"flipper_front"`, `"shell"`, `"tail"`):
 
-- `ellipse`: `{ "id": "flipper_front", "op": "ellipse", "cx": 6, "cy": 11, "rx": 6, "ry": 3, "angle": -32, "fill": "h", "outline": "O", "dither": "none|checker|sparse|scales|grid", "ditherColor": "B", "mirror": "none|x|y|quad" }`
-- `rect`: `{ "id": "box", "op": "rect", "x": 10, "y": 8, "w": 12, "h": 16, "rx": 2, "fill": "S", "outline": "O", "mirror": "none|x" }`
-- `polygon`: `{ "id": "tail", "op": "polygon", "points": [[14,26],[18,26],[16,31]], "fill": "S", "outline": "O", "mirror": "none|x" }`
+- `ellipse`: `{ "id": "flipper_front", "op": "ellipse", "cx": 6, "cy": 11, "rx": 6, "ry": 3, "angle": -32, "fill": "h", "outline": "O", "sdf": true, "smoothBlend": 2.5, "dither": "none|checker|sparse|scales|grid", "ditherColor": "B", "mirror": "none|x|y|quad" }`
+- `rect`: `{ "id": "box", "op": "rect", "x": 10, "y": 8, "w": 12, "h": 16, "rx": 2, "fill": "S", "outline": "O", "sdf": true, "smoothBlend": 0, "mirror": "none|x" }`
+- `polygon`: `{ "id": "tail", "op": "polygon", "points": [[14,26],[18,26],[16,31]], "fill": "S", "outline": "O", "sdf": true, "mirror": "none|x" }`
 - `line`: `{ "id": "ridge", "op": "line", "x1": 16, "y1": 7, "x2": 16, "y2": 26, "thickness": 1, "color": "B", "mirror": "none|x" }`
 - `curve`: `{ "id": "leg", "op": "curve", "points": [[21,22],[10,16],[5,9]], "thickness": 2, "color": "O", "mirror": "x" }`
 - `stamp`: `{ "id": "eyes", "op": "stamp", "x": 12, "y": 3, "grid": ["ew....we", "e......e"] }`
 - `pixels`: `{ "id": "glint", "op": "pixels", "color": "w", "points": [[13,3],[18,3]] }`
+
+### SDF Smooth Union (`smoothBlend`) & 3D Heightmap Normal Shading (`sdf` / `sdfShading`)
+- **Metaball Smooth Union (`smoothBlend: 1.5..6.0`)**: When consecutive shape layers (`ellipse`, `rect`, `polygon`) share the same `"fill"` symbol and have `"smoothBlend" > 0`, the engine evaluates their 2D Signed Distance Fields and fuses them via polynomial smooth-min (`smin`), producing organic muscle/slime/carapace silhouettes with a single unified `1px` pixel-art outline.
+- **3D SDF Dome Volume Shading (`sdf: true` or `postProcess.sdfShading: true`)**: Automatically converts the 2D signed distance field into a 3D spherical heightmap ($z = \sqrt{1 - (1 - t)^2}$), computes surface normals $(N_x, N_y, N_z)$, and applies directional pixel-art lighting quantized into 5 tonal bands (specular, highlight, base, shadow, deep shadow) with Bayer $2\times2$ ordered dithering.
 
 ### Frame Deltas (`frames`) for Sprite Sheets
 To animate a sprite (e.g., swimming flippers or walking legs), define per-layer delta overrides (`dx`, `dy`, `dAngle`, `drx`, `dry`, `hidden`) in `"frames"`:
