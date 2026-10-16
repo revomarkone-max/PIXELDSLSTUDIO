@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PixelDSL Studio — 2D Pixel-Art Asset Generator &amp; Editor (8×8 – 128×128)</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <!-- Top Bar -->
+  <header class="topbar">
+    <div class="brand">
+      <button id="btnToggleCodePanel" class="btn active" title="Show / Hide Code &amp; ASCII Grid Editor">
+        ⟨⟩ Code
+      </button>
+      <span class="brand-badge">8×8 .. 128×128</span>
+      <span>PixelDSL Studio</span>
+    </div>
+
+    <div class="topbar-controls">
+      <label for="presetSelect" style="color: var(--text-muted); font-size: 12px;">Sprite:</label>
+      <select id="presetSelect" title="Select sprite from library (presets.js)"></select>
+
+      <button id="btnOpenPromptModal" class="btn btn-accent-outline" title="Generate LLM Prompt or copy SKILL.md CLI instructions">
+        📋 Prompt / SKILL.md
+      </button>
+
+      <button id="btnExport1x" class="btn btn-primary" title="Download current frame PNG at native 1:1 resolution">
+        💾 PNG (1:1)
+      </button>
+      <button id="btnExportSheet" class="btn" title="Download horizontal Sprite Sheet PNG containing all animation frames">
+        🎞️ Sprite Sheet
+      </button>
+      <button id="btnExportUpscaled" class="btn" title="Download upscaled crisp nearest-neighbor PNG preview">
+        🖼️ PNG (Preview)
+      </button>
+    </div>
+  </header>
+
+  <!-- Main Workspace -->
+  <main class="workspace">
+    <!-- LEFT DRAWER: Code & Symbolic Matrix Editor (Collapsible) -->
+    <section id="panelLeft" class="panel panel-left">
+      <div class="panel-header">
+        <div class="tab-group">
+          <button id="tabJson" class="tab-btn active">JSON (PixelDSL)</button>
+          <button id="tabGrid" class="tab-btn">ASCII Grid</button>
+        </div>
+        <button id="btnCollapseCode" class="btn btn-sm" title="Hide Code Panel">◀ Hide</button>
+      </div>
+
+      <div class="editor-toolbar">
+        <div style="display: flex; gap: 5px;">
+          <button id="btnNormalizeGrid" class="btn btn-sm" title="Pad/trim all grid rows to exact canvas W×H">
+            🔧 Normalize Grid
+          </button>
+          <button id="btnBakeToGrid" class="btn btn-sm" title="Bake procedural layers into a character matrix (grid)">
+            🔥 Bake Layers → Grid
+          </button>
+        </div>
+        <span id="editorMeta" style="font-family: var(--font-mono); font-size: 11px; color: var(--text-muted);">
+          32×32 px
+        </span>
+      </div>
+
+      <div class="editor-container">
+        <textarea
+          id="codeEditor"
+          class="code-textarea"
+          spellcheck="false"
+          placeholder="Paste PixelDSL JSON or raw character grid here..."
+        ></textarea>
+      </div>
+
+      <div class="status-bar">
+        <span id="editorStatus" class="status-ok">✓ Valid DSL</span>
+        <span id="aiDiagnosticsBadge" style="color: var(--text-muted);">Fill: --%</span>
+      </div>
+    </section>
+
+    <!-- CENTER VIEWPORT: Interactive Canvas + Visual Frame Timeline -->
+    <section class="panel-center">
+      <div class="canvas-toolbar">
+        <div class="tool-group">
+          <button class="tool-btn active" data-tool="brush" title="Pencil / Draw (Shortcut: D)">
+            🖌️ Pencil <span class="kbd">D</span>
+          </button>
+          <button class="tool-btn" data-tool="eraser" title="Eraser — sets transparent '.' (Shortcut: E)">
+            🧽 Eraser <span class="kbd">E</span>
+          </button>
+          <button class="tool-btn" data-tool="picker" title="Eyedropper — pick symbol from canvas (Shortcut: S)">
+            💧 Eyedropper <span class="kbd">S</span>
+          </button>
+          <button class="tool-btn" data-tool="bucket" title="Flood Fill area with active symbol (Shortcut: G)">
+            🪣 Bucket <span class="kbd">G</span>
+          </button>
+
+          <span style="width: 1px; height: 18px; background: var(--border); margin: 0 4px;"></span>
+
+          <button id="btnUndo" class="btn btn-sm" disabled title="Undo last action (Shortcut: Alt+Z)">
+            ↶ Undo <span class="kbd">Alt+Z</span>
+          </button>
+          <button id="btnRedo" class="btn btn-sm" disabled title="Redo action (Shortcut: Alt+Y)">
+            ↷ Redo
+          </button>
+        </div>
+
+        <div class="tool-group" style="gap: 9px;">
+          <label style="display: inline-flex; align-items: center; gap: 4px; cursor: pointer; font-size: 12px;">
+            <input type="checkbox" id="chkGridLines" checked />
+            <span>Grid</span>
+          </label>
+          <label style="display: inline-flex; align-items: center; gap: 4px; cursor: pointer; font-size: 12px;">
+            <input type="checkbox" id="chkCenterAxes" />
+            <span>Axes</span>
+          </label>
+
+          <select id="zoomSelect" title="Canvas Zoom">
+            <option value="auto">Zoom: Auto</option>
+            <option value="1">1x (100%)</option>
+            <option value="4">4x</option>
+            <option value="8">8x</option>
+            <option value="12">12x</option>
+            <option value="16">16x</option>
+            <option value="24">24x</option>
+          </select>
+
+          <select id="bgSelect" title="Canvas Backdrop">
+            <option value="checker">BG: Checker</option>
+            <option value="dark">BG: Dark</option>
+            <option value="light">BG: Light</option>
+            <option value="grass">BG: Grass</option>
+            <option value="water">BG: Water</option>
+          </select>
+        </div>
+      </div>
+
+      <div id="viewportArea" class="viewport-area">
+        <div id="canvasWrapper" class="canvas-wrapper bg-checker">
+          <canvas id="mainCanvas" width="256" height="256"></canvas>
+        </div>
+      </div>
+
+      <!-- Visual Animation Timeline & Frame Strip -->
+      <div class="timeline-bar">
+        <div class="timeline-controls">
+          <button id="btnPlayAnim" class="btn btn-sm" title="Play / Pause frame animation">▶ Play</button>
+          <select id="selAnimFps" title="Playback Speed (FPS)">
+            <option value="4">4 FPS</option>
+            <option value="6" selected>6 FPS</option>
+            <option value="10">10 FPS</option>
+            <option value="14">14 FPS</option>
+          </select>
+          <label style="display: inline-flex; align-items: center; gap: 4px; cursor: pointer; font-size: 11.5px; color: var(--text-muted);" title="Show previous frame ghost overlay">
+            <input type="checkbox" id="chkOnionSkin" />
+            <span>🧅 Onion</span>
+          </label>
+        </div>
+
+        <div id="timelineFrames" class="timeline-frames"></div>
+
+        <div class="timeline-controls">
+          <button id="btnAddFrame" class="btn btn-sm" title="Add / Duplicate animation frame">+ Frame</button>
+          <button id="btnDeleteFrame" class="btn btn-sm" title="Delete current extra frame">🗑</button>
+        </div>
+      </div>
+
+      <div class="status-bar">
+        <span id="cursorInfo">Hover over canvas to inspect pixels | Shortcuts: [D] Pencil, [E] Eraser, [S] Eyedropper, [G] Bucket, [Alt+Z] Undo</span>
+        <span id="canvasDimInfo" style="color: var(--text-muted);">32×32 px</span>
+      </div>
+    </section>
+
+    <!-- RIGHT SIDEBAR: Layers, Palette, and Collapsible Settings -->
+    <aside class="panel panel-right">
+      <!-- 1. LAYERS STACK (Open by default) -->
+      <details class="inspector-group" open>
+        <summary>
+          <span>Layers Stack (<span id="layerCountBadge">0</span>)</span>
+        </summary>
+        <div class="inspector-body">
+          <div style="display: flex; gap: 4px; margin-bottom: 7px;">
+            <button id="btnAddEllipseLayer" class="btn btn-sm" style="flex: 1; justify-content: center;" title="Add new Ellipse layer">+ Ellipse</button>
+            <button id="btnAddRectLayer" class="btn btn-sm" style="flex: 1; justify-content: center;" title="Add new Rect layer">+ Rect</button>
+            <button id="btnShowAllLayers" class="btn btn-sm" title="Unhide all layers">👁 All</button>
+          </div>
+          <div id="layersList" class="layers-list"></div>
+        </div>
+      </details>
+
+      <!-- 2. PALETTE & COLOR RAMPS (Open by default) -->
+      <details class="inspector-group" open>
+        <summary>
+          <span>Palette &amp; Ramps</span>
+        </summary>
+        <div class="inspector-body">
+          <div style="display: flex; gap: 5px; margin-bottom: 8px;">
+            <button id="btnAddRamp" class="btn btn-sm" style="flex: 1; justify-content: center;" title="Generate 4 harmonious tones (base, highlight, shadow, outline) from 1 color">+ Auto Ramp</button>
+            <button id="btnAddSymbol" class="btn btn-sm" style="flex: 1; justify-content: center;" title="Add single character symbol to palette">+ Symbol</button>
+          </div>
+
+          <div class="control-row" style="margin-bottom: 8px;">
+            <span style="font-size: 11.5px; color: var(--text-muted);">Preset:</span>
+            <select id="selPalettePreset" style="flex: 1;">
+              <option value="">Custom Palette</option>
+              <option value="endesga32">Endesga 32 (Pixel Standard)</option>
+              <option value="pico8">PICO-8 (16 Colors)</option>
+              <option value="gameboy">GameBoy (4 Greens)</option>
+            </select>
+          </div>
+
+          <div id="paletteList" class="palette-list"></div>
+        </div>
+      </details>
+
+      <!-- 3. CANVAS SIZE & PREVIEW (Collapsed by default to reduce clutter) -->
+      <details class="inspector-group">
+        <summary>
+          <span>Size (8×8 – 128×128) &amp; Preview</span>
+        </summary>
+        <div class="inspector-body">
+          <div id="sizePills" class="size-pills">
+            <div class="size-pill" data-w="8" data-h="8">8×8</div>
+            <div class="size-pill" data-w="16" data-h="16">16×16</div>
+            <div class="size-pill" data-w="24" data-h="24">24×24</div>
+            <div class="size-pill active" data-w="32" data-h="32">32×32</div>
+            <div class="size-pill" data-w="48" data-h="48">48×48</div>
+            <div class="size-pill" data-w="64" data-h="64">64×64</div>
+            <div class="size-pill" data-w="96" data-h="96">96×96</div>
+            <div class="size-pill" data-w="128" data-h="128">128×128</div>
+          </div>
+
+          <div class="size-custom-row">
+            <input type="number" id="inputWidth" min="8" max="128" value="32" title="Width (8..128)" />
+            <span style="color: var(--text-muted);">×</span>
+            <input type="number" id="inputHeight" min="8" max="128" value="32" title="Height (8..128)" />
+            <button id="btnApplySize" class="btn btn-sm" style="flex: 1; justify-content: center;">Apply</button>
+          </div>
+
+          <div class="preview-boxes">
+            <div class="preview-item">
+              <canvas id="preview1x" class="preview-canvas" width="32" height="32"></canvas>
+              <span>1:1 Native</span>
+            </div>
+            <div class="preview-item">
+              <canvas id="previewTiled" class="preview-canvas" width="96" height="96"></canvas>
+              <span>3×3 Tiled</span>
+            </div>
+          </div>
+        </div>
+      </details>
+
+      <!-- 4. POST-PROCESSING & SYMMETRY (Collapsed by default to reduce clutter) -->
+      <details class="inspector-group">
+        <summary>
+          <span>Modifiers &amp; Post-FX</span>
+        </summary>
+        <div class="inspector-body">
+          <div class="control-row">
+            <span>Symmetry:</span>
+            <select id="selSymmetry">
+              <option value="none">None</option>
+              <option value="horizontal">Horizontal (↔)</option>
+              <option value="vertical">Vertical (↕)</option>
+              <option value="quad">Quad 4-Axis (✥)</option>
+            </select>
+          </div>
+
+          <div class="control-row">
+            <label style="display: flex; align-items: center; gap: 6px; cursor: pointer;">
+              <input type="checkbox" id="chkAutoOutline" />
+              <span>Auto-Outline (1px)</span>
+            </label>
+            <input type="color" id="inputOutlineColor" value="#14182e" class="color-swatch-input" title="Outer outline color" />
+          </div>
+
+          <div class="control-row">
+            <label style="display: flex; align-items: center; gap: 6px; cursor: pointer;">
+              <input type="checkbox" id="chkAutoShading" />
+              <span>Top-Left Shading</span>
+            </label>
+            <input
+              type="range"
+              id="inputShadingStrength"
+              min="5"
+              max="40"
+              value="16"
+              style="width: 90px; accent-color: var(--accent);"
+              title="Auto pixel-art shading intensity"
+            />
+          </div>
+        </div>
+      </details>
+    </aside>
+  </main>
+
+  <!-- Prompt & SKILL.md Modal -->
+  <div id="modalPrompt" class="modal-backdrop">
+    <div class="modal">
+      <div class="modal-header">
+        <span>📋 LLM Prompt Builder &amp; CLI Workflow (SKILL.md v2)</span>
+        <button id="btnClosePromptModal" class="btn btn-sm">✕</button>
+      </div>
+      <div class="modal-body">
+        <p style="color: var(--text-muted); line-height: 1.45;">
+          For headless generation from any LLM CLI, run <code>python pixeldsl.py sprites/my_sprite.json</code> (or pipe via <code>stdin</code>).
+          It validates edges/centering, prints a TrueColor ANSI preview in the terminal, exports PNGs to <code>game_ready/</code>, and syncs the sprite to this Web Studio!
+        </p>
+
+        <div class="control-row">
+          <label style="min-width: 100px;">Your Prompt:</label>
+          <input
+            type="text"
+            id="promptUserRequest"
+            value="32x32 pixel art turtle sprite, top-down view"
+            style="flex: 1;"
+          />
+        </div>
+
+        <div class="control-row">
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <label>Size:</label>
+            <select id="promptSizeSelect">
+              <option value="8x8">8×8 pixels</option>
+              <option value="16x16">16×16 pixels</option>
+              <option value="24x24">24×24 pixels</option>
+              <option value="32x32" selected>32×32 pixels</option>
+              <option value="48x48">48×48 pixels</option>
+              <option value="64x64">64×64 pixels</option>
+              <option value="96x96">96×96 pixels</option>
+              <option value="128x128">128×128 pixels</option>
+            </select>
+          </div>
+
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <label>Encoding Mode:</label>
+            <select id="promptModeSelect">
+              <option value="auto" selected>Auto (Grid ≤32, Layers &gt;32)</option>
+              <option value="grid">Symbolic Matrix (grid)</option>
+              <option value="layers">Hybrid Layers + Animation (layers)</option>
+            </select>
+          </div>
+        </div>
+
+        <textarea id="promptOutput" class="prompt-preview" readonly></textarea>
+      </div>
+      <div class="modal-footer">
+        <button id="btnCopyPrompt" class="btn btn-primary">📋 Copy Prompt to Clipboard</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="presets.js"></script>
+  <script src="renderer.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

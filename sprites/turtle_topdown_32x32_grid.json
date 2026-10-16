@@ -1,0 +1,68 @@
+{
+  "name": "turtle_topdown_32x32_grid",
+  "width": 32,
+  "height": 32,
+  "symmetry": "none",
+  "rle": false,
+  "ramps": {
+    "S": {
+      "base": "#3e8948",
+      "light": "L",
+      "dark": "B",
+      "outline": "O"
+    }
+  },
+  "palette": {
+    ".": "transparent",
+    "O": "#14182e",
+    "k": "#3b7d4f",
+    "h": "#63c74d",
+    "e": "#0f1016",
+    "w": "#ffffff",
+    "B": "#265c42",
+    "S": "#3e8948",
+    "L": "#73d95c",
+    "Y": "#e5b045"
+  },
+  "postProcess": {
+    "autoOutline": false,
+    "outlineColor": "#14182e",
+    "autoShading": false,
+    "shadingStrength": 0.16
+  },
+  "layers": [],
+  "grid": [
+    "................................",
+    ".............OOOOOO.............",
+    "............OhhhhhhO............",
+    "...........OewhhhhweO...........",
+    "...........OehhhhhheO...........",
+    "............OhkkkkhO............",
+    ".............OkkkkO.............",
+    "...OOOO....OOOOOOOOOO....OOOO...",
+    "..OhhhhO.OOBYYYYYYYYBOO.OhhhhO..",
+    ".OhhhhkkOOYBBBBBBBBBBYOOkkhhhhO.",
+    ".OkkkOOOYBBSSSSBBSSSSBBYOOOkkkO.",
+    "..OOO..OYBSSSSSBBSSSSSBYO..OOO..",
+    "......OYBBLLLLSBBSSSSSBBYO......",
+    "......OYBBBBBBBBBBBBBBBBYO......",
+    ".....OOYBSLLLLBBBBSSSSSBYOO.....",
+    ".....OYBBLLLLSBBBBSSSSSBBYO.....",
+    ".....OYBBLLLLSBBBBSSSSSBBYO.....",
+    ".....OYBBBBBBBBBBBBBBBBBBYO.....",
+    ".....OYBBSSSSSBBBBSSSSSBBYO.....",
+    ".....OOYBSSSSSBBBBSSSSSBYOO.....",
+    "......OYBBBBBBBBBBBBBBBBYO......",
+    "......OYBBSSSSBSSBSSSSBBYO......",
+    "..OOO..OYBSSSSBSSBSSSSBYO..OOO..",
+    ".OhhhOOOYBBSSSBSSBSSSBBYOOOhhhO.",
+    ".OhhhhkkOOYBBBBBBBBBBYOOkkhhhhO.",
+    "..OkkkkO.OOBYYYYYYYYBOO.OkkkkO..",
+    "...OOOO....OOOOOOOOOO....OOOO...",
+    "..............OkkO..............",
+    "..............OkkO..............",
+    "...............OO...............",
+    "................................",
+    "................................"
+  ]
+}
