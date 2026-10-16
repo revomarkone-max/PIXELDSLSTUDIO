@@ -1,5 +1,8 @@
 # PixelDSL Studio (`8×8` – `128×128`)
 
+[![License: MIT](https://img.shields.io/badge/Code_License-MIT-blue.svg)](./LICENSE)
+[![Assets: CC0-1.0](https://img.shields.io/badge/Generated_Assets-CC0_1.0_Public_Domain-brightgreen.svg)](https://creativecommons.org/publicdomain/zero/1.0/)
+
 **PixelDSL Studio** is a hybrid **AI-friendly + Human-friendly 2D Pixel-Art Asset Generator and Editor**. It bridges Large Language Models (LLMs) and pixel-art creation by translating natural-language prompts (e.g., *"32x32 pixel art turtle sprite, top-down view"*) into deterministic **PixelDSL JSON** code and compiling it into crisp, game-ready `.png` sprites and animated sprite sheets.
 
 ---
@@ -62,4 +65,11 @@ cat sprites/turtle_topdown_32x32_grid.json | python pixeldsl.py -
 ```
 
 ### 3. AI Agent Skill (`SKILL.md`)
-The repository includes [`.agents/skills/pixel-sprite-generator/SKILL.md`](./.agents/skills/pixel-sprite-generator/SKILL.md) and root [`SKILL.md`](./SKILL.md) so AI coding agents automatically know the PixelDSL v2 schema and CLI workflow.
+The repository includes [`.agents/skills/pixel-sprite-generator/SKILL.md`](./.agents/skills/pixel-sprite-generator/SKILL.md) and root [`SKILL.md`](./SKILL.md) so AI coding agents automatically know the PixelDSL v2.5 schema and CLI workflow.
+
+---
+
+## 📄 License
+
+- **Source Code & Engine (`renderer.js`, `app.js`, `pixeldsl.py`, `SKILL.md`)**: Licensed under the **[MIT License](./LICENSE)**.
+- **Generated Sprites & Bundled Presets (`sprites/`, `game_ready/`, `presets.js`)**: Dedicated to the public domain under **[CC0 1.0 Universal](https://creativecommons.org/publicdomain/zero/1.0/)**. Any sprites you create or export with PixelDSL Studio belong 100% to you and may be used freely in commercial or non-commercial games without attribution requirements.
