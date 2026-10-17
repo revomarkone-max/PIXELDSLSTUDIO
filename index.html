@@ -3,7 +3,28 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>PixelDSL Studio v3.0 — Procedural 2D Pixel-Art &amp; Skeletal Rig Studio</title>
+  <title>PixelDSL Studio v3.0 — Autonomous 2D Pixel-Art, Procedural Archetypes &amp; Modular Paper Doll</title>
+  
+  <!-- Primary Meta Tags & SEO -->
+  <meta name="title" content="PixelDSL Studio v3.0 — Autonomous 2D Pixel-Art, Procedural Archetypes &amp; Modular Paper Doll" />
+  <meta name="description" content="Free open-source 2D pixel-art generator, procedural archetype forge, modular paper doll equipment system, and skeletal animation rig studio with tangent-space normal maps for Godot 4 and Unity 2D." />
+  <meta name="keywords" content="pixel art, pixelart, procedural generation, gamedev, indiedev, indie game, sprite generator, sprite sheet, skeletal animation, paper doll, paperdoll, modular armor, godot 4, godot engine, unity 2d, normal maps, 2.5D lighting, oklab, signed distance field, sdf, roguelike, procedural sprite, pixel art editor" />
+  <meta name="author" content="PixelDSL Studio Team" />
+  <meta name="robots" content="index, follow" />
+  <meta name="theme-color" content="#0d0f17" />
+
+  <!-- Open Graph / Facebook / Discord -->
+  <meta property="og:type" content="website" />
+  <meta property="og:title" content="PixelDSL Studio v3.0 — Procedural 2D Pixel-Art &amp; Modular Paper Doll Studio" />
+  <meta property="og:description" content="Autonomous 2D Pixel-Art Mathematical Engine, Procedural Archetypes, Modular Paper Doll Equipment Matrix, and 3D Tangent Normal Maps for Game Developers." />
+  <meta property="og:image" content="./sprites/white_pink_bunny_jump_32x32.png" />
+
+  <!-- Twitter Card -->
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="PixelDSL Studio v3.0 — 2D Pixel-Art &amp; Paper Doll Engine" />
+  <meta name="twitter:description" content="Zero-dependency procedural pixel-art asset generator, evolutionary sprite mutator, and modular skeletal equipment system." />
+  <meta name="twitter:image" content="./sprites/white_pink_bunny_jump_32x32.png" />
+
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
@@ -34,10 +55,10 @@
         <span class="tab-icon">🧬</span>
         <span class="tab-label">Archetype Forge</span>
       </button>
-      <button class="workspace-tab" data-workspace="paperdoll" title="Modular Paper Doll &amp; Equipment (WIP)">
+      <button class="workspace-tab" data-workspace="paperdoll" title="Modular Paper Doll &amp; Equipment Matrix">
         <span class="tab-icon">🥋</span>
         <span class="tab-label">Paper Doll</span>
-        <span class="tab-badge-wip">v3.2 WIP</span>
+        <span class="tab-badge-live">Live</span>
       </button>
       <button class="workspace-tab" data-workspace="compass" title="4-Way &amp; 8-Way Directional Compass (WIP)">
         <span class="tab-icon">🧭</span>
@@ -630,130 +651,156 @@
 
 
     <!-- ==========================================
-         WORKSPACE 3: MODULAR PAPER DOLL & EQUIPMENT (WIP)
+         WORKSPACE 3: MODULAR PAPER DOLL & EQUIPMENT MATRIX
          ========================================== -->
     <div id="workspacePaperDoll" class="workspace-view">
-      <div class="module-placeholder-wrap">
-        <div class="module-header-hero">
-          <div class="hero-badge-wrap">
-            <span class="hero-pill-badge">🥋 Roadmap Module • Release v3.2</span>
+      <div class="paperdoll-layout">
+        <!-- LEFT: LOADOUTS & EQUIPMENT SELECTION -->
+        <aside class="paperdoll-sidebar-left">
+          <div class="forge-panel-title">
+            <span>🥋 Paper Doll Rigs</span>
+            <span class="badge-type">Modular FK</span>
           </div>
-          <h1 class="hero-title">Modular Paper Doll &amp; Equipment Matrix</h1>
-          <p class="hero-subtitle">
-            Procedural bone-attached modular armor, helmets, boots, and weapons that automatically snap and sync with skeletal rig kinematics frame-by-frame with zero manual re-alignment.
-          </p>
-        </div>
 
-        <div class="module-grid-3col">
-          <!-- Left: Equipment Slots -->
-          <div class="module-card">
-            <div class="card-title">
-              <span>🛡️ Modular Equipment Slots</span>
-              <span class="tag-status">Interactive Preview</span>
-            </div>
-            <p class="card-desc">Click equipment slots to test dynamic layer attachment:</p>
-            <div class="equip-slots-list" id="paperDollSlotsList">
-              <div class="slot-item active" data-slot="head">
-                <span class="slot-icon">🪖</span>
-                <div class="slot-info">
-                  <span class="slot-name">Headgear</span>
-                  <span class="slot-val">Knight Full-Helm (Steel)</span>
-                </div>
-                <button class="btn btn-sm btn-slot-toggle">Equipped</button>
-              </div>
-              <div class="slot-item active" data-slot="torso">
-                <span class="slot-icon">🛡️</span>
-                <div class="slot-info">
-                  <span class="slot-name">Torso Armor</span>
-                  <span class="slot-val">Steel Plate Cuirass</span>
-                </div>
-                <button class="btn btn-sm btn-slot-toggle">Equipped</button>
-              </div>
-              <div class="slot-item active" data-slot="hands">
-                <span class="slot-icon">🧤</span>
-                <div class="slot-info">
-                  <span class="slot-name">Gauntlets</span>
-                  <span class="slot-val">Armored Vambraces</span>
-                </div>
-                <button class="btn btn-sm btn-slot-toggle">Equipped</button>
-              </div>
-              <div class="slot-item active" data-slot="legs">
-                <span class="slot-icon">👖</span>
-                <div class="slot-info">
-                  <span class="slot-name">Leg Armor</span>
-                  <span class="slot-val">Chainmail Chausses</span>
-                </div>
-                <button class="btn btn-sm btn-slot-toggle">Equipped</button>
-              </div>
-              <div class="slot-item active" data-slot="feet">
-                <span class="slot-icon">👢</span>
-                <div class="slot-info">
-                  <span class="slot-name">Footwear</span>
-                  <span class="slot-val">Steel Sabatons</span>
-                </div>
-                <button class="btn btn-sm btn-slot-toggle">Equipped</button>
-              </div>
-              <div class="slot-item active" data-slot="weapon">
-                <span class="slot-icon">⚔️</span>
-                <div class="slot-info">
-                  <span class="slot-name">Main-Hand</span>
-                  <span class="slot-val">Runed Broadsword</span>
-                </div>
-                <button class="btn btn-sm btn-slot-toggle">Equipped</button>
-              </div>
-              <div class="slot-item active" data-slot="shield">
-                <span class="slot-icon">🔰</span>
-                <div class="slot-info">
-                  <span class="slot-name">Off-Hand</span>
-                  <span class="slot-val">Kite Shield (Royal Crest)</span>
-                </div>
-                <button class="btn btn-sm btn-slot-toggle">Equipped</button>
-              </div>
+          <!-- Base Mannequin Selector -->
+          <div class="forge-section">
+            <label class="forge-label">Base Mannequin Rig</label>
+            <div class="segmented-control" id="paperDollMannequinBtns">
+              <button class="seg-btn active" data-mannequin="humanoid">🧍 Heroic</button>
+              <button class="seg-btn" data-mannequin="chibi">👶 Chibi</button>
+              <button class="seg-btn" data-mannequin="skeleton">💀 Skeleton</button>
+              <button class="seg-btn" data-mannequin="orc">🧌 Orc</button>
             </div>
           </div>
 
-          <!-- Center: Interactive Paper Doll Mannequin Preview -->
-          <div class="module-card card-center-preview">
-            <div class="card-title">
-              <span>🧍 Live Mannequin Assembly</span>
-              <span class="tag-live">Animated Rig</span>
+          <!-- Quick Loadout Preset Dropdown -->
+          <div class="forge-section">
+            <label class="forge-label">Quick Archetype Loadout</label>
+            <select id="selPaperDollLoadout" class="forge-select">
+              <option value="paladin" selected>🛡️ Paladin Knight</option>
+              <option value="archmage">🔮 High Archmage</option>
+              <option value="assassin">🗡️ Shadow Assassin</option>
+              <option value="death_knight">💀 Undead Death Knight</option>
+              <option value="sovereign">👑 Golden Sovereign</option>
+              <option value="orc_berserker">🧌 Orc Berserker</option>
+              <option value="chibi_hero">👶 Chibi Hero</option>
+              <option value="unarmored">🥋 Bare Mannequin</option>
+            </select>
+          </div>
+
+          <!-- Material / Tint Theme -->
+          <div class="forge-section">
+            <label class="forge-label">Armor Material &amp; Tint</label>
+            <select id="selPaperDollTheme" class="forge-select">
+              <option value="steel" selected>⚔️ Polished Steel &amp; Iron</option>
+              <option value="gold">👑 Imperial Gilded Gold</option>
+              <option value="dark_iron">🌌 Abyssal Dark Iron</option>
+              <option value="crimson">🩸 Blood Knight Crimson</option>
+              <option value="cobalt">⚡ Runic Cobalt Blue</option>
+              <option value="emerald">🌲 Verdant Ranger Emerald</option>
+              <option value="obsidian">🔥 Volcanic Obsidian &amp; Flame</option>
+            </select>
+          </div>
+
+          <!-- Slot-by-Slot Equipment Matrix -->
+          <div class="forge-section">
+            <label class="forge-label">Modular Equipment Slots</label>
+            <div class="paperdoll-slots-container" id="paperDollSlotsContainer"></div>
+          </div>
+
+          <!-- Primary Action Card: Inject into Canvas Studio -->
+          <div class="forge-action-card">
+            <button id="btnPaperDollOpenInStudio" class="btn btn-primary btn-glow" title="Compile and inject this customized loadout directly into Canvas Studio for bone posing and pixel editing">
+              ⚡ Open in Canvas Studio
+            </button>
+            <div class="forge-export-grid">
+              <button id="btnPaperDollExportPng" class="btn btn-sm">💾 PNG (1:1)</button>
+              <button id="btnPaperDollExportSheet" class="btn btn-sm">🎞️ Sprite Sheet</button>
+              <button id="btnPaperDollExportNormal" class="btn btn-sm">💡 Normal Map</button>
+              <button id="btnPaperDollCopyJson" class="btn btn-sm">📋 Copy JSON</button>
             </div>
-            <div class="paperdoll-canvas-box">
-              <canvas id="paperDollCanvas" width="256" height="256"></canvas>
+          </div>
+        </aside>
+
+        <!-- CENTER: LIVE PAPER DOLL VIEWPORT -->
+        <section class="paperdoll-viewport">
+          <div class="forge-viewport-toolbar">
+            <div class="paperdoll-action-pills" id="paperDollActionPills">
+              <button class="action-pill active" data-action="walk">🚶 Walk (8f)</button>
+              <button class="action-pill" data-action="attack">⚔️ Attack (6f)</button>
+              <button class="action-pill" data-action="idle">🧘 Idle (6f)</button>
+              <button class="action-pill" data-action="hurt">💥 Hurt (4f)</button>
+              <button class="action-pill" data-action="run">🏃 Run (6f)</button>
             </div>
-            <div class="paperdoll-action-row">
-              <button id="btnPaperDollWalk" class="btn btn-sm active">Walk Cycle</button>
-              <button id="btnPaperDollAttack" class="btn btn-sm">Attack Slash</button>
-              <button id="btnPaperDollIdle" class="btn btn-sm">Idle Breathe</button>
+
+            <div class="forge-playback-controls">
+              <button id="btnPaperDollPlayAnim" class="btn btn-sm">▶ Play</button>
+              <select id="selPaperDollFps" class="btn-sm">
+                <option value="4">4 FPS</option>
+                <option value="6">6 FPS</option>
+                <option value="8" selected>8 FPS</option>
+                <option value="10">10 FPS</option>
+                <option value="12">12 FPS</option>
+                <option value="16">16 FPS</option>
+              </select>
+              <span id="lblPaperDollFrameIndicator" class="forge-frame-indicator">Frame 1 / 8</span>
+            </div>
+
+            <div class="forge-overlay-controls">
+              <label class="toggle-pill">
+                <input type="checkbox" id="chkPaperDollBones" checked />
+                <span>🦴 Rig Bones</span>
+              </label>
+              <label class="toggle-pill">
+                <input type="checkbox" id="chkPaperDollNormals" />
+                <span>💡 3D Normals</span>
+              </label>
+              <label class="toggle-pill">
+                <input type="checkbox" id="chkPaperDollZTiers" />
+                <span>🔲 Z-Tiers</span>
+              </label>
+              <select id="selPaperDollZoom" title="Zoom">
+                <option value="4">4×</option>
+                <option value="6">6×</option>
+                <option value="8" selected>8×</option>
+                <option value="12">12×</option>
+              </select>
             </div>
           </div>
 
-          <!-- Right: Architecture & Math Specs -->
-          <div class="module-card">
-            <div class="card-title">
-              <span>📐 Mathematical Architecture</span>
-              <span class="tag-math">Bone-Parent Matrix</span>
-            </div>
-            <div class="spec-block">
-              <h4>Universal Kinematic Transform</h4>
-              <p>
-                Each equipment asset is defined in bone-relative coordinates:
-                <br><code>P_{world} = T_{bone} × R(θ_{bone}) × P_{local}</code>
-              </p>
-              <p>
-                When a character swings their arm or crouches, the sword or shield maintains mathematically exact alignment with zero manual frame adjustment.
-              </p>
-            </div>
-            <div class="spec-block">
-              <h4>Export Compatibility</h4>
-              <ul class="spec-bullet-list">
-                <li>Godot 4 <code>Skeleton2D</code> + <code>Bone2D</code> synchronization</li>
-                <li>Unity 2D Animation Bone Sprite Resolver</li>
-                <li>Single-drawcall dynamic atlas layering</li>
-              </ul>
+          <div class="paperdoll-canvas-container">
+            <div id="paperDollCanvasWrapper" class="paperdoll-canvas-wrapper bg-checker">
+              <canvas id="paperDollCanvas" width="384" height="384"></canvas>
             </div>
           </div>
-        </div>
+
+          <!-- Timeline Scrubber for Paper Doll -->
+          <div class="paperdoll-timeline-strip" id="paperDollTimelineStrip"></div>
+        </section>
+
+        <!-- RIGHT: DYNAMIC Z-DEPTH MATRIX & STAT RATINGS -->
+        <aside class="paperdoll-sidebar-right">
+          <div class="forge-panel-title">
+            <span>📐 Dynamic Z-Depth Matrix</span>
+            <span id="badgePaperDollBoneCount" class="badge-type">42 Bones</span>
+          </div>
+
+          <!-- Real-Time Combat Stat Weights -->
+          <div class="paperdoll-stats-card" id="paperDollStatsCard"></div>
+
+          <!-- Z-Tier Depth Stack Preview -->
+          <div class="paperdoll-ztier-stack" id="paperDollZTierStack"></div>
+
+          <!-- Engine Export Guide -->
+          <div class="spec-block">
+            <h4>🎮 Engine Export Compatibility</h4>
+            <ul class="spec-bullet-list">
+              <li><strong>Godot 4:</strong> Synchronous <code>Skeleton2D</code> + <code>Bone2D</code> hierarchy with 2D lighting normal maps</li>
+              <li><strong>Unity 2D:</strong> Compatible with 2D Animation Bone Sprite Resolver &amp; universal skinning</li>
+              <li><strong>Single-Drawcall Atlas:</strong> All gear layers composited deterministically without runtime depth-sorting overhead</li>
+            </ul>
+          </div>
+        </aside>
       </div>
     </div>
 
@@ -1064,6 +1111,7 @@ litMat.SetTexture("_NormalMap", normalTexture);</code></pre>
   <!-- Scripts -->
   <script src="presets.js"></script>
   <script src="archetypes.js"></script>
+  <script src="paperdoll.js"></script>
   <script src="renderer.js"></script>
   <script src="app.js"></script>
 </body>

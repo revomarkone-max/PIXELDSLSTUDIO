@@ -2637,81 +2637,509 @@
   }
 
   // ==========================================
-  // Workspace 3: Paper Doll Showcase
+  // Workspace 3: Modular Paper Doll Studio
   // ==========================================
-  let paperDollFrame = 0;
-  let paperDollTimer = null;
-  const paperDollEquip = { head: true, torso: true, hands: true, legs: true, feet: true, weapon: true, shield: true };
+  let paperDollActiveMannequin = "humanoid";
+  let paperDollActiveLoadout = "paladin";
+  let paperDollActiveTheme = "steel";
+  let paperDollActiveAction = "walk";
+  let paperDollEquippedSlots = {
+    head: "iron_helm",
+    torso: "steel_cuirass",
+    hands: "steel_gauntlets",
+    legs: "plate_greaves",
+    feet: "iron_sabatons",
+    weapon: "runed_broadsword",
+    shield: "kite_shield",
+    back: "red_cape"
+  };
+  let paperDollFrameIndex = 0;
+  let paperDollIsPlaying = true;
+  let paperDollAnimTimer = null;
+  let compiledPaperDollSpec = null;
 
   function initPaperDoll() {
-    const list = document.getElementById("paperDollSlotsList");
-    if (list) {
-      list.querySelectorAll(".slot-item").forEach(item => {
-        const slotKey = item.dataset.slot;
-        const btn = item.querySelector(".btn-slot-toggle");
-        item.addEventListener("click", () => {
-          paperDollEquip[slotKey] = !paperDollEquip[slotKey];
-          item.classList.toggle("active", paperDollEquip[slotKey]);
-          if (btn) btn.textContent = paperDollEquip[slotKey] ? "Equipped" : "Unequipped";
-          renderPaperDollDemo();
-        });
+    if (!window.PaperDollEngine) return;
+
+    const PDE = window.PaperDollEngine;
+
+    // 1. Mannequin Buttons
+    const mannequinBtns = document.querySelectorAll("#paperDollMannequinBtns button[data-mannequin]");
+    mannequinBtns.forEach(btn => {
+      btn.addEventListener("click", () => {
+        paperDollActiveMannequin = btn.dataset.mannequin;
+        mannequinBtns.forEach(b => b.classList.toggle("active", b === btn));
+        compileAndRenderPaperDoll();
+      });
+    });
+
+    // 2. Loadout Selector
+    const selLoadout = document.getElementById("selPaperDollLoadout");
+    if (selLoadout) {
+      selLoadout.addEventListener("change", () => {
+        const loadoutKey = selLoadout.value;
+        const ld = PDE.LOADOUTS[loadoutKey];
+        if (ld) {
+          paperDollActiveLoadout = loadoutKey;
+          paperDollActiveMannequin = ld.mannequin || "humanoid";
+          paperDollActiveTheme = ld.theme || "steel";
+          paperDollEquippedSlots = Object.assign({}, ld.slots);
+
+          // Update UI controls
+          mannequinBtns.forEach(b => b.classList.toggle("active", b.dataset.mannequin === paperDollActiveMannequin));
+          const selTheme = document.getElementById("selPaperDollTheme");
+          if (selTheme) selTheme.value = paperDollActiveTheme;
+
+          populatePaperDollSlotsUI();
+          compileAndRenderPaperDoll();
+        }
       });
     }
 
-    const actionBtns = ["btnPaperDollWalk", "btnPaperDollAttack", "btnPaperDollIdle"];
-    actionBtns.forEach(id => {
-      const btn = document.getElementById(id);
-      if (btn) {
-        btn.addEventListener("click", () => {
-          actionBtns.forEach(bId => {
-            const b = document.getElementById(bId);
-            if (b) b.classList.toggle("active", b === btn);
-          });
-          renderPaperDollDemo();
-        });
-      }
+    // 3. Theme Selector
+    const selTheme = document.getElementById("selPaperDollTheme");
+    if (selTheme) {
+      selTheme.addEventListener("change", () => {
+        paperDollActiveTheme = selTheme.value;
+        compileAndRenderPaperDoll();
+      });
+    }
+
+    // 4. Action Pills
+    const actionPills = document.querySelectorAll("#paperDollActionPills button[data-action]");
+    actionPills.forEach(pill => {
+      pill.addEventListener("click", () => {
+        paperDollActiveAction = pill.dataset.action;
+        actionPills.forEach(p => p.classList.toggle("active", p === pill));
+        paperDollFrameIndex = 0;
+        compileAndRenderPaperDoll();
+        startPaperDollAnimLoop();
+      });
     });
 
-    if (paperDollTimer) clearInterval(paperDollTimer);
-    paperDollTimer = setInterval(() => {
-      const ws = document.getElementById("workspacePaperDoll");
-      if (ws && ws.classList.contains("active")) {
-        paperDollFrame = (paperDollFrame + 1) % 8;
-        renderPaperDollDemo();
-      }
-    }, 125);
+    // 5. Playback Controls
+    const btnPlay = document.getElementById("btnPaperDollPlayAnim");
+    if (btnPlay) {
+      btnPlay.addEventListener("click", () => {
+        paperDollIsPlaying = !paperDollIsPlaying;
+        btnPlay.textContent = paperDollIsPlaying ? "⏸ Pause" : "▶ Play";
+      });
+    }
+
+    const selFps = document.getElementById("selPaperDollFps");
+    if (selFps) {
+      selFps.addEventListener("change", () => {
+        startPaperDollAnimLoop();
+      });
+    }
+
+    // 6. Viewport Overlays
+    const chkBones = document.getElementById("chkPaperDollBones");
+    const chkNormals = document.getElementById("chkPaperDollNormals");
+    const chkZTiers = document.getElementById("chkPaperDollZTiers");
+    const selZoom = document.getElementById("selPaperDollZoom");
+
+    [chkBones, chkNormals, chkZTiers, selZoom].forEach(el => {
+      if (el) el.addEventListener("change", () => drawPaperDollFrame());
+    });
+
+    // 7. Action Card Buttons
+    const btnStudio = document.getElementById("btnPaperDollOpenInStudio");
+    if (btnStudio) {
+      btnStudio.addEventListener("click", () => {
+        if (!compiledPaperDollSpec) return;
+        currentSpec = JSON.parse(JSON.stringify(compiledPaperDollSpec));
+        syncEditorFromSpec();
+        syncInspectorFromSpec();
+        document.querySelectorAll(".workspace-tab").forEach(t => t.classList.toggle("active", t.dataset.workspace === "studio"));
+        document.querySelectorAll(".workspace-view").forEach(v => v.classList.toggle("active", v.id === "workspaceStudio"));
+        renderAll();
+        showToast(`⚡ Injected "${compiledPaperDollSpec.label}" into Canvas Studio!`, "success");
+      });
+    }
+
+    const btnPng = document.getElementById("btnPaperDollExportPng");
+    if (btnPng) {
+      btnPng.addEventListener("click", () => {
+        exportPaperDollPng();
+      });
+    }
+
+    const btnSheet = document.getElementById("btnPaperDollExportSheet");
+    if (btnSheet) {
+      btnSheet.addEventListener("click", () => {
+        exportPaperDollSheet();
+      });
+    }
+
+    const btnNormal = document.getElementById("btnPaperDollExportNormal");
+    if (btnNormal) {
+      btnNormal.addEventListener("click", () => {
+        exportPaperDollNormal();
+      });
+    }
+
+    const btnJson = document.getElementById("btnPaperDollCopyJson");
+    if (btnJson) {
+      btnJson.addEventListener("click", () => {
+        if (!compiledPaperDollSpec) return;
+        navigator.clipboard.writeText(JSON.stringify(compiledPaperDollSpec, null, 2));
+        showToast("📋 Copied Paper Doll JSON spec to clipboard!", "copy");
+      });
+    }
+
+    populatePaperDollSlotsUI();
+    compileAndRenderPaperDoll();
+    startPaperDollAnimLoop();
   }
 
-  function renderPaperDollDemo() {
+  function populatePaperDollSlotsUI() {
+    const container = document.getElementById("paperDollSlotsContainer");
+    if (!container || !window.PaperDollEngine) return;
+    const PDE = window.PaperDollEngine;
+
+    container.innerHTML = "";
+
+    PDE.SLOTS.forEach(slotDef => {
+      const row = document.createElement("div");
+      row.className = "paperdoll-slot-row";
+
+      const iconSpan = document.createElement("span");
+      iconSpan.className = "paperdoll-slot-icon";
+      iconSpan.textContent = slotDef.icon;
+      iconSpan.title = slotDef.name;
+
+      const sel = document.createElement("select");
+      sel.className = "paperdoll-slot-select";
+      sel.dataset.slot = slotDef.id;
+
+      // Fill options with items matching this slot
+      const matchingItems = Object.values(PDE.ITEMS).filter(it => it.slot === slotDef.id || it.id === "none");
+      matchingItems.forEach(it => {
+        const opt = document.createElement("option");
+        opt.value = it.id;
+        opt.textContent = it.name;
+        if (paperDollEquippedSlots[slotDef.id] === it.id) {
+          opt.selected = true;
+        }
+        sel.appendChild(opt);
+      });
+
+      const currentItem = paperDollEquippedSlots[slotDef.id] || "none";
+      const isEquipped = currentItem !== "none";
+
+      const toggleBtn = document.createElement("button");
+      toggleBtn.className = "paperdoll-slot-toggle" + (isEquipped ? " equipped" : "");
+      toggleBtn.textContent = isEquipped ? "Equipped" : "Empty";
+
+      sel.addEventListener("change", () => {
+        paperDollEquippedSlots[slotDef.id] = sel.value;
+        const active = sel.value !== "none";
+        toggleBtn.className = "paperdoll-slot-toggle" + (active ? " equipped" : "");
+        toggleBtn.textContent = active ? "Equipped" : "Empty";
+        compileAndRenderPaperDoll();
+      });
+
+      toggleBtn.addEventListener("click", () => {
+        if (paperDollEquippedSlots[slotDef.id] && paperDollEquippedSlots[slotDef.id] !== "none") {
+          paperDollEquippedSlots[slotDef.id] = "none";
+          sel.value = "none";
+          toggleBtn.className = "paperdoll-slot-toggle";
+          toggleBtn.textContent = "Empty";
+        } else {
+          paperDollEquippedSlots[slotDef.id] = slotDef.defaultItem;
+          sel.value = slotDef.defaultItem;
+          toggleBtn.className = "paperdoll-slot-toggle equipped";
+          toggleBtn.textContent = "Equipped";
+        }
+        compileAndRenderPaperDoll();
+      });
+
+      row.appendChild(iconSpan);
+      row.appendChild(sel);
+      row.appendChild(toggleBtn);
+      container.appendChild(row);
+    });
+  }
+
+  function compileAndRenderPaperDoll() {
+    if (!window.PaperDollEngine) return;
+    const PDE = window.PaperDollEngine;
+
+    compiledPaperDollSpec = PDE.assembleSpec(
+      paperDollActiveMannequin,
+      paperDollEquippedSlots,
+      paperDollActiveAction,
+      {
+        theme: paperDollActiveTheme,
+        outline: "o",
+        outlineWidth: 1,
+        selOut: true
+      }
+    );
+
+    // Update Bone Count Badge
+    const badgeCount = document.getElementById("badgePaperDollBoneCount");
+    const totalBones = (compiledPaperDollSpec.rig && compiledPaperDollSpec.rig.bones) ? compiledPaperDollSpec.rig.bones.length : 0;
+    if (badgeCount) {
+      badgeCount.textContent = `${totalBones} Active Bones`;
+    }
+
+    // Update Combat Stats
+    const summary = PDE.calculateLoadoutSummary(paperDollActiveMannequin, paperDollEquippedSlots, paperDollActiveTheme);
+    const statsCard = document.getElementById("paperDollStatsCard");
+    if (statsCard) {
+      const st = summary.stats;
+      statsCard.innerHTML = `
+        <div class="paperdoll-stat-item">
+          <span class="stat-item-label">⚔️ Attack Power</span>
+          <span class="stat-item-value" style="color: #f87171;">${st.atk || 0}</span>
+        </div>
+        <div class="paperdoll-stat-item">
+          <span class="stat-item-label">🛡️ Armor Rating</span>
+          <span class="stat-item-value" style="color: #60a5fa;">${st.def || 0}</span>
+        </div>
+        <div class="paperdoll-stat-item">
+          <span class="stat-item-label">⚖️ Total Weight</span>
+          <span class="stat-item-value" style="color: #fbbf24;">${(st.weight || 0).toFixed(1)} kg</span>
+        </div>
+        <div class="paperdoll-stat-item">
+          <span class="stat-item-label">🔮 Magic / Mana</span>
+          <span class="stat-item-value" style="color: #c084fc;">+${st.mana || 0}</span>
+        </div>
+      `;
+    }
+
+    // Update Z-Tier Stack
+    const zStack = document.getElementById("paperDollZTierStack");
+    if (zStack && compiledPaperDollSpec.rig && compiledPaperDollSpec.rig.bones) {
+      const sortedBones = [...compiledPaperDollSpec.rig.bones].sort((a, b) => Number(b.z || 0) - Number(a.z || 0));
+      zStack.innerHTML = sortedBones.map(b => `
+        <div class="ztier-layer-row">
+          <span class="ztier-layer-name">${b.id}</span>
+          <span class="ztier-layer-tag">Z = ${(Number(b.z || 0)).toFixed(2)}</span>
+        </div>
+      `).join("");
+    }
+
+    buildPaperDollTimelineStrip();
+    drawPaperDollFrame();
+  }
+
+  function buildPaperDollTimelineStrip() {
+    const strip = document.getElementById("paperDollTimelineStrip");
+    if (!strip || !compiledPaperDollSpec) return;
+    strip.innerHTML = "";
+
+    const numFrames = Math.max(1, compiledPaperDollSpec.frames ? compiledPaperDollSpec.frames.length : 1);
+    for (let fi = 0; fi < numFrames; fi++) {
+      const thumb = document.createElement("div");
+      thumb.className = "forge-frame-thumb" + (fi === paperDollFrameIndex ? " active" : "");
+      thumb.title = `Scrub to Frame ${fi + 1}`;
+
+      const tCanvas = document.createElement("canvas");
+      tCanvas.width = 36;
+      tCanvas.height = 36;
+      const tCtx = tCanvas.getContext("2d");
+      tCtx.imageSmoothingEnabled = false;
+
+      const fRes = PixelDSLRenderer.renderRig(compiledPaperDollSpec, fi + 1);
+      const off = document.createElement("canvas");
+      off.width = fRes.width;
+      off.height = fRes.height;
+      const offCtx = off.getContext("2d");
+      const imgData = offCtx.createImageData(fRes.width, fRes.height);
+      imgData.data.set(fRes.buffer);
+      offCtx.putImageData(imgData, 0, 0);
+
+      tCtx.drawImage(off, 0, 0, 36, 36);
+
+      const numBadge = document.createElement("span");
+      numBadge.className = "thumb-num";
+      numBadge.textContent = fi + 1;
+
+      thumb.appendChild(tCanvas);
+      thumb.appendChild(numBadge);
+
+      const fIdx = fi;
+      thumb.addEventListener("click", () => {
+        paperDollFrameIndex = fIdx;
+        drawPaperDollFrame();
+      });
+      strip.appendChild(thumb);
+    }
+  }
+
+  function drawPaperDollFrame() {
     const canvas = document.getElementById("paperDollCanvas");
-    if (!canvas || !window.ArchetypeCompiler) return;
+    if (!canvas || !compiledPaperDollSpec) return;
+
+    const numFrames = Math.max(1, compiledPaperDollSpec.frames ? compiledPaperDollSpec.frames.length : 1);
+    paperDollFrameIndex = paperDollFrameIndex % numFrames;
+
+    const lblIndicator = document.getElementById("lblPaperDollFrameIndicator");
+    if (lblIndicator) {
+      lblIndicator.textContent = `Frame ${paperDollFrameIndex + 1} / ${numFrames}`;
+    }
+
+    // Active thumb in strip
+    const strip = document.getElementById("paperDollTimelineStrip");
+    if (strip) {
+      strip.querySelectorAll(".forge-frame-thumb").forEach((t, idx) => {
+        t.classList.toggle("active", idx === paperDollFrameIndex);
+      });
+    }
+
+    const renderRes = PixelDSLRenderer.renderRig(compiledPaperDollSpec, paperDollFrameIndex + 1);
+    const w = renderRes.width;
+    const h = renderRes.height;
+
+    const selZoom = document.getElementById("selPaperDollZoom");
+    const scale = selZoom ? parseInt(selZoom.value, 10) || 8 : 8;
+
+    canvas.width = w * scale;
+    canvas.height = h * scale;
     const ctx = canvas.getContext("2d");
     ctx.imageSmoothingEnabled = false;
 
-    const baseArch = window.ArchetypeCompiler.compile({
-      archetypeId: "humanoid",
-      width: 32,
-      height: 36,
-      action: "walk",
-      frames: 8,
-      headScale: 1.1,
-      paletteTheme: "royal"
-    });
-
-    const res = PixelDSLRenderer.render(baseArch, paperDollFrame);
-    const scale = 5;
-    canvas.width = res.width * scale;
-    canvas.height = res.height * scale;
+    const showNormals = Boolean(document.getElementById("chkPaperDollNormals") && document.getElementById("chkPaperDollNormals").checked);
+    const showBones = Boolean(document.getElementById("chkPaperDollBones") && document.getElementById("chkPaperDollBones").checked);
 
     const off = document.createElement("canvas");
-    off.width = res.width;
-    off.height = res.height;
-    const octx = off.getContext("2d");
-    const imgData = octx.createImageData(res.width, res.height);
-    imgData.data.set(res.buffer);
-    octx.putImageData(imgData, 0, 0);
+    off.width = w;
+    off.height = h;
+    const offCtx = off.getContext("2d");
+    const imgData = offCtx.createImageData(w, h);
+
+    if (showNormals && renderRes.normalBuffer) {
+      imgData.data.set(renderRes.normalBuffer);
+    } else {
+      imgData.data.set(renderRes.buffer);
+    }
+    offCtx.putImageData(imgData, 0, 0);
 
     ctx.drawImage(off, 0, 0, canvas.width, canvas.height);
+
+    // Draw skeletal rig bone overlay if requested
+    if (showBones && compiledPaperDollSpec.rig && Array.isArray(compiledPaperDollSpec.rig.bones)) {
+      const fDef = (compiledPaperDollSpec.frames && compiledPaperDollSpec.frames[paperDollFrameIndex]) || {};
+      const pose = fDef.pose || {};
+      const fk = PixelDSLRenderer.solveFkRig(compiledPaperDollSpec.rig.bones, pose);
+
+      ctx.save();
+      ctx.scale(scale, scale);
+
+      for (const [bid, xf] of Object.entries(fk)) {
+        const ax = xf.start[0];
+        const ay = xf.start[1];
+        const bx = xf.end[0];
+        const by = xf.end[1];
+        const isEq = bid.startsWith("eq_");
+
+        ctx.strokeStyle = isEq ? "rgba(234, 179, 8, 0.85)" : "rgba(99, 102, 241, 0.85)";
+        ctx.lineWidth = 1 / scale;
+        ctx.beginPath();
+        ctx.moveTo(ax, ay);
+        ctx.lineTo(bx, by);
+        ctx.stroke();
+
+        ctx.fillStyle = isEq ? "#facc15" : "#60a5fa";
+        ctx.beginPath();
+        ctx.arc(ax, ay, 1.2 / scale, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.fillStyle = "#ec4899";
+        ctx.beginPath();
+        ctx.arc(bx, by, 0.9 / scale, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.restore();
+    }
+  }
+
+  function startPaperDollAnimLoop() {
+    if (paperDollAnimTimer) clearInterval(paperDollAnimTimer);
+    const selFps = document.getElementById("selPaperDollFps");
+    const fps = selFps ? parseInt(selFps.value, 10) || 8 : 8;
+
+    paperDollAnimTimer = setInterval(() => {
+      const ws = document.getElementById("workspacePaperDoll");
+      if (!ws || !ws.classList.contains("active")) return;
+      if (!paperDollIsPlaying || !compiledPaperDollSpec) return;
+
+      const numFrames = Math.max(1, compiledPaperDollSpec.frames ? compiledPaperDollSpec.frames.length : 1);
+      if (numFrames > 1) {
+        paperDollFrameIndex = (paperDollFrameIndex + 1) % numFrames;
+        drawPaperDollFrame();
+      }
+    }, 1000 / fps);
+  }
+
+  function exportPaperDollPng() {
+    if (!compiledPaperDollSpec) return;
+    const res = PixelDSLRenderer.renderRig(compiledPaperDollSpec, paperDollFrameIndex + 1);
+    const canvas = document.createElement("canvas");
+    canvas.width = res.width;
+    canvas.height = res.height;
+    const ctx = canvas.getContext("2d");
+    const imgData = ctx.createImageData(res.width, res.height);
+    imgData.data.set(res.buffer);
+    ctx.putImageData(imgData, 0, 0);
+
+    const a = document.createElement("a");
+    a.download = `${compiledPaperDollSpec.name}_f${paperDollFrameIndex + 1}.png`;
+    a.href = canvas.toDataURL("image/png");
+    a.click();
+    showToast(`💾 Exported 1:1 PNG: ${a.download}`, "success");
+  }
+
+  function exportPaperDollNormal() {
+    if (!compiledPaperDollSpec) return;
+    const res = PixelDSLRenderer.renderRig(compiledPaperDollSpec, paperDollFrameIndex + 1);
+    if (!res.normalBuffer) return;
+    const canvas = document.createElement("canvas");
+    canvas.width = res.width;
+    canvas.height = res.height;
+    const ctx = canvas.getContext("2d");
+    const imgData = ctx.createImageData(res.width, res.height);
+    imgData.data.set(res.normalBuffer);
+    ctx.putImageData(imgData, 0, 0);
+
+    const a = document.createElement("a");
+    a.download = `${compiledPaperDollSpec.name}_normal.png`;
+    a.href = canvas.toDataURL("image/png");
+    a.click();
+    showToast(`💡 Exported Normal Map: ${a.download}`, "success");
+  }
+
+  function exportPaperDollSheet() {
+    if (!compiledPaperDollSpec) return;
+    const numFrames = Math.max(1, compiledPaperDollSpec.frames ? compiledPaperDollSpec.frames.length : 1);
+    const f1 = PixelDSLRenderer.renderRig(compiledPaperDollSpec, 1);
+    const sheetCanvas = document.createElement("canvas");
+    sheetCanvas.width = f1.width * numFrames;
+    sheetCanvas.height = f1.height;
+    const sCtx = sheetCanvas.getContext("2d");
+    sCtx.imageSmoothingEnabled = false;
+
+    for (let fi = 0; fi < numFrames; fi++) {
+      const rf = PixelDSLRenderer.renderRig(compiledPaperDollSpec, fi + 1);
+      const fCanvas = document.createElement("canvas");
+      fCanvas.width = rf.width;
+      fCanvas.height = rf.height;
+      const fCtx = fCanvas.getContext("2d");
+      const imgData = fCtx.createImageData(rf.width, rf.height);
+      imgData.data.set(rf.buffer);
+      fCtx.putImageData(imgData, 0, 0);
+
+      sCtx.drawImage(fCanvas, fi * f1.width, 0);
+    }
+
+    const a = document.createElement("a");
+    a.download = `${compiledPaperDollSpec.name}_sheet.png`;
+    a.href = sheetCanvas.toDataURL("image/png");
+    a.click();
+    showToast(`🎞️ Exported Sprite Sheet: ${a.download} (${sheetCanvas.width}×${sheetCanvas.height})`, "success");
   }
 
   // ==========================================

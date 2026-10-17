@@ -1,9 +1,9 @@
 ---
 name: pixel-sprite-generator
 description: >-
-  Generates 2D pixel art sprites, normal maps, and animated sprite sheets (from 8x8 to 128x128 pixels)
-  using the PixelDSL v3.0 mathematical engine and compiles them via pixeldsl.py into PNGs
-  and the Web Studio (index.html). Supports both 100% LLM-free procedural generation (--generate / --mutate / --import-image)
+  Generates 2D pixel art sprites, modular paper doll character equipment rigs, normal maps, and animated sprite sheets (from 8x8 to 128x128 pixels)
+  using the PixelDSL v3.0 mathematical engine and compiles them via pixeldsl.py and paperdoll.py into PNGs
+  and the Web Studio (index.html). Supports both 100% LLM-free procedural generation (--generate / --mutate / --import-image / paper doll)
   and declarative JSON specs. Activate this skill whenever the user asks to generate, design, animate, import, or edit a 2D pixel sprite, icon, tile, or asset.
 ---
 
