@@ -1391,7 +1391,29 @@ class PixelDSLRenderer {
   // SKELETAL CAPSULE RIG ENGINE (PixelRig)
   // ==========================================================================
 
-  static solveFkRig(bonesDef, pose = {}) {
+  static solveFkRig(bonesDefOrSpec, poseOrFrameIndex = {}) {
+    let bonesDef = bonesDefOrSpec;
+    let pose = poseOrFrameIndex;
+
+    // Polymorphic signature: solveFkRig(spec, frameIndex)
+    if (bonesDefOrSpec && typeof bonesDefOrSpec === "object" && !Array.isArray(bonesDefOrSpec)) {
+      const spec = bonesDefOrSpec;
+      const rigDef = spec.rig && typeof spec.rig === "object" ? spec.rig : spec;
+      bonesDef = Array.isArray(rigDef.bones) ? rigDef.bones : (Array.isArray(spec.bones) ? spec.bones : []);
+      const fIdx = typeof poseOrFrameIndex === "number" ? poseOrFrameIndex : 0;
+      const frames = Array.isArray(spec.frames) ? spec.frames : [];
+      if (fIdx > 0 && fIdx <= frames.length) {
+        const fDef = frames[fIdx - 1];
+        pose = fDef.pose || fDef.layers || {};
+      } else if (fIdx === 0 && frames.length === 1 && (frames[0].pose || frames[0].layers)) {
+        pose = frames[0].pose || frames[0].layers || {};
+      } else if (Array.isArray(spec.poses) && spec.poses[fIdx - 1]) {
+        pose = spec.poses[fIdx - 1];
+      } else {
+        pose = {};
+      }
+    }
+
     const bonesById = {};
     if (Array.isArray(bonesDef)) {
       bonesDef.forEach((b) => {
@@ -1403,7 +1425,7 @@ class PixelDSLRenderer {
     const getBoneXform = (bid, visited = new Set()) => {
       if (resolved[bid]) return resolved[bid];
       if (visited.has(bid) || !bonesById[bid]) {
-        return { start: [0, 0], end: [0, 0], angle: 0 };
+        return { start: [0, 0], end: [0, 0], head: [0, 0], tail: [0, 0], angle: 0, parentAngle: 0, bone: null };
       }
       visited.add(bid);
 
@@ -1416,10 +1438,12 @@ class PixelDSLRenderer {
       let startX = 0;
       let startY = 0;
       let worldAngle = 0;
+      let parentAngle = 0;
 
       const parentId = b.parent;
       if (parentId && bonesById[parentId]) {
         const parentXform = getBoneXform(parentId, visited);
+        parentAngle = parentXform.angle;
         const offset = Array.isArray(b.offset) ? b.offset : [0, 0];
         const prad = (parentXform.angle * Math.PI) / 180.0;
         const pcos = Math.cos(prad);
@@ -1440,7 +1464,16 @@ class PixelDSLRenderer {
       const endX = startX + length * Math.cos(wrad);
       const endY = startY + length * Math.sin(wrad);
 
-      resolved[bid] = { start: [startX, startY], end: [endX, endY], angle: worldAngle };
+      resolved[bid] = {
+        start: [startX, startY],
+        end: [endX, endY],
+        head: [startX, startY],
+        tail: [endX, endY],
+        angle: worldAngle,
+        parentAngle: parentAngle,
+        id: bid,
+        bone: b
+      };
       return resolved[bid];
     };
 

@@ -51,25 +51,16 @@
 
   <!-- Main Workspace -->
   <main class="workspace">
-    <!-- LEFT DRAWER: Code & Symbolic Matrix Editor (Collapsible) -->
+    <!-- LEFT DRAWER: PixelDSL Specification Editor (Collapsible) -->
     <section id="panelLeft" class="panel panel-left">
       <div class="panel-header">
-        <div class="tab-group">
-          <button id="tabJson" class="tab-btn active">JSON (PixelDSL)</button>
-          <button id="tabGrid" class="tab-btn">ASCII Grid</button>
-        </div>
+        <span style="font-size: 12px; font-weight: 600; color: var(--text-bright); display: flex; align-items: center; gap: 6px;">
+          ⟨⟩ PixelDSL Specification
+        </span>
         <button id="btnCollapseCode" class="btn btn-sm" title="Hide Code Panel">◀ Hide</button>
       </div>
 
       <div class="editor-toolbar">
-        <div style="display: flex; gap: 5px;">
-          <button id="btnNormalizeGrid" class="btn btn-sm" title="Pad/trim all grid rows to exact canvas W×H">
-            🔧 Normalize Grid
-          </button>
-          <button id="btnBakeToGrid" class="btn btn-sm" title="Bake procedural layers into a character matrix (grid)">
-            🔥 Bake Layers → Grid
-          </button>
-        </div>
         <span id="editorMeta" style="font-family: var(--font-mono); font-size: 11px; color: var(--text-muted);">
           32×32 px
         </span>
@@ -80,7 +71,7 @@
           id="codeEditor"
           class="code-textarea"
           spellcheck="false"
-          placeholder="Paste PixelDSL JSON or raw character grid here..."
+          placeholder="Paste PixelDSL JSON specification here..."
         ></textarea>
       </div>
 
@@ -94,17 +85,14 @@
     <section class="panel-center">
       <div class="canvas-toolbar">
         <div class="tool-group">
-          <button class="tool-btn active" data-tool="brush" title="Pencil / Draw (Shortcut: D)">
-            🖌️ Pencil <span class="kbd">D</span>
+          <button class="tool-btn active" data-tool="pose" id="toolPose" title="Bone Posing — Drag joints on canvas to rotate bones interactively">
+            🦴 Pose
           </button>
-          <button class="tool-btn" data-tool="eraser" title="Eraser — sets transparent '.' (Shortcut: E)">
-            🧽 Eraser <span class="kbd">E</span>
+          <button class="tool-btn" data-tool="inspect" id="toolInspect" title="Inspect pixel color, normal, and depth (Shortcut: S)">
+            🔍 Inspect
           </button>
-          <button class="tool-btn" data-tool="picker" title="Eyedropper — pick symbol from canvas (Shortcut: S)">
-            💧 Eyedropper <span class="kbd">S</span>
-          </button>
-          <button class="tool-btn" data-tool="bucket" title="Flood Fill area with active symbol (Shortcut: G)">
-            🪣 Bucket <span class="kbd">G</span>
+          <button class="tool-btn" data-tool="light" id="toolLight" title="Dynamic 3D Light — Drag on canvas to change surface normal lighting direction">
+            💡 3D Light
           </button>
 
           <span style="width: 1px; height: 18px; background: var(--border); margin: 0 4px;"></span>
@@ -196,8 +184,8 @@
         </summary>
         <div class="inspector-body">
           <div style="display: flex; gap: 4px; margin-bottom: 7px;">
-            <button id="btnAddBone" class="btn btn-sm" style="flex: 1; justify-content: center;" title="Add new bone to rig hierarchy">+ Bone</button>
-            <button id="btnToggleBonesDebug" class="btn btn-sm" title="Toggle bone wireframe skeleton overlay on canvas">🦴 Overlay</button>
+            <button id="btnToggleBonesDebug" class="btn btn-sm active" style="flex: 1; justify-content: center;" title="Toggle bone wireframe skeleton overlay on canvas">🦴 Skeleton Overlay</button>
+            <button id="btnResetFramePose" class="btn btn-sm" title="Reset all bone deltas to 0 for current frame">↺ Reset Frame</button>
           </div>
           <div id="bonesList" class="layers-list"></div>
         </div>

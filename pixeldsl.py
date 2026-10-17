@@ -3193,7 +3193,7 @@ def sync_sprite_to_presets_js(presets_js_path, sprite_key, label, prompt_text, s
     return True
 
 
-def process_spec(spec, base_dir, no_ansi=False, sync_web=True, export_normals=True):
+def process_spec(spec, base_dir, show_ansi=False, sync_web=True, export_normals=True):
     name = re.sub(r"[^a-zA-Z0-9_-]", "_", str(spec.get("name") or "sprite"))
     spec["name"] = name
 
@@ -3279,7 +3279,7 @@ def process_spec(spec, base_dir, no_ansi=False, sync_web=True, export_normals=Tr
     print(f"  • Web Studio Sync   : {'OK (registered in presets.js)' if synced else 'Skipped'}")
     print("=" * 64)
 
-    if not no_ansi:
+    if show_ansi:
         print(render_ansi_preview(w, h, first["buffer"]))
         print("=" * 64)
 
@@ -3325,9 +3325,9 @@ def main():
         help="Import raw image / sprite strip (chroma-key #FF00FF despill + SLIC superpixel downsampler)"
     )
     parser.add_argument(
-        "--no-ansi",
+        "--ansi",
         action="store_true",
-        help="Disable TrueColor ANSI preview in terminal"
+        help="Print TrueColor ANSI character block preview in terminal"
     )
     parser.add_argument(
         "--no-sync",
@@ -3344,7 +3344,7 @@ def main():
 
     if args.generate_arch:
         spec = generate_archetype(args.generate_arch, seed=args.seed, width=gen_w, height=gen_h)
-        process_spec(spec, base_dir, no_ansi=args.no_ansi, sync_web=not args.no_sync)
+        process_spec(spec, base_dir, show_ansi=args.ansi, sync_web=not args.no_sync)
         return
 
     if args.mutate_path:
@@ -3354,7 +3354,7 @@ def main():
             sys.exit(1)
         parent_spec = json.loads(m_path.read_text(encoding="utf-8"))
         spec = mutate_spec(parent_spec, seed=args.seed, rate=0.28)
-        process_spec(spec, base_dir, no_ansi=args.no_ansi, sync_web=not args.no_sync)
+        process_spec(spec, base_dir, show_ansi=args.ansi, sync_web=not args.no_sync)
         return
 
     if args.import_image:
@@ -3363,7 +3363,7 @@ def main():
             print(f"Error: image file not found: {imp_path}", file=sys.stderr)
             sys.exit(1)
         spec = import_image_to_spec(imp_path, target_size=gen_w)
-        process_spec(spec, base_dir, no_ansi=args.no_ansi, sync_web=not args.no_sync)
+        process_spec(spec, base_dir, show_ansi=args.ansi, sync_web=not args.no_sync)
         return
 
     raw_json = None
@@ -3392,7 +3392,7 @@ def main():
         print(f"JSON Parse Error: {exc}", file=sys.stderr)
         sys.exit(1)
 
-    process_spec(spec, base_dir, no_ansi=args.no_ansi, sync_web=not args.no_sync)
+    process_spec(spec, base_dir, show_ansi=args.ansi, sync_web=not args.no_sync)
 
 
 if __name__ == "__main__":

@@ -1,10 +1,11 @@
 // PixelDSL Studio v2 — Interactive Web Controller (English UI, Undo/Redo, Hotkeys, Visual Frames & Layers)
 
 (function () {
-  let currentSpec = JSON.parse(JSON.stringify(window.PIXEL_PRESETS.turtle_grid_32x32.data));
+  const defaultPresetKey = window.PIXEL_PRESETS["ginger_cat_walk_120x80"] ? "ginger_cat_walk_120x80" : Object.keys(window.PIXEL_PRESETS)[0];
+  let currentSpec = JSON.parse(JSON.stringify(window.PIXEL_PRESETS[defaultPresetKey].data));
   let lastRender = null;
-  let editorMode = "json"; // "json" | "grid"
-  let activeTool = "brush"; // "brush" | "eraser" | "picker" | "bucket"
+  let editorMode = "json";
+  let activeTool = "pose"; // "pose" | "inspect" | "light" | "brush" | "eraser"
   let activeSymbol = "S";
   let zoomLevel = "auto";
   let showGridLines = true;
@@ -15,6 +16,12 @@
   let strokeSnapshotRecorded = false;
   let hoverCoord = null;
   let selectedLayerIndex = -1;
+
+  // Skeletal Rig Interactive State
+  let selectedBoneId = null;
+  let hoveredBoneId = null;
+  let isDraggingBone = false;
+  let showSkeletonDebug = true;
 
   // Undo / Redo History Stack
   const undoStack = [];
@@ -33,10 +40,6 @@
   const presetSelect = document.getElementById("presetSelect");
   const btnNewSprite = document.getElementById("btnNewSprite");
   const codeEditor = document.getElementById("codeEditor");
-  const tabJson = document.getElementById("tabJson");
-  const tabGrid = document.getElementById("tabGrid");
-  const btnNormalizeGrid = document.getElementById("btnNormalizeGrid");
-  const btnBakeToGrid = document.getElementById("btnBakeToGrid");
   const editorStatus = document.getElementById("editorStatus");
   const editorMeta = document.getElementById("editorMeta");
   const aiDiagnosticsBadge = document.getElementById("aiDiagnosticsBadge");
@@ -71,9 +74,8 @@
   const groupRigInspector = document.getElementById("groupRigInspector");
   const boneCountBadge = document.getElementById("boneCountBadge");
   const bonesList = document.getElementById("bonesList");
-  const btnAddBone = document.getElementById("btnAddBone");
   const btnToggleBonesDebug = document.getElementById("btnToggleBonesDebug");
-  let showSkeletonDebug = false;
+  const btnResetFramePose = document.getElementById("btnResetFramePose");
 
   // Shader Inspector Elements
   const groupShaderInspector = document.getElementById("groupShaderInspector");
@@ -338,24 +340,7 @@
   }
 
   function syncEditorFromSpec() {
-    if (editorMode === "json") {
-      codeEditor.classList.remove("grid-mode");
-      codeEditor.value = JSON.stringify(currentSpec, null, 2);
-    } else {
-      codeEditor.classList.add("grid-mode");
-      const w = PixelDSLRenderer.clampSize(currentSpec.width, 32);
-      const h = PixelDSLRenderer.clampSize(currentSpec.height, 32);
-      const norm = PixelDSLRenderer.normalizeGrid(
-        currentSpec.grid && currentSpec.grid.length > 0
-          ? currentSpec.grid
-          : (lastRender ? PixelDSLRenderer.bakeToGrid(lastRender, PixelDSLRenderer.resolveFullPalette(currentSpec)) : []),
-        w,
-        h,
-        Boolean(currentSpec.rle),
-        currentSpec.symmetry || "none"
-      );
-      codeEditor.value = norm.normalized.join("\n");
-    }
+    codeEditor.value = JSON.stringify(currentSpec, null, 2);
   }
 
   function syncInspectorFromSpec() {
@@ -384,17 +369,21 @@
     // Update active engine badge
     if (engineBadge) {
       if (currentSpec.type === "rig") {
-        engineBadge.textContent = "🦴 Rig Engine (FK)";
+        engineBadge.textContent = "🦴 PixelRig (FK)";
         engineBadge.className = "engine-badge badge-rig";
+        setTool("pose");
       } else if (currentSpec.type === "shader") {
         engineBadge.textContent = "✨ GLSL Shader";
         engineBadge.className = "engine-badge badge-shader";
+        setTool("inspect");
       } else if (Array.isArray(currentSpec.layers) && currentSpec.layers.length > 0) {
-        engineBadge.textContent = "📐 2.5D SDF";
+        engineBadge.textContent = "📐 Quilez 2.5D SDF";
         engineBadge.className = "engine-badge badge-layers";
+        setTool("inspect");
       } else {
-        engineBadge.textContent = "🔲 Grid";
-        engineBadge.className = "engine-badge badge-grid";
+        engineBadge.textContent = "📐 PixelDSL";
+        engineBadge.className = "engine-badge badge-layers";
+        setTool("inspect");
       }
     }
 
@@ -427,17 +416,32 @@
   function renderBonesList() {
     if (!bonesList) return;
     bonesList.innerHTML = "";
-    const bones = Array.isArray(currentSpec.bones) ? currentSpec.bones : [];
+    const rigDef = (currentSpec.rig && typeof currentSpec.rig === "object") ? currentSpec.rig : currentSpec;
+    const bones = Array.isArray(rigDef.bones) ? rigDef.bones : (Array.isArray(currentSpec.bones) ? currentSpec.bones : []);
     if (boneCountBadge) boneCountBadge.textContent = bones.length;
 
-    const currentPose = (currentFrame > 0 && Array.isArray(currentSpec.poses) && currentSpec.poses[currentFrame - 1])
-      ? currentSpec.poses[currentFrame - 1]
-      : null;
+    let currentPose = null;
+    if (currentFrame > 0 && Array.isArray(currentSpec.frames) && currentSpec.frames[currentFrame - 1]) {
+      const fDef = currentSpec.frames[currentFrame - 1];
+      if (!fDef.pose) fDef.pose = {};
+      currentPose = fDef.pose;
+    } else if (currentFrame > 0 && Array.isArray(currentSpec.poses) && currentSpec.poses[currentFrame - 1]) {
+      currentPose = currentSpec.poses[currentFrame - 1];
+    }
 
     for (let i = 0; i < bones.length; i++) {
       const bone = bones[i];
       const item = document.createElement("div");
-      item.className = "bone-item";
+      const isSelected = bone.id === selectedBoneId;
+      item.className = "bone-item" + (isSelected ? " selected" : "");
+      item.dataset.boneId = bone.id;
+
+      item.addEventListener("click", (e) => {
+        if (e.target.tagName === "INPUT" || e.target.tagName === "BUTTON") return;
+        selectedBoneId = (selectedBoneId === bone.id) ? null : bone.id;
+        renderBonesList();
+        renderAll();
+      });
 
       const mainRow = document.createElement("div");
       mainRow.className = "layer-row-main";
@@ -452,6 +456,10 @@
       const nameSpan = document.createElement("span");
       nameSpan.className = "layer-name";
       nameSpan.textContent = bone.id || `bone_${i + 1}`;
+      if (isSelected) {
+        nameSpan.style.color = "var(--accent)";
+        nameSpan.style.fontWeight = "bold";
+      }
 
       info.appendChild(badge);
       info.appendChild(nameSpan);
@@ -466,65 +474,85 @@
       mainRow.appendChild(metaSpan);
       item.appendChild(mainRow);
 
-      // Controls row: Angle adjustment slider
+      // Controls row: Angle adjustment slider + number input + 0° reset button
       const ctrlRow = document.createElement("div");
       ctrlRow.style.display = "flex";
       ctrlRow.style.alignItems = "center";
       ctrlRow.style.gap = "6px";
-      ctrlRow.style.marginTop = "2px";
+      ctrlRow.style.marginTop = "3px";
 
       const angleLabel = document.createElement("span");
       angleLabel.style.fontSize = "10.5px";
       angleLabel.style.color = "var(--text-muted)";
-      angleLabel.style.minWidth = "40px";
+      angleLabel.style.minWidth = "42px";
       angleLabel.textContent = currentPose ? "dAngle:" : "Angle:";
 
       const angleSlider = document.createElement("input");
       angleSlider.type = "range";
       angleSlider.style.flex = "1";
       angleSlider.style.accentColor = "var(--accent)";
+      angleSlider.min = "-180";
+      angleSlider.max = "180";
 
-      const angleVal = document.createElement("span");
-      angleVal.style.fontFamily = "var(--font-mono)";
-      angleVal.style.fontSize = "10.5px";
-      angleVal.style.minWidth = "32px";
-      angleVal.style.textAlign = "right";
+      const numInput = document.createElement("input");
+      numInput.type = "number";
+      numInput.style.width = "48px";
+      numInput.style.padding = "1px 3px";
+      numInput.style.fontSize = "11px";
+      numInput.style.fontFamily = "var(--font-mono)";
+      numInput.style.textAlign = "center";
+      numInput.min = "-180";
+      numInput.max = "180";
 
+      let curAngle = 0;
       if (currentPose) {
-        angleSlider.min = "-90";
-        angleSlider.max = "90";
-        const curD = (currentPose[bone.id] && typeof currentPose[bone.id].dAngle === "number")
-          ? currentPose[bone.id].dAngle
+        curAngle = (currentPose[bone.id] && typeof currentPose[bone.id].dAngle === "number")
+          ? Math.round(currentPose[bone.id].dAngle)
           : 0;
-        angleSlider.value = String(curD);
-        angleVal.textContent = `${curD > 0 ? "+" : ""}${curD}°`;
       } else {
-        angleSlider.min = "-180";
-        angleSlider.max = "180";
-        const curA = typeof bone.angle === "number" ? bone.angle : 0;
-        angleSlider.value = String(curA);
-        angleVal.textContent = `${curA}°`;
+        curAngle = typeof bone.angle === "number" ? Math.round(bone.angle) : 0;
       }
+      angleSlider.value = String(curAngle);
+      numInput.value = String(curAngle);
 
-      angleSlider.addEventListener("input", () => {
-        const val = parseInt(angleSlider.value, 10);
+      const applyAngleChange = (val) => {
+        val = Math.max(-180, Math.min(180, Math.round(val)));
+        angleSlider.value = String(val);
+        numInput.value = String(val);
         if (currentPose) {
-          angleVal.textContent = `${val > 0 ? "+" : ""}${val}°`;
-          if (!currentSpec.poses) currentSpec.poses = [];
-          if (!currentSpec.poses[currentFrame - 1]) currentSpec.poses[currentFrame - 1] = {};
-          if (!currentSpec.poses[currentFrame - 1][bone.id]) currentSpec.poses[currentFrame - 1][bone.id] = {};
-          currentSpec.poses[currentFrame - 1][bone.id].dAngle = val;
+          if (!currentPose[bone.id]) currentPose[bone.id] = {};
+          currentPose[bone.id].dAngle = val;
         } else {
-          angleVal.textContent = `${val}°`;
           bone.angle = val;
         }
         syncEditorFromSpec();
         renderAll();
+      };
+
+      angleSlider.addEventListener("input", () => {
+        applyAngleChange(parseInt(angleSlider.value, 10) || 0);
+      });
+      numInput.addEventListener("change", () => {
+        pushUndoState();
+        applyAngleChange(parseInt(numInput.value, 10) || 0);
+      });
+
+      const btnZero = document.createElement("button");
+      btnZero.className = "btn btn-sm";
+      btnZero.style.padding = "1px 5px";
+      btnZero.style.fontSize = "10px";
+      btnZero.textContent = "0°";
+      btnZero.title = "Reset angle to 0°";
+      btnZero.addEventListener("click", (e) => {
+        e.stopPropagation();
+        pushUndoState();
+        applyAngleChange(0);
       });
 
       ctrlRow.appendChild(angleLabel);
       ctrlRow.appendChild(angleSlider);
-      ctrlRow.appendChild(angleVal);
+      ctrlRow.appendChild(numInput);
+      ctrlRow.appendChild(btnZero);
       item.appendChild(ctrlRow);
 
       bonesList.appendChild(item);
@@ -546,41 +574,24 @@
     if (selShaderFrames) selShaderFrames.value = String(currentSpec.framesCount || 8);
   }
 
-  if (btnAddBone) {
-    btnAddBone.addEventListener("click", () => {
-      pushUndoState();
-      if (!Array.isArray(currentSpec.bones)) currentSpec.bones = [];
-      const idx = currentSpec.bones.length + 1;
-      const lastBone = currentSpec.bones[currentSpec.bones.length - 1];
-      const newBone = {
-        id: `bone_${idx}`,
-        parent: lastBone ? lastBone.id : null,
-        length: 6,
-        r1: 3,
-        r2: 2.5,
-        angle: 0,
-        fill: activeSymbol !== "." ? activeSymbol : "S",
-        outline: "O",
-        z: 2,
-        crease: true
-      };
-      if (!lastBone) {
-        newBone.origin = [
-          Math.floor(PixelDSLRenderer.clampSize(currentSpec.width, 32) / 2),
-          Math.floor(PixelDSLRenderer.clampSize(currentSpec.height, 32) / 2)
-        ];
-      }
-      currentSpec.bones.push(newBone);
-      syncEditorFromSpec();
-      renderBonesList();
+  if (btnToggleBonesDebug) {
+    btnToggleBonesDebug.classList.toggle("active", showSkeletonDebug);
+    btnToggleBonesDebug.addEventListener("click", () => {
+      showSkeletonDebug = !showSkeletonDebug;
+      btnToggleBonesDebug.classList.toggle("active", showSkeletonDebug);
       renderAll();
     });
   }
 
-  if (btnToggleBonesDebug) {
-    btnToggleBonesDebug.addEventListener("click", () => {
-      showSkeletonDebug = !showSkeletonDebug;
-      btnToggleBonesDebug.classList.toggle("active", showSkeletonDebug);
+  if (btnResetFramePose) {
+    btnResetFramePose.addEventListener("click", () => {
+      if (currentFrame <= 0) return;
+      pushUndoState();
+      if (Array.isArray(currentSpec.frames) && currentSpec.frames[currentFrame - 1]) {
+        currentSpec.frames[currentFrame - 1].pose = {};
+      }
+      syncEditorFromSpec();
+      renderBonesList();
       renderAll();
     });
   }
@@ -1356,22 +1367,55 @@
       const fkMap = PixelDSLRenderer.solveFkRig(currentSpec, currentFrame);
       ctx.save();
       for (const [bId, bState] of Object.entries(fkMap)) {
-        ctx.strokeStyle = "rgba(0, 240, 255, 0.85)";
-        ctx.lineWidth = Math.max(1.5, Math.floor(scale / 4));
+        const isSelected = bId === selectedBoneId;
+        const isHovered = bId === hoveredBoneId;
+
+        const sx = bState.start[0] * scale + scale * 0.5;
+        const sy = bState.start[1] * scale + scale * 0.5;
+        const ex = bState.end[0] * scale + scale * 0.5;
+        const ey = bState.end[1] * scale + scale * 0.5;
+
+        // Bone segment line
+        ctx.strokeStyle = isSelected
+          ? "rgba(255, 215, 0, 0.95)"
+          : (isHovered ? "rgba(0, 255, 255, 1.0)" : "rgba(0, 210, 240, 0.65)");
+        ctx.lineWidth = isSelected ? Math.max(3, scale * 0.4) : Math.max(1.5, scale * 0.22);
         ctx.beginPath();
-        ctx.moveTo(bState.head[0] * scale + scale * 0.5, bState.head[1] * scale + scale * 0.5);
-        ctx.lineTo(bState.tail[0] * scale + scale * 0.5, bState.tail[1] * scale + scale * 0.5);
+        ctx.moveTo(sx, sy);
+        ctx.lineTo(ex, ey);
         ctx.stroke();
 
-        ctx.fillStyle = "rgba(255, 230, 0, 0.95)";
+        // Joint at start (yellow/gold)
+        ctx.fillStyle = isSelected ? "#ffffff" : "#ffe600";
         ctx.beginPath();
-        ctx.arc(bState.head[0] * scale + scale * 0.5, bState.head[1] * scale + scale * 0.5, Math.max(2.5, scale * 0.35), 0, Math.PI * 2);
+        ctx.arc(sx, sy, Math.max(2.5, scale * 0.3), 0, Math.PI * 2);
         ctx.fill();
 
-        ctx.fillStyle = "rgba(255, 80, 80, 0.95)";
+        // Joint at end / rotation handle (larger if hovered or selected)
+        const endRadius = (isSelected || isHovered) ? Math.max(4.5, scale * 0.55) : Math.max(2.5, scale * 0.3);
+        ctx.fillStyle = isSelected ? "#ffd700" : (isHovered ? "#00ffff" : "#ff5555");
         ctx.beginPath();
-        ctx.arc(bState.tail[0] * scale + scale * 0.5, bState.tail[1] * scale + scale * 0.5, Math.max(2.5, scale * 0.35), 0, Math.PI * 2);
+        ctx.arc(ex, ey, endRadius, 0, Math.PI * 2);
         ctx.fill();
+
+        // Rotation arc / gizmo if selected
+        if (isSelected) {
+          ctx.strokeStyle = "rgba(255, 215, 0, 0.6)";
+          ctx.lineWidth = 1.5;
+          ctx.setLineDash([3, 3]);
+          ctx.beginPath();
+          const dist = Math.hypot(ex - sx, ey - sy);
+          ctx.arc(sx, sy, Math.max(10, dist), 0, Math.PI * 2);
+          ctx.stroke();
+          ctx.setLineDash([]);
+        }
+
+        // Bone name tag
+        if (isSelected || isHovered || scale >= 8) {
+          ctx.fillStyle = isSelected ? "#ffd700" : "rgba(255, 255, 255, 0.85)";
+          ctx.font = "bold 9px sans-serif";
+          ctx.fillText(bId, (sx + ex) * 0.5 + 4, (sy + ey) * 0.5 - 2);
+        }
       }
       ctx.restore();
     }
@@ -1475,176 +1519,22 @@
     }
   });
 
-  tabJson.addEventListener("click", () => {
-    editorMode = "json";
-    tabJson.classList.add("active");
-    tabGrid.classList.remove("active");
-    syncEditorFromSpec();
-  });
-
-  tabGrid.addEventListener("click", () => {
-    editorMode = "grid";
-    tabGrid.classList.add("active");
-    tabJson.classList.remove("active");
-    syncEditorFromSpec();
-  });
-
-  btnNormalizeGrid.addEventListener("click", () => {
-    pushUndoState();
-    const w = PixelDSLRenderer.clampSize(currentSpec.width, 32);
-    const h = PixelDSLRenderer.clampSize(currentSpec.height, 32);
-    const norm = PixelDSLRenderer.normalizeGrid(
-      currentSpec.grid || [],
-      w,
-      h,
-      Boolean(currentSpec.rle),
-      currentSpec.symmetry || "none"
-    );
-    currentSpec.grid = norm.normalized;
-    currentSpec.rle = false;
-    syncEditorFromSpec();
-    renderLayersList();
-    renderAll();
-  });
-
-  btnBakeToGrid.addEventListener("click", () => {
-    if (!lastRender) return;
-    pushUndoState();
-    const totalFrames = PixelDSLRenderer.getFrameCount(currentSpec);
-    const mergedPalette = Object.assign(
-      { ".": "transparent" },
-      PixelDSLRenderer.resolveFullPalette(currentSpec),
-      lastRender.resolvedPalette || {}
-    );
-    const bakedFrames = [];
-    let baseGrid = [];
-    for (let f = 0; f < totalFrames; f++) {
-      const fRender = PixelDSLRenderer.render(currentSpec, f);
-      if (fRender.resolvedPalette) {
-        Object.assign(mergedPalette, fRender.resolvedPalette);
-      }
-      const rows = PixelDSLRenderer.bakeToGrid(fRender, mergedPalette);
-      if (f === 0) {
-        baseGrid = rows;
-      } else {
-        bakedFrames.push({ grid: rows });
-      }
-    }
-    currentSpec.grid = baseGrid;
-    currentSpec.frames = bakedFrames;
-    delete currentSpec.motion;
-    if (!currentSpec.palette) currentSpec.palette = { ".": "transparent" };
-    const collectPaletteFromRows = (rows) => {
-      for (const row of rows) {
-        for (const ch of row) {
-          if (ch !== "." && mergedPalette[ch]) {
-            currentSpec.palette[ch] = mergedPalette[ch];
-          }
-        }
-      }
-    };
-    collectPaletteFromRows(baseGrid);
-    for (const bf of bakedFrames) {
-      collectPaletteFromRows(bf.grid);
-    }
-    currentSpec.layers = [];
-    currentSpec.rules = [];
-    if (currentSpec.postProcess) {
-      currentSpec.postProcess.autoOutline = false;
-      currentSpec.postProcess.autoShading = false;
-      currentSpec.postProcess.selOut = false;
-    }
-    selectedLayerIndex = -1;
-    syncInspectorFromSpec();
-    syncEditorFromSpec();
-    renderAll();
-  });
-
-  // Canvas Tools
+  // Canvas Tools (Pose, Inspect, 3D Light)
   function setTool(toolName) {
     activeTool = toolName;
     document.querySelectorAll("[data-tool]").forEach((btn) => {
       btn.classList.toggle("active", btn.dataset.tool === toolName);
     });
+    if (activeTool === "pose") {
+      showSkeletonDebug = true;
+      if (btnToggleBonesDebug) btnToggleBonesDebug.classList.add("active");
+    }
+    renderAll();
   }
 
   document.querySelectorAll("[data-tool]").forEach((btn) => {
     btn.addEventListener("click", () => setTool(btn.dataset.tool));
   });
-
-  function ensureEditableGrid() {
-    const w = PixelDSLRenderer.clampSize(currentSpec.width, 32);
-    const h = PixelDSLRenderer.clampSize(currentSpec.height, 32);
-    if (!Array.isArray(currentSpec.grid) || currentSpec.grid.length === 0) {
-      currentSpec.grid = Array.from({ length: h }, () => ".".repeat(w));
-    } else {
-      const norm = PixelDSLRenderer.normalizeGrid(currentSpec.grid, w, h, Boolean(currentSpec.rle), "none");
-      currentSpec.grid = norm.normalized;
-      currentSpec.rle = false;
-    }
-  }
-
-  function floodFillGrid(startX, startY, replacementSym) {
-    ensureEditableGrid();
-    const w = PixelDSLRenderer.clampSize(currentSpec.width, 32);
-    const h = PixelDSLRenderer.clampSize(currentSpec.height, 32);
-    const matrix = currentSpec.grid.map((r) => r.split(""));
-    const targetSym = matrix[startY][startX];
-    if (targetSym === replacementSym) return;
-
-    const queue = [[startX, startY]];
-    const visited = new Uint8Array(w * h);
-    while (queue.length > 0) {
-      const [x, y] = queue.pop();
-      if (x < 0 || x >= w || y < 0 || y >= h) continue;
-      if (visited[y * w + x]) continue;
-      if (matrix[y][x] !== targetSym) continue;
-
-      visited[y * w + x] = 1;
-      matrix[y][x] = replacementSym;
-      queue.push([x + 1, y], [x - 1, y], [x, y + 1], [x, y - 1]);
-    }
-    currentSpec.grid = matrix.map((r) => r.join(""));
-  }
-
-  function applyToolAt(x, y) {
-    if (!lastRender) return;
-    const { width, height, symbolBuffer } = lastRender;
-    if (x < 0 || x >= width || y < 0 || y >= height) return;
-
-    if (activeTool === "picker") {
-      const picked = symbolBuffer[y * width + x] || ".";
-      activeSymbol = picked;
-      renderPaletteList();
-      setTool(picked === "." ? "eraser" : "brush");
-      return;
-    }
-
-    if (activeTool === "bucket") {
-      pushUndoState();
-      const sym = activeSymbol === "." ? "." : activeSymbol;
-      floodFillGrid(x, y, sym);
-      syncEditorFromSpec();
-      renderLayersList();
-      renderAll();
-      return;
-    }
-
-    if (!strokeSnapshotRecorded) {
-      pushUndoState();
-      strokeSnapshotRecorded = true;
-    }
-
-    ensureEditableGrid();
-    const symToWrite = activeTool === "eraser" ? "." : activeSymbol;
-    const rowChars = currentSpec.grid[y].split("");
-    if (rowChars[x] === symToWrite) return;
-    rowChars[x] = symToWrite;
-    currentSpec.grid[y] = rowChars.join("");
-    syncEditorFromSpec();
-    renderLayersList();
-    renderAll();
-  }
 
   function getCanvasPixelCoords(evt) {
     if (!lastRender) return null;
@@ -1656,41 +1546,147 @@
     return { x, y };
   }
 
+  function getCanvasPreciseCoords(evt) {
+    if (!lastRender) return null;
+    const rect = mainCanvas.getBoundingClientRect();
+    const scaleX = lastRender.width / rect.width;
+    const scaleY = lastRender.height / rect.height;
+    const x = (evt.clientX - rect.left) * scaleX;
+    const y = (evt.clientY - rect.top) * scaleY;
+    return { x, y };
+  }
+
   mainCanvas.addEventListener("pointerdown", (evt) => {
     isPointerDown = true;
-    strokeSnapshotRecorded = false;
-    const pt = getCanvasPixelCoords(evt);
-    if (pt) applyToolAt(pt.x, pt.y);
+    const pt = getCanvasPreciseCoords(evt);
+    if (!pt || !lastRender) return;
+
+    if (currentSpec.type === "rig") {
+      const fkMap = PixelDSLRenderer.solveFkRig(currentSpec, currentFrame);
+      let hitBoneId = null;
+      let minDist = 9999;
+
+      // 1. Check distance to bone end joint (rotation handle)
+      for (const [bid, bState] of Object.entries(fkMap)) {
+        const dEnd = Math.hypot(pt.x - bState.end[0], pt.y - bState.end[1]);
+        if (dEnd < 6.0 && dEnd < minDist) {
+          minDist = dEnd;
+          hitBoneId = bid;
+        }
+      }
+      // 2. Check distance to bone root joint
+      if (!hitBoneId) {
+        for (const [bid, bState] of Object.entries(fkMap)) {
+          const dStart = Math.hypot(pt.x - bState.start[0], pt.y - bState.start[1]);
+          if (dStart < 5.0 && dStart < minDist) {
+            minDist = dStart;
+            hitBoneId = bid;
+          }
+        }
+      }
+
+      if (hitBoneId) {
+        selectedBoneId = hitBoneId;
+        isDraggingBone = true;
+        pushUndoState();
+        renderBonesList();
+        renderAll();
+        return;
+      }
+    }
   });
 
   window.addEventListener("pointerup", () => {
+    if (isDraggingBone) {
+      isDraggingBone = false;
+      syncEditorFromSpec();
+      renderBonesList();
+      renderAll();
+    }
     isPointerDown = false;
     strokeSnapshotRecorded = false;
   });
 
   mainCanvas.addEventListener("pointermove", (evt) => {
-    const pt = getCanvasPixelCoords(evt);
+    const pt = getCanvasPreciseCoords(evt);
     if (!pt || !lastRender) return;
-    hoverCoord = pt;
+    const pixelPt = getCanvasPixelCoords(evt);
+    hoverCoord = pixelPt;
 
-    const { width, height, buffer, symbolBuffer } = lastRender;
-    if (pt.x >= 0 && pt.x < width && pt.y >= 0 && pt.y < height) {
-      const idx = (pt.y * width + pt.x) * 4;
-      const r = buffer[idx], g = buffer[idx + 1], b = buffer[idx + 2], a = buffer[idx + 3];
-      const sym = symbolBuffer[pt.y * width + pt.x] || ".";
-      const hex = PixelDSLRenderer.rgbaToHex(r, g, b, a);
-      cursorInfo.textContent = `X: ${pt.x}, Y: ${pt.y} | Sym: '${sym}' | Color: ${hex} | Tool: ${activeTool.toUpperCase()}`;
-      if (isPointerDown && (activeTool === "brush" || activeTool === "eraser")) {
-        applyToolAt(pt.x, pt.y);
+    // Interactive Bone Drag Posing
+    if (isDraggingBone && selectedBoneId && currentSpec.type === "rig") {
+      const fkMap = PixelDSLRenderer.solveFkRig(currentSpec, currentFrame);
+      const bState = fkMap[selectedBoneId];
+      if (bState) {
+        const startX = bState.start[0];
+        const startY = bState.start[1];
+        const mouseAngleDeg = (Math.atan2(pt.y - startY, pt.x - startX) * 180.0) / Math.PI;
+        const parentAngle = bState.parentAngle || 0;
+        let desiredRelAngle = mouseAngleDeg - parentAngle;
+        desiredRelAngle = Math.round(((desiredRelAngle + 180) % 360 + 360) % 360 - 180);
+
+        if (currentFrame > 0) {
+          if (!Array.isArray(currentSpec.frames)) currentSpec.frames = [];
+          while (currentSpec.frames.length < currentFrame) {
+            currentSpec.frames.push({ pose: {} });
+          }
+          const fDef = currentSpec.frames[currentFrame - 1];
+          if (!fDef.pose) fDef.pose = {};
+          const baseAngle = (bState.bone && typeof bState.bone.angle === "number") ? bState.bone.angle : 0;
+          fDef.pose[selectedBoneId] = fDef.pose[selectedBoneId] || {};
+          fDef.pose[selectedBoneId].dAngle = desiredRelAngle - baseAngle;
+        } else {
+          if (bState.bone) {
+            bState.bone.angle = desiredRelAngle;
+          }
+        }
+
+        renderBonesList();
+        renderAll();
+        cursorInfo.textContent = `🦴 Posing '${selectedBoneId}' | Angle: ${desiredRelAngle}° (Release mouse to set)`;
         return;
       }
+    }
+
+    // Bone hover detection for cursor feedback
+    if (currentSpec.type === "rig") {
+      const fkMap = PixelDSLRenderer.solveFkRig(currentSpec, currentFrame);
+      let newHovered = null;
+      let minDist = 9999;
+      for (const [bid, bState] of Object.entries(fkMap)) {
+        const dEnd = Math.hypot(pt.x - bState.end[0], pt.y - bState.end[1]);
+        if (dEnd < 6.0 && dEnd < minDist) {
+          minDist = dEnd;
+          newHovered = bid;
+        }
+      }
+      if (newHovered !== hoveredBoneId) {
+        hoveredBoneId = newHovered;
+        mainCanvas.style.cursor = hoveredBoneId ? "crosshair" : "default";
+        renderAll();
+      }
+      if (hoveredBoneId) {
+        cursorInfo.textContent = `🦴 Joint: '${hoveredBoneId}' | Drag joint on canvas to rotate bone!`;
+        return;
+      }
+    }
+
+    const { width, height, buffer, symbolBuffer } = lastRender;
+    if (pixelPt && pixelPt.x >= 0 && pixelPt.x < width && pixelPt.y >= 0 && pixelPt.y < height) {
+      const idx = (pixelPt.y * width + pixelPt.x) * 4;
+      const r = buffer[idx], g = buffer[idx + 1], b = buffer[idx + 2], a = buffer[idx + 3];
+      const sym = (symbolBuffer && symbolBuffer[pixelPt.y * width + pixelPt.x]) || ".";
+      const hex = PixelDSLRenderer.rgbaToHex(r, g, b, a);
+      cursorInfo.textContent = `X: ${pixelPt.x}, Y: ${pixelPt.y} | Sym: '${sym}' | Color: ${hex} | Tool: ${activeTool.toUpperCase()}`;
     }
     renderAll();
   });
 
   mainCanvas.addEventListener("pointerleave", () => {
     hoverCoord = null;
-    cursorInfo.textContent = "Hover over canvas to inspect pixels | Shortcuts: [D] Pencil, [E] Eraser, [S] Eyedropper, [G] Bucket, [Alt+Z] Undo";
+    hoveredBoneId = null;
+    mainCanvas.style.cursor = "default";
+    cursorInfo.textContent = "Hover over canvas or drag bone joints to pose | Tool: " + activeTool.toUpperCase();
     renderAll();
   });
 
