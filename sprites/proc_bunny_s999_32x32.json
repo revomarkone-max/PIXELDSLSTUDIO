@@ -1,0 +1,165 @@
+{
+  "name": "proc_bunny_s999_32x32",
+  "prompt": "Procedural bunny (seed=999, 32x32) — 100% LLM-Free PixelDSL v3.0",
+  "width": 32,
+  "height": 32,
+  "symmetry": "none",
+  "rle": false,
+  "ramps": {
+    "M": {
+      "base": "#e04ba0",
+      "light": "L",
+      "dark": "D",
+      "outline": "O"
+    },
+    "A": {
+      "base": "#00cfdd",
+      "light": "W",
+      "dark": "B",
+      "outline": "O"
+    },
+    "S": {
+      "base": "#9bbfc5",
+      "light": "w",
+      "dark": "d",
+      "outline": "O"
+    },
+    "H": {
+      "base": "#8c4a11",
+      "light": "h",
+      "dark": "b",
+      "outline": "O"
+    }
+  },
+  "palette": {
+    ".": "transparent",
+    "O": "#14182e",
+    "e": "#0e101c",
+    "w": "#ffffff",
+    "a": "#14182e44"
+  },
+  "postProcess": {
+    "autoOutline": false,
+    "outlineColor": "#14182e",
+    "autoShading": false,
+    "shadingStrength": 0.16,
+    "sdfShading": true,
+    "selOut": true
+  },
+  "layers": [
+    {
+      "id": "shadow",
+      "op": "ellipse",
+      "cx": 15.5,
+      "cy": 28.5,
+      "rx": 8.5,
+      "ry": 1.5,
+      "fill": "a"
+    },
+    {
+      "id": "ear_back",
+      "op": "uneven_capsule",
+      "x1": 16.5,
+      "y1": 12.5,
+      "x2": 13.5,
+      "y2": 5.5,
+      "r1": 2.1,
+      "r2": 1.4,
+      "fill": "A",
+      "outline": "O",
+      "sdf": true,
+      "parent": "body"
+    },
+    {
+      "id": "tail",
+      "op": "ellipse",
+      "cx": 6.5,
+      "cy": 20.0,
+      "rx": 2.6,
+      "ry": 2.6,
+      "fill": "S",
+      "outline": "O",
+      "sdf": true,
+      "parent": "body"
+    },
+    {
+      "id": "body",
+      "op": "ellipse",
+      "cx": 15.5,
+      "cy": 20.0,
+      "rx": 6.2,
+      "ry": 5.0,
+      "angle": -8,
+      "fill": "S",
+      "outline": "O",
+      "sdf": true,
+      "smoothBlend": 2.0,
+      "z": 1
+    },
+    {
+      "id": "thigh",
+      "op": "ellipse",
+      "cx": 11.0,
+      "cy": 21.0,
+      "rx": 4.8,
+      "ry": 3.8,
+      "angle": -10,
+      "fill": "S",
+      "outline": "O",
+      "sdf": true,
+      "smoothBlend": 1.8,
+      "z": 2,
+      "crease": true,
+      "parent": "body"
+    },
+    {
+      "id": "head",
+      "op": "ellipse",
+      "cx": 20.0,
+      "cy": 14.5,
+      "rx": 4.8,
+      "ry": 4.5,
+      "fill": "S",
+      "outline": "O",
+      "sdf": true,
+      "smoothBlend": 1.6,
+      "z": 1,
+      "parent": "body"
+    },
+    {
+      "id": "ear_front",
+      "op": "uneven_capsule",
+      "x1": 19.0,
+      "y1": 12.5,
+      "x2": 16.5,
+      "y2": 5.5,
+      "r1": 2.2,
+      "r2": 1.5,
+      "fill": "S",
+      "outline": "O",
+      "sdf": true,
+      "smoothBlend": 1.4,
+      "z": 2,
+      "crease": true,
+      "parent": "body"
+    },
+    {
+      "id": "eye",
+      "op": "ellipse",
+      "cx": 22.0,
+      "cy": 13.5,
+      "rx": 1.3,
+      "ry": 1.6,
+      "fill": "e",
+      "parent": "body"
+    }
+  ],
+  "frames": [],
+  "grid": [],
+  "motion": {
+    "type": "jump_arc",
+    "frames": 4,
+    "amplitude": 1.0,
+    "squash": 0.1
+  }
+}

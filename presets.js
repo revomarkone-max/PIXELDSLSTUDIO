@@ -401,9 +401,9 @@ window.PIXEL_PRESETS = {
         { "id": "crown_base", "op": "rect", "x": 16, "y": 8, "w": 16, "h": 6, "rx": 1, "fill": "Y", "outline": "O", "sdf": true },
         { "id": "crown_spikes", "op": "polygon", "points": [[16, 9], [19, 3], [24, 8], [29, 3], [32, 9]], "fill": "Y", "outline": "O", "sdf": true },
         { "id": "crown_gem", "op": "ellipse", "cx": 24, "cy": 9, "rx": 2, "ry": 2, "fill": "R", "outline": "O" },
-        { "id": "slime_core", "op": "ellipse", "cx": 24, "cy": 27, "rx": 14, "ry": 12, "fill": "G", "outline": "O", "sdf": true, "smoothBlend": 3.5 },
-        { "id": "slime_lobes", "op": "ellipse", "cx": 12, "cy": 33, "rx": 7, "ry": 6, "fill": "G", "outline": "O", "mirror": "x", "sdf": true, "smoothBlend": 3.5 },
-        { "id": "slime_top", "op": "ellipse", "cx": 24, "cy": 18, "rx": 9, "ry": 6, "fill": "G", "outline": "O", "sdf": true, "smoothBlend": 3.0 },
+        { "id": "slime_core", "op": "ellipse", "cx": 24, "cy": 27, "rx": 14, "ry": 12, "fill": "G", "outline": "O", "sdf": true, "smoothBlend": 2.2 },
+        { "id": "slime_lobes", "op": "ellipse", "cx": 12, "cy": 33, "rx": 7, "ry": 6, "fill": "G", "outline": "O", "mirror": "x", "sdf": true, "smoothBlend": 2.2 },
+        { "id": "slime_top", "op": "ellipse", "cx": 24, "cy": 18, "rx": 9, "ry": 6, "fill": "G", "outline": "O", "sdf": true, "smoothBlend": 2.0 },
         {
           "id": "face",
           "op": "stamp",
@@ -447,6 +447,1540 @@ window.PIXEL_PRESETS = {
   }
 };
 
+
+// Auto-synced by pixeldsl.py CLI
+window.PIXEL_PRESETS["white_pink_bunny_jump_32x32"] = {
+  label: "🐰 White-Pink Bunny 32×32 (6-Frame Jump)",
+  prompt: "Generated via CLI: white_pink_bunny_jump_32x32",
+  data: {
+  "name": "white_pink_bunny_jump_32x32",
+  "label": "🐰 White-Pink Bunny 32×32 (6-Frame Jump)",
+  "width": 32,
+  "height": 32,
+  "symmetry": "none",
+  "rle": false,
+  "palette": {
+    ".": "transparent",
+    "O": "#33182c",
+    "W": "#ffffff",
+    "p": "#ffe3ec",
+    "S": "#f7bfd0",
+    "P": "#ff8fab",
+    "N": "#e0527b",
+    "e": "#210d1e",
+    "w": "#ffffff",
+    "a": "#33182c40"
+  },
+  "postProcess": {
+    "autoOutline": false,
+    "outlineColor": "#33182c",
+    "autoShading": false,
+    "shadingStrength": 0.12,
+    "sdfShading": false
+  },
+  "layers": [
+    {
+      "id": "shadow",
+      "op": "ellipse",
+      "cx": 16,
+      "cy": 28,
+      "rx": 9,
+      "ry": 1,
+      "fill": "a"
+    },
+    {
+      "id": "ear_back",
+      "op": "ellipse",
+      "cx": 16,
+      "cy": 8,
+      "rx": 2,
+      "ry": 5,
+      "angle": -22,
+      "fill": "S",
+      "outline": "O"
+    },
+    {
+      "id": "tail",
+      "op": "ellipse",
+      "cx": 6,
+      "cy": 21,
+      "rx": 3,
+      "ry": 3,
+      "fill": "p",
+      "outline": "O"
+    },
+    {
+      "id": "foot_back",
+      "op": "ellipse",
+      "cx": 12,
+      "cy": 26,
+      "rx": 4,
+      "ry": 2,
+      "angle": 5,
+      "fill": "S",
+      "outline": "O"
+    },
+    {
+      "id": "thigh",
+      "op": "ellipse",
+      "cx": 11,
+      "cy": 22,
+      "rx": 5,
+      "ry": 4,
+      "angle": -10,
+      "fill": "W",
+      "outline": "O",
+      "smoothBlend": 1.8,
+      "z": 2,
+      "crease": true
+    },
+    {
+      "id": "body",
+      "op": "ellipse",
+      "cx": 16,
+      "cy": 21,
+      "rx": 6,
+      "ry": 5,
+      "angle": -8,
+      "fill": "W",
+      "outline": "O",
+      "smoothBlend": 2,
+      "z": 1
+    },
+    {
+      "id": "head",
+      "op": "ellipse",
+      "cx": 21,
+      "cy": 15,
+      "rx": 5,
+      "ry": 5,
+      "angle": 5,
+      "fill": "W",
+      "outline": "O",
+      "smoothBlend": 1.6,
+      "z": 1
+    },
+    {
+      "id": "ear_front",
+      "op": "ellipse",
+      "cx": 19,
+      "cy": 8,
+      "rx": 3,
+      "ry": 5,
+      "angle": -16,
+      "fill": "W",
+      "outline": "O",
+      "smoothBlend": 1.4,
+      "z": 1
+    },
+    {
+      "id": "belly_pink",
+      "op": "ellipse",
+      "cx": 15,
+      "cy": 23,
+      "rx": 5,
+      "ry": 2,
+      "angle": -5,
+      "fill": "p",
+      "dither": "checker",
+      "ditherColor": "S"
+    },
+    {
+      "id": "thigh_shade",
+      "op": "ellipse",
+      "cx": 10,
+      "cy": 23,
+      "rx": 3,
+      "ry": 2,
+      "fill": "p"
+    },
+    {
+      "id": "ear_pink",
+      "op": "ellipse",
+      "cx": 19,
+      "cy": 8,
+      "rx": 1,
+      "ry": 3,
+      "angle": -16,
+      "fill": "P"
+    },
+    {
+      "id": "paw_front",
+      "op": "ellipse",
+      "cx": 21,
+      "cy": 25,
+      "rx": 3,
+      "ry": 2,
+      "angle": 15,
+      "fill": "W",
+      "outline": "O"
+    },
+    {
+      "id": "cheek",
+      "op": "pixels",
+      "color": "P",
+      "points": [
+        [
+          21,
+          16
+        ],
+        [
+          22,
+          16
+        ],
+        [
+          21,
+          17
+        ],
+        [
+          22,
+          17
+        ]
+      ]
+    },
+    {
+      "id": "nose",
+      "op": "pixels",
+      "color": "N",
+      "points": [
+        [
+          26,
+          14
+        ],
+        [
+          26,
+          15
+        ],
+        [
+          25,
+          14
+        ]
+      ]
+    },
+    {
+      "id": "eye",
+      "op": "stamp",
+      "x": 22,
+      "y": 12,
+      "grid": [
+        "eP",
+        "ee",
+        "ee"
+      ]
+    }
+  ],
+  "frames": [
+    {
+      "layers": {
+        "shadow": {
+          "drx": 1
+        },
+        "ear_back": {
+          "dy": 2,
+          "dAngle": -16
+        },
+        "ear_front": {
+          "dy": 2,
+          "dAngle": -16
+        },
+        "ear_pink": {
+          "dy": 2,
+          "dAngle": -16
+        },
+        "tail": {
+          "dy": 2,
+          "dx": -1
+        },
+        "thigh": {
+          "dy": 2,
+          "drx": 1,
+          "dry": -1
+        },
+        "body": {
+          "dy": 2,
+          "drx": 1,
+          "dry": -1
+        },
+        "belly_pink": {
+          "dy": 2
+        },
+        "thigh_shade": {
+          "dy": 2
+        },
+        "head": {
+          "dy": 2,
+          "dx": 1
+        },
+        "cheek": {
+          "dy": 2,
+          "dx": 1
+        },
+        "nose": {
+          "dy": 2,
+          "dx": 1
+        },
+        "eye": {
+          "dy": 2,
+          "dx": 1
+        },
+        "paw_front": {
+          "dy": 1,
+          "dx": 1
+        }
+      }
+    },
+    {
+      "layers": {
+        "shadow": {
+          "drx": -2
+        },
+        "ear_back": {
+          "dy": -3,
+          "dAngle": -12
+        },
+        "ear_front": {
+          "dy": -3,
+          "dAngle": -12
+        },
+        "ear_pink": {
+          "dy": -3,
+          "dAngle": -12
+        },
+        "tail": {
+          "dy": -3,
+          "dx": -1
+        },
+        "foot_back": {
+          "dy": -2,
+          "dx": -2,
+          "dAngle": 30
+        },
+        "thigh": {
+          "dy": -3,
+          "dAngle": -15
+        },
+        "body": {
+          "dy": -4,
+          "dAngle": -18
+        },
+        "belly_pink": {
+          "dy": -4,
+          "dAngle": -18
+        },
+        "thigh_shade": {
+          "dy": -3
+        },
+        "head": {
+          "dy": -4,
+          "dx": 1
+        },
+        "cheek": {
+          "dy": -4,
+          "dx": 1
+        },
+        "nose": {
+          "dy": -4,
+          "dx": 1
+        },
+        "eye": {
+          "dy": -4,
+          "dx": 1
+        },
+        "paw_front": {
+          "dy": -5,
+          "dx": 2,
+          "dAngle": -25
+        }
+      }
+    },
+    {
+      "layers": {
+        "shadow": {
+          "drx": -4
+        },
+        "ear_back": {
+          "dy": -3,
+          "dAngle": 6
+        },
+        "ear_front": {
+          "dy": -3,
+          "dAngle": 6
+        },
+        "ear_pink": {
+          "dy": -3,
+          "dAngle": 6
+        },
+        "tail": {
+          "dy": -5
+        },
+        "foot_back": {
+          "dy": -5,
+          "dx": -1,
+          "dAngle": 18
+        },
+        "thigh": {
+          "dy": -5
+        },
+        "body": {
+          "dy": -5
+        },
+        "belly_pink": {
+          "dy": -5
+        },
+        "thigh_shade": {
+          "dy": -5
+        },
+        "head": {
+          "dy": -5
+        },
+        "cheek": {
+          "dy": -5
+        },
+        "nose": {
+          "dy": -5
+        },
+        "eye": {
+          "dy": -5
+        },
+        "paw_front": {
+          "dy": -5,
+          "dx": 1,
+          "dAngle": -10
+        }
+      }
+    },
+    {
+      "layers": {
+        "shadow": {
+          "drx": -2
+        },
+        "ear_back": {
+          "dy": -2,
+          "dAngle": 18
+        },
+        "ear_front": {
+          "dy": -2,
+          "dAngle": 18
+        },
+        "ear_pink": {
+          "dy": -2,
+          "dAngle": 18
+        },
+        "tail": {
+          "dy": -3
+        },
+        "foot_back": {
+          "dy": -4,
+          "dAngle": -12
+        },
+        "thigh": {
+          "dy": -3,
+          "dAngle": 10
+        },
+        "body": {
+          "dy": -3,
+          "dAngle": 12
+        },
+        "belly_pink": {
+          "dy": -3,
+          "dAngle": 12
+        },
+        "thigh_shade": {
+          "dy": -3
+        },
+        "head": {
+          "dy": -2
+        },
+        "cheek": {
+          "dy": -2
+        },
+        "nose": {
+          "dy": -2
+        },
+        "eye": {
+          "dy": -2
+        },
+        "paw_front": {
+          "dy": -2,
+          "dx": 1,
+          "dAngle": 25
+        }
+      }
+    },
+    {
+      "layers": {
+        "shadow": {
+          "drx": 1
+        },
+        "ear_back": {
+          "dy": 1,
+          "dAngle": 10
+        },
+        "ear_front": {
+          "dy": 1,
+          "dAngle": 10
+        },
+        "ear_pink": {
+          "dy": 1,
+          "dAngle": 10
+        },
+        "tail": {
+          "dy": 1
+        },
+        "foot_back": {
+          "dy": 0
+        },
+        "thigh": {
+          "dy": 1,
+          "dry": -1
+        },
+        "body": {
+          "dy": 1,
+          "dry": -1
+        },
+        "belly_pink": {
+          "dy": 1
+        },
+        "thigh_shade": {
+          "dy": 1
+        },
+        "head": {
+          "dy": 1
+        },
+        "cheek": {
+          "dy": 1
+        },
+        "nose": {
+          "dy": 1
+        },
+        "eye": {
+          "dy": 1
+        },
+        "paw_front": {
+          "dy": 0
+        }
+      }
+    }
+  ],
+  "grid": []
+}
+};
+
+
+// Auto-synced by pixeldsl.py CLI
+window.PIXEL_PRESETS["proc_sword_s42_32x32"] = {
+  label: "✨ proc_sword_s42_32x32 (32×32) [4f]",
+  prompt: "Procedural sword (seed=42, 32x32) — 100% LLM-Free PixelDSL v3.0",
+  data: {
+  "name": "proc_sword_s42_32x32",
+  "prompt": "Procedural sword (seed=42, 32x32) — 100% LLM-Free PixelDSL v3.0",
+  "width": 32,
+  "height": 32,
+  "symmetry": "none",
+  "rle": false,
+  "ramps": {
+    "M": {
+      "base": "#00bef1",
+      "light": "L",
+      "dark": "D",
+      "outline": "O"
+    },
+    "A": {
+      "base": "#ff6537",
+      "light": "W",
+      "dark": "B",
+      "outline": "O"
+    },
+    "S": {
+      "base": "#c6b59b",
+      "light": "w",
+      "dark": "d",
+      "outline": "O"
+    },
+    "H": {
+      "base": "#8c4a11",
+      "light": "h",
+      "dark": "b",
+      "outline": "O"
+    }
+  },
+  "palette": {
+    ".": "transparent",
+    "O": "#14182e",
+    "e": "#0e101c",
+    "w": "#ffffff",
+    "a": "#14182e44"
+  },
+  "postProcess": {
+    "autoOutline": false,
+    "outlineColor": "#14182e",
+    "autoShading": false,
+    "shadingStrength": 0.16,
+    "sdfShading": true,
+    "selOut": true
+  },
+  "layers": [
+    {
+      "id": "shadow",
+      "op": "ellipse",
+      "cx": 15.5,
+      "cy": 29.0,
+      "rx": 6.0,
+      "ry": 1.5,
+      "fill": "a"
+    },
+    {
+      "id": "pommel",
+      "op": "ellipse",
+      "cx": 15.5,
+      "cy": 27.5,
+      "rx": 2.2,
+      "ry": 2.2,
+      "fill": "A",
+      "outline": "O",
+      "sdf": true
+    },
+    {
+      "id": "grip",
+      "op": "uneven_capsule",
+      "x1": 15.5,
+      "y1": 26.0,
+      "x2": 15.5,
+      "y2": 21.0,
+      "r1": 1.6,
+      "r2": 1.9,
+      "fill": "H",
+      "outline": "O",
+      "sdf": true
+    },
+    {
+      "id": "blade",
+      "op": "uneven_capsule",
+      "x1": 15.5,
+      "y1": 21.0,
+      "x2": 15.5,
+      "y2": 4.5,
+      "r1": 3.2,
+      "r2": 1.2,
+      "fill": "S",
+      "outline": "O",
+      "sdf": true
+    },
+    {
+      "id": "blade_tip",
+      "op": "vesica",
+      "cx": 15.5,
+      "cy": 7.5,
+      "rx": 3.1,
+      "ry": 5.0,
+      "fill": "S",
+      "outline": "O",
+      "sdf": true,
+      "smoothBlend": 1.5
+    },
+    {
+      "id": "fuller",
+      "op": "uneven_capsule",
+      "x1": 15.5,
+      "y1": 20.0,
+      "x2": 15.5,
+      "y2": 9.0,
+      "r1": 1.0,
+      "r2": 0.6,
+      "fill": "M",
+      "sdf": true
+    },
+    {
+      "id": "guard",
+      "op": "vesica",
+      "cx": 15.5,
+      "cy": 21.0,
+      "rx": 8.1,
+      "ry": 2.2,
+      "angle": -0.44292711839079857,
+      "fill": "A",
+      "outline": "O",
+      "sdf": true
+    },
+    {
+      "id": "gem",
+      "op": "ellipse",
+      "cx": 15.5,
+      "cy": 21.0,
+      "rx": 1.8,
+      "ry": 1.8,
+      "fill": "M",
+      "outline": "O",
+      "sdf": true
+    }
+  ],
+  "frames": [],
+  "grid": [],
+  "motion": {
+    "type": "idle_breathe",
+    "frames": 4,
+    "amplitude": 0.8,
+    "squash": 0.04
+  }
+}
+};
+
+
+// Auto-synced by pixeldsl.py CLI
+window.PIXEL_PRESETS["proc_crystal_monolith_s108_48x48"] = {
+  label: "✨ proc_crystal_monolith_s108_48x48 (48×48) [4f]",
+  prompt: "Procedural crystal_monolith (seed=108, 48x48) — 100% LLM-Free PixelDSL v3.0",
+  data: {
+  "name": "proc_crystal_monolith_s108_48x48",
+  "prompt": "Procedural crystal_monolith (seed=108, 48x48) — 100% LLM-Free PixelDSL v3.0",
+  "width": 48,
+  "height": 48,
+  "symmetry": "none",
+  "rle": false,
+  "ramps": {
+    "M": {
+      "base": "#00c25c",
+      "light": "L",
+      "dark": "D",
+      "outline": "O"
+    },
+    "A": {
+      "base": "#c78eff",
+      "light": "W",
+      "dark": "B",
+      "outline": "O"
+    },
+    "S": {
+      "base": "#d0adb0",
+      "light": "w",
+      "dark": "d",
+      "outline": "O"
+    },
+    "H": {
+      "base": "#8c4a11",
+      "light": "h",
+      "dark": "b",
+      "outline": "O"
+    }
+  },
+  "palette": {
+    ".": "transparent",
+    "O": "#14182e",
+    "e": "#0e101c",
+    "w": "#ffffff",
+    "a": "#14182e44"
+  },
+  "postProcess": {
+    "autoOutline": false,
+    "outlineColor": "#14182e",
+    "autoShading": false,
+    "shadingStrength": 0.16,
+    "sdfShading": true,
+    "selOut": true
+  },
+  "layers": [
+    {
+      "id": "shadow",
+      "op": "ellipse",
+      "cx": 23.5,
+      "cy": 42.8,
+      "rx": 14.2,
+      "ry": 3.3,
+      "fill": "a"
+    },
+    {
+      "id": "pedestal",
+      "op": "rect",
+      "x": 13.0,
+      "y": 36.8,
+      "w": 21.0,
+      "h": 6.0,
+      "rx": 1,
+      "fill": "H",
+      "outline": "O",
+      "sdf": true
+    },
+    {
+      "id": "monolith_body",
+      "op": "vesica",
+      "cx": 23.5,
+      "cy": 21.2,
+      "rx": 8.2,
+      "ry": 17.2,
+      "fill": "M",
+      "outline": "O",
+      "sdf": true,
+      "dither": "worley",
+      "shaderScale": 5.5,
+      "seed": 108
+    },
+    {
+      "id": "shard_orbit",
+      "op": "vesica",
+      "cx": 10.8,
+      "cy": 23.5,
+      "rx": 3.0,
+      "ry": 6.8,
+      "angle": -18,
+      "fill": "A",
+      "outline": "O",
+      "mirror": "x",
+      "sdf": true
+    },
+    {
+      "id": "core_star",
+      "op": "star",
+      "cx": 23.5,
+      "cy": 21.2,
+      "r": 5.7,
+      "n": 4,
+      "innerRatio": 0.45,
+      "fill": "w",
+      "outline": "O",
+      "sdf": true
+    }
+  ],
+  "frames": [],
+  "grid": [],
+  "motion": {
+    "type": "idle_breathe",
+    "frames": 4,
+    "amplitude": 1.5,
+    "squash": 0.04
+  }
+}
+};
+
+
+// Auto-synced by pixeldsl.py CLI
+window.PIXEL_PRESETS["imported_body_strip_raw_48x48"] = {
+  label: "✨ imported_body_strip_raw_48x48 (48×48) [4f]",
+  prompt: "Imported & Oklab-quantized from body_strip_raw.png (4 frame(s))",
+  data: {
+  "name": "imported_body_strip_raw_48x48",
+  "prompt": "Imported & Oklab-quantized from body_strip_raw.png (4 frame(s))",
+  "width": 48,
+  "height": 48,
+  "symmetry": "none",
+  "rle": false,
+  "palette": {
+    ".": "transparent",
+    "A": "#121117",
+    "B": "#1c261b",
+    "C": "#20361f",
+    "D": "#020202",
+    "E": "#3d553d",
+    "F": "#040a00",
+    "G": "#304524",
+    "H": "#2e2e35",
+    "I": "#2c4144",
+    "J": "#69605b",
+    "K": "#4f443e",
+    "L": "#54745d",
+    "M": "#737377",
+    "N": "#3f6431",
+    "O": "#948187",
+    "P": "#acada8"
+  },
+  "postProcess": {
+    "autoOutline": false,
+    "outlineColor": "#14182e",
+    "autoShading": false,
+    "shadingStrength": 0.16,
+    "sdfShading": false
+  },
+  "layers": [],
+  "frames": [
+    {
+      "grid": [
+        "................................................",
+        "................................................",
+        "................................................",
+        "................................................",
+        "................................................",
+        "..............M.................................",
+        "...............M................................",
+        "...............KO.............MO................",
+        "................K..............M................",
+        "................JO.............J................",
+        "...............JMMOM.ENNNEEN..JMO...............",
+        "..................HKMGGEGEENNNJMO...............",
+        "..................GHJKGGEEEGEEEM................",
+        ".................KKKIKGGEGICBFBI................",
+        ".................CCBBCGGCGCFDDFCK...............",
+        ".................CBCBBGGEBAHKBDAC...............",
+        ".................ICCBCCGCAKPOIAFB...............",
+        ".................ICBGCCCBBBJMKHAB...............",
+        ".................ICCGGGAAABHHJHHA...............",
+        "................ICBCCGCAAAAABHHHFB..............",
+        "................ECCBCGAAAAAAAABHFB..............",
+        "................GCBBBCDAAAAAAAHAFB..............",
+        "................CBBBBIAAAAAAAAHAAB..............",
+        ".................BAABIIFFAABABBBBC..............",
+        "...............LEIBAFBCCBAAAABCGGEO.............",
+        ".............HEGNECCAAFBCGCFFCGGELM.............",
+        ".............AFBAENNEGCBCGCCBCGNEKO.............",
+        "..............IHHBHKEJNNELIBBILLLJ..............",
+        "..............KIIKKKKHELELJIIIELLJM.............",
+        ".............EKIKKJJIABAHEKOJIIJEHJ.............",
+        ".............JJKKKIBAABHHHMPPKHKOIHK............",
+        "............KKKHIBDDAABBAHKPPKHHL...............",
+        ".............HIFDBAFAAAABBBKJIIBIO..............",
+        ".............JIDDABBAAAAAAHBBHIBIJ..............",
+        ".............IBFFAAAAAAAABAAAHBBII..............",
+        ".............BAFDAAAAAAAAAAABHBBH...............",
+        ".............BBFFABAAAAAAAABBAAHH...............",
+        ".............CBFFFBAAAAAABBBAAABB...............",
+        ".............GCAFFABAAAAAABBAAABH...............",
+        ".............CBAFAABBAAAAAAAABBHK...............",
+        ".............ACBBAAHHBAAAAAABBHC................",
+        ".............BCBBBBBHHBAAABBHHBB................",
+        "..............CBBBBBABIHHHHHB.A.................",
+        "..............CBBBBBBBBCC.......................",
+        "..............HBB.BCB...........................",
+        "...................C............................",
+        "................................................",
+        "................................................"
+      ]
+    },
+    {
+      "grid": [
+        "................................................",
+        "................................................",
+        "................................................",
+        "................................................",
+        "................................................",
+        ".........................OJ.....................",
+        "..........................J.....................",
+        "..................J.......HK....................",
+        "...................K.......K....................",
+        "...................H....E..HK...................",
+        "....................EEGEGNLBH...................",
+        "...................NEGGGIGECBN..................",
+        "..................INECBCCCBABJLL................",
+        ".................GGCGCBBBBBBABGL................",
+        ".................CBCBBCCCCGBBBGNL...............",
+        ".................BBFACCCCCGCGGGEE...............",
+        "..................HABCCGGCGGGEEGK...............",
+        "..................EBBCCCCICGKGENN...............",
+        "..................BBCCCCCIGEKENEN...............",
+        ".................CCBCCCCCCGCEGEEEK..............",
+        ".................GBBBBCCCBCCCGGGEK..............",
+        ".................BBBBBABBBCCBCGCGK..............",
+        ".................BAABAAAFFBBBCBGCG..............",
+        ".................MBAFAAABAGNEEECC...............",
+        "................PLHBBBIGEEGEGCBEG...............",
+        "................MECIHHEEENEBAAAAB...............",
+        "................MCIIGHHBBBBHKKJJB...............",
+        "................JIIHCIICIHHHJMMMO...............",
+        "................EIICECCGGBKJJJMMO...............",
+        "...............IIIECCCHBGBHIJJJOO...............",
+        "...............MJIIBHCIGEIBAHIMMO...............",
+        "...............EIEIIICGEGGIBBHIKJ...............",
+        "..............JBEECICCHGEBGHBKKHH...............",
+        "...............IEAACCGICGEIEIHHBB...............",
+        "..............EEIBCIIBGBEEEIBBHBH...............",
+        "..............EEHICECCBCBEEEAABBH...............",
+        "..............BBAIBIBGIGBBGEHAABA...............",
+        "...............HIBBHBIGGBGCEEAAB................",
+        "...............IIAHCBBGBGEGEEBB.................",
+        "...............KBBIBACBBCEEEEB..................",
+        "...............CBIKABCBBBGEGE...................",
+        "...............BCIBBBCBBBBGG....................",
+        "...............GICBBCCBCBBGE....................",
+        "................ICBCC..CC.GK....................",
+        "................HC.CH..C........................",
+        "................................................",
+        "................................................",
+        "................................................"
+      ]
+    },
+    {
+      "grid": [
+        "................................................",
+        "................................................",
+        "................................................",
+        "................................................",
+        "................................................",
+        "............J...................................",
+        "............HK..................JK..............",
+        ".............K..................IK..............",
+        ".............K..................B...............",
+        ".............IK......LLLNN...B..HI..............",
+        ".............BBKK..NEEEELNEE.ABBHH..............",
+        "...............BBHCGGGGGNNNNEBB.................",
+        "................BCCHCCEEEEEELAB.................",
+        ".................CGBBBCKEEGGNG..................",
+        ".................CCBAABGECGGNE..................",
+        "................CCBBAAABBGGEEN..................",
+        "................GBBBBAABCGGGEEK.................",
+        "...............EGCBCBBBCGGGGGEE.................",
+        "...............GBBCCCCCCGGIGEEEE................",
+        "...............CBBCCCCCCCCIGGEKE................",
+        "...............CBABCCCCCGCIBGGIG................",
+        "...............BBAABBBCBCBCCBCCK................",
+        "..............MCBAAAAAAABCBBCGEEP...............",
+        "...........ELEIIIICBCCBFCCBENLLEEMJJ............",
+        ".............EEGIEEEGEECGLNCBELGLL..............",
+        ".............HACCECBGEIEEELECBCIBJ..............",
+        "............KHHIGBGICGBEEBEEJGLLKJM.............",
+        "............EIHGCCGEEJICEELJJECLJJM.............",
+        "...........JHHAHGGGEGJECEIECLLEKGBJJ............",
+        "..........H..AHIGBCIBEEKBGEEEBLLLE..J...........",
+        ".............CICCGEGEBGECBJLLIALLL..............",
+        "............IEGBGBEECBEEEIGLLLJEELM.............",
+        "............IBCCGCGCCBENEHAGEELLNEE.............",
+        "............ICIIECACGBCNECCIILELELM.............",
+        "............ICCCBCCGGGBCGGCJEELIEBE.............",
+        "............HBICIGBCGGCEGEAGJCCLLEJ.............",
+        "............CHIICCBCGBCEGGBBCCBELLL.............",
+        "............IIGCBCCCIHBEEGICCJEACEJ.............",
+        "............ICBACGBHIGCIBGEEBEJCABL.............",
+        "............ABBBBCBBIGICCIEEGCGGCIK.............",
+        ".............CBBBGCBCCGEGCGGEGEEEE..............",
+        "..............BBBGGGBBGECKBGEEENEK..............",
+        "...............B.GGGCCGGGGBGEE.E................",
+        "..................G.CBGEGJ..E...................",
+        "......................ENE.......................",
+        ".......................G........................",
+        "................................................",
+        "................................................"
+      ]
+    }
+  ],
+  "grid": [
+    "................................................",
+    "................................................",
+    "................................................",
+    "................................................",
+    "................................................",
+    "................................................",
+    "............MO...................MM.............",
+    "............JO...................JM.............",
+    ".............M...................M..............",
+    ".............J......EENNLLL......MO.............",
+    "............KIKJM..ENNNENLLL..JMMJJ.............",
+    "...............KJ.EEEEGGEENLL.JJ................",
+    "...............HIGGGCBCBBCEENEKK................",
+    "...............BBGGCBADDDAGEENHH................",
+    "................GCGCAFFAADFBGLL.................",
+    "................CCBBAAHBHIAFCNL.................",
+    "................GCAFAAAABKMAAGLJ................",
+    "...............EGBDAAAABBHIBDCNL................",
+    "...............GCFFAAABAABBHAAGN................",
+    "..............HCBDAAAAAAAABHADBEL...............",
+    "..............GCBDFAAAAAAAHAADAGN...............",
+    "..............HBFDFAAAAABHBAFDFCE...............",
+    "..............HBBDFAAAAABBAADDACE...............",
+    "..............KBCCBDFAAAAAAFFBBCJ...............",
+    "...........LLEBBBBBBBFAADFBBCCBEGLMOM...........",
+    "............EIEBBABBBCCDBCCBBBENLLLL............",
+    "............ICBCCCCBGCBBBCCCENLECEL.............",
+    "............IBHGGEEENIAAAGNNLNEEKKJM............",
+    "...........JIHHBBGCEEHBAHIGLEEBKJMMM............",
+    "...........KHIHFDHBCBHHIIJOLIBBAHKJMM...........",
+    ".........JIKBADFABBBAHHHIMPPJHHADFHKJM..........",
+    ".........I..AFAAHHAAAAABHKOOJHHBBFB..K..........",
+    "............FDHBIHAAAAAABHHKKKHIHFA.............",
+    "............ADHHBHBAAAAAABBBHIHHHFAB............",
+    "............AFHBAAAAAAAAAAABHHHIIAFA............",
+    "............BFBBBAAAAAAAAABBBBHIAFC.............",
+    "............BFABBAAAAAAAAHAAABHHBACK............",
+    "............ABAHBAAAAABBBAAABAHHAAA.............",
+    "............ABAAHBAAAAAAAAAAABHBABAB............",
+    "...........AAABAAHBBAAAAABAABHHAAABA............",
+    "...........BBBBBBAHBAAAAAAABHHAAABCH............",
+    "............BBBBBBBHHBAAABBHBABBBBB.............",
+    "............BBBBBBBBBHHBHHBBBABBBBB.............",
+    "...............B.BBBABBBBBBABA.BB.H.............",
+    "..................B...BBB...A...................",
+    "......................AB........................",
+    "................................................",
+    "................................................"
+  ]
+}
+};
+
+
+// Auto-synced by pixeldsl.py CLI
+window.PIXEL_PRESETS["proc_sword_s123_32x32"] = {
+  label: "✨ proc_sword_s123_32x32 (32×32) [4f]",
+  prompt: "Procedural sword (seed=123, 32x32) — 100% LLM-Free PixelDSL v3.0",
+  data: {
+  "name": "proc_sword_s123_32x32",
+  "prompt": "Procedural sword (seed=123, 32x32) — 100% LLM-Free PixelDSL v3.0",
+  "width": 32,
+  "height": 32,
+  "symmetry": "none",
+  "rle": false,
+  "ramps": {
+    "M": {
+      "base": "#8a85f2",
+      "light": "L",
+      "dark": "D",
+      "outline": "O"
+    },
+    "A": {
+      "base": "#ff6800",
+      "light": "W",
+      "dark": "B",
+      "outline": "O"
+    },
+    "S": {
+      "base": "#a9bea7",
+      "light": "w",
+      "dark": "d",
+      "outline": "O"
+    },
+    "H": {
+      "base": "#8c4a11",
+      "light": "h",
+      "dark": "b",
+      "outline": "O"
+    }
+  },
+  "palette": {
+    ".": "transparent",
+    "O": "#14182e",
+    "e": "#0e101c",
+    "w": "#ffffff",
+    "a": "#14182e44"
+  },
+  "postProcess": {
+    "autoOutline": false,
+    "outlineColor": "#14182e",
+    "autoShading": false,
+    "shadingStrength": 0.16,
+    "sdfShading": true,
+    "selOut": true
+  },
+  "layers": [
+    {
+      "id": "shadow",
+      "op": "ellipse",
+      "cx": 15.5,
+      "cy": 29.0,
+      "rx": 6.0,
+      "ry": 1.5,
+      "fill": "a"
+    },
+    {
+      "id": "pommel",
+      "op": "ellipse",
+      "cx": 15.5,
+      "cy": 27.5,
+      "rx": 2.2,
+      "ry": 2.2,
+      "fill": "A",
+      "outline": "O",
+      "sdf": true
+    },
+    {
+      "id": "grip",
+      "op": "uneven_capsule",
+      "x1": 15.5,
+      "y1": 26.0,
+      "x2": 15.5,
+      "y2": 21.0,
+      "r1": 1.6,
+      "r2": 1.9,
+      "fill": "H",
+      "outline": "O",
+      "sdf": true
+    },
+    {
+      "id": "blade",
+      "op": "uneven_capsule",
+      "x1": 15.5,
+      "y1": 21.0,
+      "x2": 15.5,
+      "y2": 4.5,
+      "r1": 4.2,
+      "r2": 1.5,
+      "fill": "S",
+      "outline": "O",
+      "sdf": true
+    },
+    {
+      "id": "blade_tip",
+      "op": "vesica",
+      "cx": 15.5,
+      "cy": 7.5,
+      "rx": 4.0,
+      "ry": 5.0,
+      "fill": "S",
+      "outline": "O",
+      "sdf": true,
+      "smoothBlend": 1.5
+    },
+    {
+      "id": "fuller",
+      "op": "uneven_capsule",
+      "x1": 15.5,
+      "y1": 20.0,
+      "x2": 15.5,
+      "y2": 9.0,
+      "r1": 1.0,
+      "r2": 0.6,
+      "fill": "M",
+      "sdf": true
+    },
+    {
+      "id": "guard",
+      "op": "vesica",
+      "cx": 15.5,
+      "cy": 21.0,
+      "rx": 7.9,
+      "ry": 2.2,
+      "angle": -1.4545059241354465,
+      "fill": "A",
+      "outline": "O",
+      "sdf": true
+    },
+    {
+      "id": "gem",
+      "op": "ellipse",
+      "cx": 15.5,
+      "cy": 21.0,
+      "rx": 1.8,
+      "ry": 1.8,
+      "fill": "M",
+      "outline": "O",
+      "sdf": true
+    }
+  ],
+  "frames": [],
+  "grid": [],
+  "motion": {
+    "type": "idle_breathe",
+    "frames": 4,
+    "amplitude": 0.8,
+    "squash": 0.04
+  }
+}
+};
+
+
+// Auto-synced by pixeldsl.py CLI
+window.PIXEL_PRESETS["proc_slime_s777_32x32"] = {
+  label: "✨ proc_slime_s777_32x32 (32×32) [4f]",
+  prompt: "Procedural slime (seed=777, 32x32) — 100% LLM-Free PixelDSL v3.0",
+  data: {
+  "name": "proc_slime_s777_32x32",
+  "prompt": "Procedural slime (seed=777, 32x32) — 100% LLM-Free PixelDSL v3.0",
+  "width": 32,
+  "height": 32,
+  "symmetry": "none",
+  "rle": false,
+  "ramps": {
+    "M": {
+      "base": "#268edd",
+      "light": "L",
+      "dark": "D",
+      "outline": "O"
+    },
+    "A": {
+      "base": "#ff779f",
+      "light": "W",
+      "dark": "B",
+      "outline": "O"
+    },
+    "S": {
+      "base": "#baba9c",
+      "light": "w",
+      "dark": "d",
+      "outline": "O"
+    },
+    "H": {
+      "base": "#8c4a11",
+      "light": "h",
+      "dark": "b",
+      "outline": "O"
+    }
+  },
+  "palette": {
+    ".": "transparent",
+    "O": "#14182e",
+    "e": "#0e101c",
+    "w": "#ffffff",
+    "a": "#14182e44"
+  },
+  "postProcess": {
+    "autoOutline": false,
+    "outlineColor": "#14182e",
+    "autoShading": false,
+    "shadingStrength": 0.16,
+    "sdfShading": true,
+    "selOut": true
+  },
+  "layers": [
+    {
+      "id": "shadow",
+      "op": "ellipse",
+      "cx": 15.5,
+      "cy": 28.0,
+      "rx": 9.9,
+      "ry": 2.2,
+      "fill": "a"
+    },
+    {
+      "id": "crown",
+      "op": "star",
+      "cx": 15.5,
+      "cy": 6.1,
+      "r": 3.8,
+      "n": 5,
+      "innerRatio": 0.55,
+      "fill": "A",
+      "outline": "O",
+      "sdf": true,
+      "parent": "slime_body"
+    },
+    {
+      "id": "slime_body",
+      "op": "ellipse",
+      "cx": 15.5,
+      "cy": 17.5,
+      "rx": 9.4,
+      "ry": 8.2,
+      "fill": "M",
+      "outline": "O",
+      "sdf": true,
+      "smoothBlend": 3.0
+    },
+    {
+      "id": "slime_lobes",
+      "op": "ellipse",
+      "cx": 9.1,
+      "cy": 20.7,
+      "rx": 4.6,
+      "ry": 3.6,
+      "fill": "M",
+      "outline": "O",
+      "mirror": "x",
+      "sdf": true,
+      "smoothBlend": 3.0
+    },
+    {
+      "id": "slime_top",
+      "op": "ellipse",
+      "cx": 15.5,
+      "cy": 12.7,
+      "rx": 5.8,
+      "ry": 4.2,
+      "fill": "M",
+      "outline": "O",
+      "sdf": true,
+      "smoothBlend": 2.5
+    },
+    {
+      "id": "eye_l",
+      "op": "ellipse",
+      "cx": 12.0,
+      "cy": 16.5,
+      "rx": 1.5,
+      "ry": 2.0,
+      "fill": "e",
+      "mirror": "x",
+      "parent": "slime_body"
+    },
+    {
+      "id": "glint",
+      "op": "pixels",
+      "color": "w",
+      "mirror": "x",
+      "points": [
+        [
+          12,
+          16
+        ]
+      ],
+      "parent": "slime_body"
+    }
+  ],
+  "frames": [],
+  "grid": [],
+  "motion": {
+    "type": "idle_breathe",
+    "frames": 4,
+    "amplitude": 1.0,
+    "squash": 0.12
+  }
+}
+};
+
+
+// Auto-synced by pixeldsl.py CLI
+window.PIXEL_PRESETS["proc_bunny_s999_32x32"] = {
+  label: "✨ proc_bunny_s999_32x32 (32×32) [4f]",
+  prompt: "Procedural bunny (seed=999, 32x32) — 100% LLM-Free PixelDSL v3.0",
+  data: {
+  "name": "proc_bunny_s999_32x32",
+  "prompt": "Procedural bunny (seed=999, 32x32) — 100% LLM-Free PixelDSL v3.0",
+  "width": 32,
+  "height": 32,
+  "symmetry": "none",
+  "rle": false,
+  "ramps": {
+    "M": {
+      "base": "#e04ba0",
+      "light": "L",
+      "dark": "D",
+      "outline": "O"
+    },
+    "A": {
+      "base": "#00cfdd",
+      "light": "W",
+      "dark": "B",
+      "outline": "O"
+    },
+    "S": {
+      "base": "#9bbfc5",
+      "light": "w",
+      "dark": "d",
+      "outline": "O"
+    },
+    "H": {
+      "base": "#8c4a11",
+      "light": "h",
+      "dark": "b",
+      "outline": "O"
+    }
+  },
+  "palette": {
+    ".": "transparent",
+    "O": "#14182e",
+    "e": "#0e101c",
+    "w": "#ffffff",
+    "a": "#14182e44"
+  },
+  "postProcess": {
+    "autoOutline": false,
+    "outlineColor": "#14182e",
+    "autoShading": false,
+    "shadingStrength": 0.16,
+    "sdfShading": true,
+    "selOut": true
+  },
+  "layers": [
+    {
+      "id": "shadow",
+      "op": "ellipse",
+      "cx": 15.5,
+      "cy": 28.5,
+      "rx": 8.5,
+      "ry": 1.5,
+      "fill": "a"
+    },
+    {
+      "id": "ear_back",
+      "op": "uneven_capsule",
+      "x1": 16.5,
+      "y1": 12.5,
+      "x2": 13.5,
+      "y2": 5.5,
+      "r1": 2.1,
+      "r2": 1.4,
+      "fill": "A",
+      "outline": "O",
+      "sdf": true,
+      "parent": "body"
+    },
+    {
+      "id": "tail",
+      "op": "ellipse",
+      "cx": 6.5,
+      "cy": 20.0,
+      "rx": 2.6,
+      "ry": 2.6,
+      "fill": "S",
+      "outline": "O",
+      "sdf": true,
+      "parent": "body"
+    },
+    {
+      "id": "body",
+      "op": "ellipse",
+      "cx": 15.5,
+      "cy": 20.0,
+      "rx": 6.2,
+      "ry": 5.0,
+      "angle": -8,
+      "fill": "S",
+      "outline": "O",
+      "sdf": true,
+      "smoothBlend": 2.0,
+      "z": 1
+    },
+    {
+      "id": "thigh",
+      "op": "ellipse",
+      "cx": 11.0,
+      "cy": 21.0,
+      "rx": 4.8,
+      "ry": 3.8,
+      "angle": -10,
+      "fill": "S",
+      "outline": "O",
+      "sdf": true,
+      "smoothBlend": 1.8,
+      "z": 2,
+      "crease": true,
+      "parent": "body"
+    },
+    {
+      "id": "head",
+      "op": "ellipse",
+      "cx": 20.0,
+      "cy": 14.5,
+      "rx": 4.8,
+      "ry": 4.5,
+      "fill": "S",
+      "outline": "O",
+      "sdf": true,
+      "smoothBlend": 1.6,
+      "z": 1,
+      "parent": "body"
+    },
+    {
+      "id": "ear_front",
+      "op": "uneven_capsule",
+      "x1": 19.0,
+      "y1": 12.5,
+      "x2": 16.5,
+      "y2": 5.5,
+      "r1": 2.2,
+      "r2": 1.5,
+      "fill": "S",
+      "outline": "O",
+      "sdf": true,
+      "smoothBlend": 1.4,
+      "z": 2,
+      "crease": true,
+      "parent": "body"
+    },
+    {
+      "id": "eye",
+      "op": "ellipse",
+      "cx": 22.0,
+      "cy": 13.5,
+      "rx": 1.3,
+      "ry": 1.6,
+      "fill": "e",
+      "parent": "body"
+    }
+  ],
+  "frames": [],
+  "grid": [],
+  "motion": {
+    "type": "jump_arc",
+    "frames": 4,
+    "amplitude": 1.0,
+    "squash": 0.1
+  }
+}
+};
+
 window.SKILL_PROMPT_TEMPLATE = function(userRequest, width, height, mode) {
   const isGridPreferred = (mode === "grid") || (mode === "auto" && width <= 32 && height <= 32);
   const modeInstructions = isGridPreferred
@@ -454,23 +1988,29 @@ window.SKILL_PROMPT_TEMPLATE = function(userRequest, width, height, mode) {
 - The "grid" array must contain exactly ${height} strings.
 - Each string must contain exactly ${width} single-character keys from "palette" (where "." is transparent).
 - Count characters in every row carefully (strictly ${width} chars per row).`
-    : `MODE: Hybrid Procedural & SDF Pixel Layers ("layers" + "stamp" + optional "frames").
+    : `MODE: Hybrid Procedural & 2.5D SDF/CSG Pixel Layers ("layers" + "stamp" + optional "motion" / "frames").
 - Canvas size: ${width}x${height} pixels.
-- Build the silhouette in "layers" using integer primitives with an "id" field:
-  * { "id": "body", "op": "ellipse", "cx": X, "cy": Y, "rx": RX, "ry": RY, "angle": 0, "fill": "S", "outline": "O", "sdf": true, "smoothBlend": 2.5, "dither": "none|checker|sparse|scales", "ditherColor": "B", "mirror": "none|x|y|quad" }
-  * { "id": "box", "op": "rect", "x": X, "y": Y, "w": W, "h": H, "rx": 1, "fill": "S", "outline": "O", "sdf": true, "smoothBlend": 0, "mirror": "none|x" }
-  * { "id": "tail", "op": "polygon", "points": [[x1,y1],[x2,y2],[x3,y3]], "fill": "S", "outline": "O", "sdf": true, "mirror": "none|x" }
-  * { "id": "seam", "op": "line", "x1": X1, "y1": Y1, "x2": X2, "y2": Y2, "thickness": 1, "color": "O", "mirror": "none|x" }
-  * { "id": "leg", "op": "curve", "points": [[x1,y1],[cx,cy],[x2,y2]], "thickness": 1, "color": "O", "mirror": "none|x" }
-  * { "id": "eyes", "op": "stamp", "x": X, "y": Y, "grid": ["..ee..", ".ewwe."] }
+- Build the silhouette in "layers" using integer or exact Quilez SDF primitives with an "id" field:
+  * { "id": "body", "op": "ellipse", "cx": X, "cy": Y, "rx": RX, "ry": RY, "angle": 0, "fill": "S", "outline": "O", "sdf": true, "smoothBlend": 2.2, "z": 1, "crease": false, "opMode": "union|smooth_union|subtract|smooth_subtract|intersect", "shader": "none|worley|voronoi|turing|bayer4x4|blue_noise", "mirror": "none|x|y|quad" }
+  * { "id": "limb", "op": "uneven_capsule", "x1": X1, "y1": Y1, "x2": X2, "y2": Y2, "r1": R1, "r2": R2, "fill": "S", "outline": "O", "sdf": true, "z": 2, "crease": true, "mirror": "none|x" }
+  * { "id": "leaf", "op": "vesica", "cx": X, "cy": Y, "rx": RX, "ry": RY, "angle": 0, "fill": "S", "outline": "O", "sdf": true }
+  * { "id": "crest", "op": "moon", "cx": X, "cy": Y, "r": R1, "r2": R2, "d": D, "angle": 0, "fill": "S", "outline": "O", "sdf": true }
+  * { "id": "tail", "op": "bezier_sdf", "points": [[x1,y1],[cx,cy],[x2,y2]], "r1": R1, "r2": R2, "fill": "S", "outline": "O", "sdf": true }
+  * { "id": "gem", "op": "star", "cx": X, "cy": Y, "r": R, "n": 5, "innerRatio": 0.48, "angle": 0, "fill": "S", "outline": "O", "sdf": true }
+  * { "id": "hex", "op": "ngon", "cx": X, "cy": Y, "r": R, "n": 6, "angle": 0, "fill": "S", "outline": "O", "sdf": true }
+  * { "id": "box", "op": "rect", "x": X, "y": Y, "w": W, "h": H, "rx": 1, "angle": 0, "fill": "S", "outline": "O", "sdf": true, "mirror": "none|x" }
+  * { "id": "shard", "op": "polygon", "points": [[x1,y1],[x2,y2],[x3,y3]], "angle": 0, "fill": "S", "outline": "O", "sdf": true, "mirror": "none|x" }
+  * { "id": "eyes", "op": "stamp", "x": X, "y": Y, "angle": 0, "grid": ["..ee..", ".ewwe."] }
   * { "id": "glint", "op": "pixels", "color": "w", "points": [[x,y]] }
-- SDF METABALLS & 3D VOLUME SHADING:
-  * Set "smoothBlend": 2.0..5.0 on consecutive shape layers sharing the same "fill" to smoothly fuse them via polynomial SDF smooth-min (metaballs) with a single unified pixel outline!
-  * Set "sdf": true on a layer (or "postProcess": { "sdfShading": true } globally) to automatically compute 3D spherical heightmap normals, quantized 5-band pixel-art tones, and Bayer 2x2 ordered dithering.
-- Use "mirror": "x" for symmetrical limbs/wings/details.
-- For animations, add "frames": [{ "layers": { "leg": { "dx": 0, "dy": -1, "dAngle": 15 } } }].`;
+- 2.5D SDF METABALLS, INTERNAL CREASES & 3D VOLUME SHADING:
+  * Set "smoothBlend": 1.6..3.5 on consecutive shape layers sharing the same "fill" to smoothly fuse them via polynomial SDF smooth-min with a single unified 1px outline.
+  * Set "z": 2 and "crease": true on foreground overlapping limbs (e.g., thigh over body) to draw an automatic 1px dark anatomical crease inside the merged silhouette.
+  * Set "sdf": true on a layer (or "postProcess": { "sdfShading": true } globally) for Oklch hue-shifted 5-band 3D volume shading and tangent-space normal maps.
+- PROCEDURAL MOTION & ANIMATION:
+  * Either provide a declarative motion block: "motion": { "type": "idle_breathe|walk_cycle|swim_cycle|jump_arc|wave", "frames": 4, "amplitude": 1.0 }
+  * Or explicit per-frame layer deltas: "frames": [{ "layers": { "limb": { "dx": 0, "dy": -1, "dAngle": 15 } } }].`;
 
-  return `You are a 2D pixel-art asset generator following the PixelDSL v2.5 specification (SKILL.md).
+  return `You are a 2D pixel-art asset generator following the PixelDSL v3.0 specification (SKILL.md).
 Convert the user request into a valid JSON sprite definition without any surrounding explanation (JSON only).
 
 USER REQUEST: "${userRequest}"
@@ -478,10 +2018,10 @@ TARGET CANVAS SIZE: ${width}x${height} pixels (coordinate range X: 0..${width - 
 
 ${modeInstructions}
 
-PALETTE, AUTO-RAMPS ("ramps"), AND COMPOSITION RULES:
+PALETTE, OKLCH AUTO-RAMPS ("ramps"), AND COMPOSITION RULES:
 1. "." is always "transparent".
-2. You may specify "palettePreset": "endesga32" | "pico8" | "gameboy" OR define auto tonal ramps in "ramps":
-   "ramps": { "S": { "base": "#3e8948", "light": "L", "dark": "B", "outline": "O" } } — the engine will automatically generate highlight "L", shadow "B", and outline "O".
+2. You may specify "palettePreset": "endesga32" | "pico8" | "gameboy" OR define perceptual Oklch auto tonal ramps in "ramps":
+   "ramps": { "S": { "base": "#3e8948", "light": "L", "dark": "B", "outline": "O" } } — the engine automatically generates highlight "L", shadow "B", and outline "O".
 3. Leave a 1–2 pixel transparent margin around canvas borders so the silhouette is never clipped.
 
 OUTPUT FORMAT (strictly valid JSON):
@@ -503,7 +2043,8 @@ OUTPUT FORMAT (strictly valid JSON):
     "outlineColor": "#14182e",
     "autoShading": false,
     "shadingStrength": 0.16,
-    "sdfShading": false
+    "sdfShading": false,
+    "selOut": false
   },
   "layers": [],
   "frames": [],

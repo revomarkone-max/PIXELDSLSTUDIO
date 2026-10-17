@@ -1,25 +1,39 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-PixelDSL CLI v2.5 — Blind 2D Pixel-Art Asset Compiler (8x8 .. 128x128) for any LLM CLI.
-Zero external dependencies (uses only Python 3 standard library: json, zlib, struct, math).
+PixelDSL CLI v3.0 — Autonomous 2D Pixel-Art Mathematical Engine & Asset Compiler (8x8 .. 128x128).
+Zero external dependencies (uses only Python 3 standard library: json, zlib, struct, math, base64, subprocess).
 
-Features:
-- Accepts JSON from a file path, --json inline string, or standard input (stdin).
-- Supports symbolic grids (grid), integer/SDF primitive layers (layers), SDF Smooth Union (smoothBlend),
-  3D Heightmap Normal Shading (sdfShading), auto color ramps (ramps), retro palettes, and multi-frame animations.
-- Prints an AI self-diagnostics report to stdout (fill %, center balance, edge clipping check)
-  along with a TrueColor ANSI terminal preview using half-blocks (▀).
-- Automatically saves canonical JSON to sprites/, exports 1:1 PNG and _sheet.png to game_ready/,
-  and syncs the sprite library with the Web Studio (presets.js -> index.html).
+Six Mathematical Pillars of PixelDSL v3.0:
+1. 2.5D SDF & CSG Algebra: Exact Inigo Quilez SDFs (gradient-normalized ellipse, uneven_capsule,
+   vesica, moon, bezier_sdf, star/ngon), universal 2D inverse affine rotation, CSG Booleans
+   (union, smooth_union, subtract, smooth_subtract, intersect, onion), polarRepeat, domainWarp,
+   unclamped continuous SDF normals, 2.5D Z-buffers with automatic 1px Internal Anatomical Creases
+   (Delta-Z / Delta-N), Selective Outlining, and tangent-space Normal Map export (_normal.png).
+2. Felzenszwalb & Huttenlocher O(W*H) 2D Euclidean Distance Transform (EDT) + Discrete Pixel-Art
+   Morphology (1px cardinal spur/pimple pruning, pinhole filling, L-corner jaggie cleanup, and
+   RotSprite EPX 2x clean stamp rotation).
+3. Perceptual Björn Ottosson Oklab / Oklch Color Engine + Procedural Surface Micro-Shaders
+   (worley F2-F1 cellular ridges, voronoi F1, turing activator-inhibitor reaction-diffusion,
+   bayer4x4, blue_noise) + 5-tone SDF auto-registration into symbol_buffer for lossless Bake-to-Grid.
+4. Kinematic Bone Hierarchy (parent / pivot), Analytical Law-of-Cosines 2-Bone IK Solver (ik),
+   and Declarative Procedural Motion Generators (idle_breathe, walk_cycle, swim_cycle, jump_arc, wave)
+   with volume-preserving Squash & Stretch (rx * ry = const) and phase-lagged secondary follow-through.
+5. 100% LLM-Free Parametric Archetype Generator (--generate <archetype> --seed <N>), Evolutionary
+   Genome Mutator (--mutate), and MarkovJunior-style local cellular rewrite rules ("rules").
+6. Pure-Python RFC-2083 5-Filter PNG Decoder + Chroma-Key (#FF00FF) Oklab Despiller + Connected-Component
+   Strip Slicer + SLIC Edge-Snapping Superpixel Downsampler (--import-image).
 """
 
 import argparse
+import base64
 import copy
 import json
 import math
+import os
 import re
 import struct
+import subprocess
 import sys
 import zlib
 from pathlib import Path
@@ -53,6 +67,73 @@ BAYER_2X2 = (
     (0.06, -0.02)
 )
 
+BAYER_4X4 = (
+    (0.0 / 16.0, 8.0 / 16.0, 2.0 / 16.0, 10.0 / 16.0),
+    (12.0 / 16.0, 4.0 / 16.0, 14.0 / 16.0, 6.0 / 16.0),
+    (3.0 / 16.0, 11.0 / 16.0, 1.0 / 16.0, 9.0 / 16.0),
+    (15.0 / 16.0, 7.0 / 16.0, 13.0 / 16.0, 5.0 / 16.0)
+)
+
+SDF_SHAPE_OPS = (
+    "ellipse", "rect", "polygon", "capsule", "uneven_capsule",
+    "vesica", "moon", "bezier_sdf", "star", "ngon"
+)
+
+
+# ============================================================================
+# Deterministic Seeded PRNG (Mulberry32-compatible across Python & JS)
+# ============================================================================
+
+class SeededRNG:
+    def __init__(self, seed=42):
+        self.state = int(seed) & 0xFFFFFFFF
+        if self.state == 0:
+            self.state = 0x6D2B79F5
+
+    def next_float(self):
+        self.state = (self.state + 0x6D2B79F5) & 0xFFFFFFFF
+        t = self.state
+        t = ((t ^ (t >> 15)) * (t | 1)) & 0xFFFFFFFF
+        t = (t ^ (t + (((t ^ (t >> 7)) * (t | 61)) & 0xFFFFFFFF))) & 0xFFFFFFFF
+        return ((t ^ (t >> 14)) & 0xFFFFFFFF) / 4294967296.0
+
+    def range(self, low, high):
+        return low + (high - low) * self.next_float()
+
+    def randint(self, low, high):
+        return int(math.floor(self.range(low, high + 0.999999)))
+
+    def choice(self, seq):
+        if not seq:
+            return None
+        return seq[int(math.floor(self.next_float() * len(seq))) % len(seq)]
+
+
+def hash2d(ix, iy, seed=0):
+    h = (int(ix) * 374761393 + int(iy) * 668265263 + int(seed) * 1442695041) & 0xFFFFFFFF
+    h = ((h ^ (h >> 13)) * 1274126177) & 0xFFFFFFFF
+    return ((h ^ (h >> 16)) & 0xFFFFFFFF) / 4294967296.0
+
+
+def value_noise2d(x, y, seed=0):
+    ix = math.floor(x)
+    iy = math.floor(y)
+    fx = x - ix
+    fy = y - iy
+    ux = fx * fx * (3.0 - 2.0 * fx)
+    uy = fy * fy * (3.0 - 2.0 * fy)
+    n00 = hash2d(ix, iy, seed)
+    n10 = hash2d(ix + 1, iy, seed)
+    n01 = hash2d(ix, iy + 1, seed)
+    n11 = hash2d(ix + 1, iy + 1, seed)
+    nx0 = n00 + (n10 - n00) * ux
+    nx1 = n01 + (n11 - n01) * ux
+    return nx0 + (nx1 - nx0) * uy
+
+
+# ============================================================================
+# Pillar 3: Perceptual Oklab / Oklch Color Engine
+# ============================================================================
 
 def clamp_size(val, fallback=32):
     try:
@@ -72,9 +153,9 @@ def parse_color(color_str):
         h = s[1:]
         try:
             if len(h) == 3:
-                return (int(h[0]*2, 16), int(h[1]*2, 16), int(h[2]*2, 16), 255)
+                return (int(h[0] * 2, 16), int(h[1] * 2, 16), int(h[2] * 2, 16), 255)
             if len(h) == 4:
-                return (int(h[0]*2, 16), int(h[1]*2, 16), int(h[2]*2, 16), int(h[3]*2, 16))
+                return (int(h[0] * 2, 16), int(h[1] * 2, 16), int(h[2] * 2, 16), int(h[3] * 2, 16))
             if len(h) == 6:
                 return (int(h[0:2], 16), int(h[2:4], 16), int(h[4:6], 16), 255)
             if len(h) == 8:
@@ -94,62 +175,134 @@ def rgba_to_hex(r, g, b, a=255):
     return f"#{ch(r)}{ch(g)}{ch(b)}"
 
 
+def _srgb_to_linear(c):
+    v = max(0.0, min(1.0, c / 255.0))
+    return v / 12.92 if v <= 0.04045 else ((v + 0.055) / 1.055) ** 2.4
+
+
+def _linear_to_srgb(v):
+    v = max(0.0, min(1.0, v))
+    c = 12.92 * v if v <= 0.0031308 else 1.055 * (v ** (1.0 / 2.4)) - 0.055
+    return max(0, min(255, int(round(c * 255.0))))
+
+
+def rgb_to_oklab(r, g, b):
+    lr = _srgb_to_linear(r)
+    lg = _srgb_to_linear(g)
+    lb = _srgb_to_linear(b)
+    l = 0.4122214708 * lr + 0.5363325363 * lg + 0.0514459929 * lb
+    m = 0.2119034982 * lr + 0.6806995451 * lg + 0.1073969566 * lb
+    s = 0.0883024619 * lr + 0.2817188376 * lg + 0.6299787005 * lb
+    l_ = l ** (1.0 / 3.0) if l > 0 else 0.0
+    m_ = m ** (1.0 / 3.0) if m > 0 else 0.0
+    s_ = s ** (1.0 / 3.0) if s > 0 else 0.0
+    L = 0.2104542553 * l_ + 0.7936177850 * m_ - 0.0040720468 * s_
+    a = 1.9779984951 * l_ - 2.4285922050 * m_ + 0.4505937099 * s_
+    b_val = 0.0259040371 * l_ + 0.7827717662 * m_ - 0.8086757660 * s_
+    return (L, a, b_val)
+
+
+def oklab_to_rgb(L, a, b_val):
+    l_ = L + 0.3963377774 * a + 0.2158037573 * b_val
+    m_ = L - 0.1055613458 * a - 0.0638541728 * b_val
+    s_ = L - 0.0894841775 * a - 1.2914855480 * b_val
+    l = max(0.0, l_) ** 3
+    m = max(0.0, m_) ** 3
+    s = max(0.0, s_) ** 3
+    lr = +4.0767416621 * l - 3.3077115913 * m + 0.2309699292 * s
+    lg = -1.2684380046 * l + 2.6097574011 * m - 0.3413193965 * s
+    lb = -0.0041960863 * l - 0.7034186147 * m + 1.7076147010 * s
+    return (_linear_to_srgb(lr), _linear_to_srgb(lg), _linear_to_srgb(lb))
+
+
+def rgb_to_oklch(r, g, b):
+    L, a, b_val = rgb_to_oklab(r, g, b)
+    C = math.sqrt(a * a + b_val * b_val)
+    h = math.degrees(math.atan2(b_val, a)) % 360.0
+    return (L, C, h)
+
+
+def oklch_to_rgb(L, C, h_deg):
+    rad = math.radians(h_deg)
+    return oklab_to_rgb(L, C * math.cos(rad), C * math.sin(rad))
+
+
+def _shift_hue_toward(h_deg, target_deg, amount):
+    diff = ((target_deg - h_deg + 180.0) % 360.0) - 180.0
+    return (h_deg + diff * amount) % 360.0
+
+
 def generate_color_ramp(base_hex):
+    """Generates a harmonious 4-tone pixel-art ramp in perceptual Oklch space."""
     r, g, b, a = parse_color(base_hex)
-    light = rgba_to_hex(
-        min(255, r + (255 - r) * 0.35 + 12),
-        min(255, g + (255 - g) * 0.38 + 14),
-        min(255, b + (255 - b) * 0.18),
-        a
-    )
-    dark = rgba_to_hex(
-        max(0, r * 0.62 - 6),
-        max(0, g * 0.66 - 4),
-        max(0, min(255, b * 0.78 + 10)),
-        a
-    )
-    outline = rgba_to_hex(
-        max(8, r * 0.22),
-        max(10, g * 0.22),
-        max(22, min(255, b * 0.34 + 14)),
-        255
-    )
-    return {"base": base_hex, "light": light, "dark": dark, "outline": outline}
+    L, C, h = rgb_to_oklch(r, g, b)
+    is_neutral = C < 0.025
+
+    # Warm highlight shift toward golden sunlight (~90 deg in Oklch)
+    L_light = min(0.97, L + (1.0 - L) * 0.42 + 0.06)
+    C_light = C * 0.85 if not is_neutral else min(0.015, C + 0.005)
+    h_light = _shift_hue_toward(h, 90.0, 0.18 if not is_neutral else 0.0)
+    lr, lg, lb = oklch_to_rgb(L_light, C_light, h_light)
+
+    # Cool shadow shift toward indigo (~275 deg) or warm berry if pink/red
+    shadow_target = 335.0 if (h > 315.0 or h < 25.0) else 275.0
+    L_dark = max(0.14, L * 0.74 - 0.04)
+    C_dark = min(0.28, C * 1.08 + 0.012) if not is_neutral else min(0.022, C + 0.012)
+    h_dark = _shift_hue_toward(h, shadow_target, 0.22)
+    dr, dg, db = oklch_to_rgb(L_dark, C_dark, h_dark)
+
+    # Deep tinted outline
+    L_out = max(0.16, min(0.26, L * 0.34))
+    C_out = min(0.14, C * 0.75 + 0.02) if not is_neutral else 0.025
+    h_out = _shift_hue_toward(h, shadow_target, 0.35)
+    or_, og, ob = oklch_to_rgb(L_out, C_out, h_out)
+
+    return {
+        "base": base_hex,
+        "light": rgba_to_hex(lr, lg, lb, a),
+        "dark": rgba_to_hex(dr, dg, db, a),
+        "outline": rgba_to_hex(or_, og, ob, 255)
+    }
 
 
 def derive_sdf_shading_tones(base_rgba):
+    """Derives 5 perceptual Oklch RGBA tones for 3D SDF Volume Shading."""
     r, g, b, a = base_rgba
-    deep_shadow = (
-        max(0, int(round(r * 0.56 - 6))),
-        max(0, int(round(g * 0.60 - 4))),
-        max(0, min(255, int(round(b * 0.74 + 12)))),
-        a
+    L, C, h = rgb_to_oklch(r, g, b)
+    is_neutral = C < 0.025
+    shadow_target = 335.0 if (h > 315.0 or h < 25.0) else 275.0
+
+    # Deep shadow
+    ds_rgb = oklch_to_rgb(
+        max(0.12, L * 0.68 - 0.05),
+        min(0.28, C * 1.10 + 0.015) if not is_neutral else min(0.025, C + 0.014),
+        _shift_hue_toward(h, shadow_target, 0.25)
     )
-    shadow = (
-        max(0, int(round(r * 0.76 - 3))),
-        max(0, int(round(g * 0.79 - 2))),
-        max(0, min(255, int(round(b * 0.88 + 6)))),
-        a
+    # Soft shadow
+    sh_rgb = oklch_to_rgb(
+        max(0.18, L * 0.84 - 0.02),
+        min(0.28, C * 1.04 + 0.008) if not is_neutral else min(0.018, C + 0.008),
+        _shift_hue_toward(h, shadow_target, 0.14)
     )
-    base = (r, g, b, a)
-    highlight = (
-        min(255, int(round(r + (255 - r) * 0.30 + 10))),
-        min(255, int(round(g + (255 - g) * 0.34 + 12))),
-        min(255, int(round(b + (255 - b) * 0.16))),
-        a
+    # Highlight
+    hi_rgb = oklch_to_rgb(
+        min(0.96, L + (1.0 - L) * 0.36 + 0.04),
+        C * 0.88 if not is_neutral else C,
+        _shift_hue_toward(h, 90.0, 0.16 if not is_neutral else 0.0)
     )
-    specular = (
-        min(255, int(round(r + (255 - r) * 0.62 + 18))),
-        min(255, int(round(g + (255 - g) * 0.65 + 18))),
-        min(255, int(round(b + (255 - b) * 0.45 + 8))),
-        a
+    # Specular
+    sp_rgb = oklch_to_rgb(
+        min(0.99, L + (1.0 - L) * 0.68 + 0.07),
+        C * 0.55 if not is_neutral else C * 0.5,
+        _shift_hue_toward(h, 92.0, 0.25 if not is_neutral else 0.0)
     )
+
     return {
-        "deepShadow": deep_shadow,
-        "shadow": shadow,
-        "base": base,
-        "highlight": highlight,
-        "specular": specular
+        "deepShadow": (ds_rgb[0], ds_rgb[1], ds_rgb[2], a),
+        "shadow": (sh_rgb[0], sh_rgb[1], sh_rgb[2], a),
+        "base": (r, g, b, a),
+        "highlight": (hi_rgb[0], hi_rgb[1], hi_rgb[2], a),
+        "specular": (sp_rgb[0], sp_rgb[1], sp_rgb[2], a)
     }
 
 
@@ -174,11 +327,13 @@ def resolve_full_palette(spec):
             elif isinstance(cfg, dict) and cfg.get("base"):
                 ramp = generate_color_ramp(cfg["base"])
                 merged[key] = ramp["base"]
-                if cfg.get("light"):
+                if cfg.get("light") and cfg["light"] not in merged:
                     merged[cfg["light"]] = ramp["light"]
-                if cfg.get("dark"):
+                elif cfg.get("light") and not (spec.get("palette") or {}).get(cfg["light"]):
+                    merged[cfg["light"]] = ramp["light"]
+                if cfg.get("dark") and not (spec.get("palette") or {}).get(cfg["dark"]):
                     merged[cfg["dark"]] = ramp["dark"]
-                if cfg.get("outline"):
+                if cfg.get("outline") and not (spec.get("palette") or {}).get(cfg["outline"]):
                     merged[cfg["outline"]] = ramp["outline"]
     return merged
 
@@ -212,7 +367,42 @@ def normalize_grid(grid, width, height, use_rle=False, symmetry="none"):
     return normalized, warnings
 
 
-def check_dither(pattern, x, y):
+# ============================================================================
+# Pillar 3: Procedural Surface Micro-Shaders (Worley/Voronoi, Turing, Bayer)
+# ============================================================================
+
+def worley_f1_f2(x, y, scale=5.0, seed=0):
+    sx = x / max(1.0, float(scale))
+    sy = y / max(1.0, float(scale))
+    ix = math.floor(sx)
+    iy = math.floor(sy)
+    f1 = 1e9
+    f2 = 1e9
+    for dy in (-1, 0, 1):
+        for dx in (-1, 0, 1):
+            cx = ix + dx
+            cy = iy + dy
+            px = cx + 0.15 + 0.70 * hash2d(cx, cy, seed + 17)
+            py = cy + 0.15 + 0.70 * hash2d(cx, cy, seed + 53)
+            d2 = (sx - px) ** 2 + (sy - py) ** 2
+            if d2 < f1:
+                f2 = f1
+                f1 = d2
+            elif d2 < f2:
+                f2 = d2
+    return math.sqrt(f1), math.sqrt(f2)
+
+
+def turing_pattern(x, y, scale=1.0, seed=0):
+    """Multi-scale activator-inhibitor reaction-diffusion approximation."""
+    s = max(0.5, float(scale))
+    u = value_noise2d(x / (1.8 * s), y / (1.8 * s), seed + 101)
+    v = value_noise2d(x / (3.8 * s), y / (3.8 * s), seed + 307)
+    detail = value_noise2d(x / (1.1 * s), y / (1.1 * s), seed + 509)
+    return (u - v) + 0.18 * (detail - 0.5)
+
+
+def check_dither(pattern, x, y, nx=0.0, ny=0.0, scale=5.0, seed=0):
     if not pattern or pattern == "none":
         return False
     if pattern == "checker":
@@ -227,8 +417,196 @@ def check_dither(pattern, x, y):
         lx = (x + offset) % 4
         ly = y % 3
         return (ly == 2 and lx in (1, 2)) or (ly == 1 and lx == 0)
+    if pattern == "bayer4x4":
+        return BAYER_4X4[y & 3][x & 3] > 0.5
+    if pattern == "blue_noise":
+        ign = (52.9829189 * ((0.06711056 * x + 0.00583715 * y) % 1.0)) % 1.0
+        return ign > 0.55
+    if pattern == "worley":
+        # Project onto 3D dome surface normals for curvature-wrapped scutes/facets
+        wx = x + nx * 2.2
+        wy = y + ny * 2.2
+        f1, f2 = worley_f1_f2(wx, wy, scale, seed)
+        return (f2 - f1) < 0.22
+    if pattern == "voronoi":
+        wx = x + nx * 2.0
+        wy = y + ny * 2.0
+        f1, _ = worley_f1_f2(wx, wy, scale, seed)
+        return f1 < 0.36
+    if pattern == "turing":
+        return turing_pattern(x + nx * 1.5, y + ny * 1.5, scale / 4.0, seed) > 0.045
     return False
 
+
+# ============================================================================
+# Pillar 2: Felzenszwalb & Huttenlocher O(W * H) Euclidean Distance Transform
+#           + Discrete Pixel-Art Morphology + RotSprite Stamp Rotation
+# ============================================================================
+
+def edt_1d(f, n):
+    """Exact 1D parabolic lower-envelope squared Euclidean Distance Transform in O(N)."""
+    d = [0.0] * n
+    v = [0] * n
+    z = [0.0] * (n + 1)
+    k = 0
+    v[0] = 0
+    z[0] = -1e20
+    z[1] = 1e20
+    for q in range(1, n):
+        s = ((f[q] + q * q) - (f[v[k]] + v[k] * v[k])) / (2.0 * (q - v[k]))
+        while s <= z[k]:
+            k -= 1
+            s = ((f[q] + q * q) - (f[v[k]] + v[k] * v[k])) / (2.0 * (q - v[k]))
+        k += 1
+        v[k] = q
+        z[k] = s
+        z[k + 1] = 1e20
+    k = 0
+    for q in range(n):
+        while z[k + 1] < q:
+            k += 1
+        dx = q - v[k]
+        d[q] = dx * dx + f[v[k]]
+    return d
+
+
+def edt_2d_sq(feature_mask, width, height):
+    """Computes squared distance to nearest pixel where feature_mask[i] != 0 in O(W*H)."""
+    inf = 1e12
+    grid = [0.0 if feature_mask[i] else inf for i in range(width * height)]
+    # Pass 1: columns
+    for x in range(width):
+        col = [grid[y * width + x] for y in range(height)]
+        d_col = edt_1d(col, height)
+        for y in range(height):
+            grid[y * width + x] = d_col[y]
+    # Pass 2: rows
+    for y in range(height):
+        row_start = y * width
+        row = grid[row_start:row_start + width]
+        d_row = edt_1d(row, width)
+        grid[row_start:row_start + width] = d_row
+    return grid
+
+
+def compute_edt_sdf(mask, width, height):
+    """Converts any binary mask (1 inside, 0 outside) into a continuous Signed Distance Field."""
+    inv_mask = [0 if mask[i] else 1 for i in range(width * height)]
+    d_out_sq = edt_2d_sq(inv_mask, width, height)
+    d_in_sq = edt_2d_sq(mask, width, height)
+    sdf = [0.0] * (width * height)
+    for i in range(width * height):
+        if mask[i]:
+            sdf[i] = -(math.sqrt(d_out_sq[i]) - 0.5)
+        else:
+            sdf[i] = math.sqrt(d_in_sq[i]) - 0.5
+    return sdf
+
+
+def js_round(val):
+    """Matches JavaScript Math.round(x) = Math.floor(x + 0.5) for 1-to-1 cross-runtime parity."""
+    return int(math.floor(float(val) + 0.5))
+
+
+def clean_sdf_mask(full_mask, sdf_field, width, height, prune_spurs=True):
+    """
+    Discrete pixel-art morphological filter:
+    1. Fills 1px isolated interior pinholes (4 orthogonal neighbors all active).
+    2. Prunes 1px cardinal-axis aliasing pimples/spurs (<= 1 orthogonal neighbor) and
+       ultra-shallow grazing L-steps (< 0.04px depth) on curved shapes.
+    """
+    if not prune_spurs:
+        return full_mask
+    active_total = sum(full_mask)
+    if active_total <= 4:
+        return full_mask
+
+    # Pass 1: Fill 1px pinholes
+    filled = bytearray(full_mask)
+    for y in range(1, height - 1):
+        for x in range(1, width - 1):
+            idx = y * width + x
+            if not filled[idx]:
+                ortho = (
+                    filled[y * width + (x - 1)] +
+                    filled[y * width + (x + 1)] +
+                    filled[(y - 1) * width + x] +
+                    filled[(y + 1) * width + x]
+                )
+                if ortho == 4:
+                    filled[idx] = 1
+
+    # Pass 2: Prune 1px cardinal spurs/pimples and grazing tangent slivers on boundary pixels
+    cleaned = bytearray(filled)
+    for y in range(height):
+        for x in range(width):
+            idx = y * width + x
+            if not filled[idx]:
+                continue
+            depth = -sdf_field[idx]
+            if depth > 0.65:
+                continue
+            has_l = 1 if (x > 0 and filled[y * width + (x - 1)]) else 0
+            has_r = 1 if (x < width - 1 and filled[y * width + (x + 1)]) else 0
+            has_u = 1 if (y > 0 and filled[(y - 1) * width + x]) else 0
+            has_d = 1 if (y < height - 1 and filled[(y + 1) * width + x]) else 0
+            ortho = has_l + has_r + has_u + has_d
+            if ortho <= 1:
+                cleaned[idx] = 0
+            elif active_total >= 12 and ortho == 2 and (has_l != has_r) and (has_u != has_d) and depth < 0.04:
+                cleaned[idx] = 0
+    return cleaned
+
+
+def rotate_stamp_epx(grid_rows, angle_deg):
+    """RotSprite-inspired EPX 2x upscaling + inverse rotation for clean pixel stamp rotation."""
+    h = len(grid_rows)
+    w = max((len(str(r)) for r in grid_rows), default=0)
+    if w == 0 or h == 0:
+        return []
+    mat = [str(r).ljust(w, ".") for r in grid_rows]
+    # EPX 2x upscale
+    w2, h2 = w * 2, h * 2
+    epx = [["."] * w2 for _ in range(h2)]
+    for y in range(h):
+        for x in range(w):
+            p = mat[y][x]
+            a = mat[y - 1][x] if y > 0 else "."
+            b = mat[y][x + 1] if x < w - 1 else "."
+            c = mat[y][x - 1] if x > 0 else "."
+            d = mat[y + 1][x] if y < h - 1 else "."
+            p1 = a if (c == a and c != d and a != b) else p
+            p2 = b if (a == b and a != c and b != d) else p
+            p3 = c if (d == c and d != b and c != a) else p
+            p4 = d if (b == d and b != a and d != c) else p
+            epx[y * 2][x * 2] = p1
+            epx[y * 2][x * 2 + 1] = p2
+            epx[y * 2 + 1][x * 2] = p3
+            epx[y * 2 + 1][x * 2 + 1] = p4
+
+    rad = math.radians(angle_deg)
+    cos_a = math.cos(-rad)
+    sin_a = math.sin(-rad)
+    cx = (w - 1) * 0.5
+    cy = (h - 1) * 0.5
+    pad = int(math.ceil(math.hypot(w, h) * 0.5)) + 1
+    out_pts = []
+    for dy in range(-pad, pad + 1):
+        for dx in range(-pad, pad + 1):
+            lx = dx * cos_a - dy * sin_a + cx
+            ly = dx * sin_a + dy * cos_a + cy
+            sx2 = js_round(lx * 2.0)
+            sy2 = js_round(ly * 2.0)
+            if 0 <= sx2 < w2 and 0 <= sy2 < h2:
+                ch = epx[sy2][sx2]
+                if ch not in (".", " "):
+                    out_pts.append((js_round(cx + dx), js_round(cy + dy), ch))
+    return out_pts
+
+
+# ============================================================================
+# Pillar 1: 2.5D SDF & CSG Algebra (Quilez Primitives + Domain Ops)
+# ============================================================================
 
 def smin(a, b, k):
     if not k or k <= 0:
@@ -237,70 +615,311 @@ def smin(a, b, k):
     return min(a, b) - h * h * k * 0.25
 
 
+def csg_combine(d_a, d_b, op_mode="union", k=0.0):
+    mode = str(op_mode or "union").lower()
+    if mode == "subtract":
+        return max(d_a, -d_b)
+    if mode == "smooth_subtract":
+        return -smin(-d_a, d_b, k if k > 0 else 1.5)
+    if mode == "intersect":
+        return max(d_a, d_b)
+    if mode == "smooth_union" or k > 0:
+        return smin(d_a, d_b, k)
+    return min(d_a, d_b)
+
+
+def _sd_uneven_capsule_local(px, py, x1, y1, x2, y2, r1, r2):
+    dx = x2 - x1
+    dy = y2 - y1
+    l_seg = math.hypot(dx, dy)
+    if l_seg < 1e-5:
+        return math.hypot(px - x1, py - y1) - max(r1, r2)
+    ux = dx / l_seg
+    uy = dy / l_seg
+    qx = (px - x1) * ux + (py - y1) * uy
+    qy = abs(-(px - x1) * uy + (py - y1) * ux)
+    b = (r1 - r2) / l_seg
+    if abs(b) >= 0.9999:
+        return min(math.hypot(px - x1, py - y1) - r1, math.hypot(px - x2, py - y2) - r2)
+    a = math.sqrt(max(0.0, 1.0 - b * b))
+    k = qx * a - qy * b
+    if k < 0.0:
+        return math.hypot(qx, qy) - r1
+    if k > a * l_seg:
+        return math.hypot(qx - l_seg, qy) - r2
+    return qx * b + qy * a - r1
+
+
+def _sd_vesica_local(lx, ly, rx, ry):
+    # Vesica with horizontal half-width rx and vertical half-height ry
+    if rx > ry:
+        lx, ly = ly, lx
+        rx, ry = ry, rx
+    a = max(0.5, float(ry))
+    b = max(0.25, min(float(rx), a - 0.05))
+    r = (a * a + b * b) / (2.0 * b)
+    d = (a * a - b * b) / (2.0 * b)
+    px = abs(lx)
+    py = abs(ly)
+    if (py - a) * d > px * a:
+        return math.hypot(px, py - a)
+    return math.hypot(px + d, py) - r
+
+
+def _sd_moon_local(lx, ly, d, ra, rb):
+    py = abs(ly)
+    a = (ra * ra - rb * rb + d * d) / max(1e-5, 2.0 * d)
+    b = math.sqrt(max(0.0, ra * ra - a * a))
+    if d * (lx * b - py * a) > d * d * max(b - py, 0.0):
+        return math.hypot(lx - a, py - b)
+    return max(math.hypot(lx, py) - ra, -(math.hypot(lx - d, py) - rb))
+
+
+def _sd_star_local(lx, ly, r, n_pts=5, ratio=0.45):
+    n = max(3, int(n_pts))
+    m = max(0.15, min(1.0, float(ratio)))
+    an = math.pi / float(n)
+    # Rotate so vertex points straight up (-Y)
+    ang = math.atan2(lx, -ly) % (2.0 * an)
+    if ang > an:
+        ang = 2.0 * an - ang
+    dist_p = math.hypot(lx, ly)
+    px = dist_p * math.cos(ang)
+    py = dist_p * math.sin(ang)
+    # Segment from outer vertex (r, 0) to inner vertex (r*m*cos(an), r*m*sin(an))
+    ax, ay = r, 0.0
+    bx, by = r * m * math.cos(an), r * m * math.sin(an)
+    vx, vy = bx - ax, by - ay
+    wx, wy = px - ax, py - ay
+    t = max(0.0, min(1.0, (wx * vx + wy * vy) / max(1e-7, vx * vx + vy * vy)))
+    dx = wx - vx * t
+    dy = wy - vy * t
+    # At origin (0,0), vx*wy - vy*wx = +r*vy > 0, which is inside (negative SDF)
+    s = -1.0 if (vx * wy - vy * wx) > 0.0 else 1.0
+    return math.hypot(dx, dy) * s
+
+
+def _sd_bezier_local(px, py, p0, p1, p2, r1, r2):
+    min_d = 1e9
+    steps = 16
+    x0, y0 = float(p0[0]), float(p0[1])
+    x1, y1 = float(p1[0]), float(p1[1])
+    x2, y2 = float(p2[0]), float(p2[1])
+    prev_x, prev_y = x0, y0
+    prev_r = r1
+    for s in range(1, steps + 1):
+        t = s / float(steps)
+        inv = 1.0 - t
+        bx = inv * inv * x0 + 2.0 * inv * t * x1 + t * t * x2
+        by = inv * inv * y0 + 2.0 * inv * t * y1 + t * t * y2
+        cur_r = r1 + (r2 - r1) * t
+        d_seg = _sd_uneven_capsule_local(px, py, prev_x, prev_y, bx, by, prev_r, cur_r)
+        if d_seg < min_d:
+            min_d = d_seg
+        prev_x, prev_y = bx, by
+        prev_r = cur_r
+    return min_d
+
+
 def compute_layer_sdf(layer, width, height):
     op = str(layer.get("op", "")).lower()
     sdf = [1e4] * (width * height)
 
+    default_cx = (width - 1) * 0.5
+    default_cy = (height - 1) * 0.5
+
+    # Determine geometric center of the shape for local coordinate evaluation
+    if op == "rect" and "x" in layer:
+        w_val = max(1.0, float(layer.get("w", 4)))
+        h_val = max(1.0, float(layer.get("h", 4)))
+        piv_x = float(layer.get("x", 0)) + (w_val - 1.0) * 0.5
+        piv_y = float(layer.get("y", 0)) + (h_val - 1.0) * 0.5
+    elif op in ("capsule", "uneven_capsule"):
+        if isinstance(layer.get("points"), list) and len(layer["points"]) >= 2:
+            pts = layer["points"]
+            piv_x = sum(float(p[0]) for p in pts) / float(len(pts))
+            piv_y = sum(float(p[1]) for p in pts) / float(len(pts))
+        else:
+            piv_x = (float(layer.get("x1", default_cx)) + float(layer.get("x2", default_cx))) * 0.5
+            piv_y = (float(layer.get("y1", default_cy - 4)) + float(layer.get("y2", default_cy + 4))) * 0.5
+    elif op in ("polygon", "bezier_sdf") and isinstance(layer.get("points"), list) and len(layer["points"]) > 0:
+        pts = layer["points"]
+        piv_x = sum(float(p[0]) for p in pts) / float(len(pts))
+        piv_y = sum(float(p[1]) for p in pts) / float(len(pts))
+    else:
+        piv_x = float(layer.get("cx", default_cx))
+        piv_y = float(layer.get("cy", default_cy))
+
+    rad = math.radians(float(layer.get("angle", 0.0) or 0.0))
+    cos_a = math.cos(-rad)
+    sin_a = math.sin(-rad)
+    polar_n = int(layer.get("polarRepeat", 0) or 0)
+    polar_cx = float(layer.get("polarCx", default_cx))
+    polar_cy = float(layer.get("polarCy", default_cy))
+
+    warp_cfg = layer.get("domainWarp")
+    warp_amp = 0.0
+    warp_freq = 0.18
+    warp_seed = int(layer.get("seed", 0) or 0)
+    if isinstance(warp_cfg, (int, float)):
+        warp_amp = float(warp_cfg)
+    elif isinstance(warp_cfg, dict):
+        warp_amp = float(warp_cfg.get("amp", warp_cfg.get("strength", 1.5)))
+        warp_freq = float(warp_cfg.get("freq", warp_cfg.get("scale", 0.18)))
+        warp_seed = int(warp_cfg.get("seed", warp_seed))
+
+    onion_w = float(layer.get("onion", 0.0) or 0.0)
+
+    def transform_pt(x, y):
+        px, py = float(x), float(y)
+        if warp_amp != 0.0:
+            nx = value_noise2d(px * warp_freq, py * warp_freq, warp_seed + 11) * 2.0 - 1.0
+            ny = value_noise2d(px * warp_freq, py * warp_freq, warp_seed + 37) * 2.0 - 1.0
+            px += nx * warp_amp
+            py += ny * warp_amp
+        if polar_n >= 2:
+            ddx = px - polar_cx
+            ddy = py - polar_cy
+            r_pol = math.hypot(ddx, ddy)
+            sector = (2.0 * math.pi) / float(polar_n)
+            ang = math.atan2(ddx, -ddy) % (2.0 * math.pi)
+            ang = ((ang + sector * 0.5) % sector) - sector * 0.5
+            px = polar_cx + r_pol * math.sin(ang)
+            py = polar_cy - r_pol * math.cos(ang)
+        dx = px - piv_x
+        dy = py - piv_y
+        lx = dx * cos_a - dy * sin_a
+        ly = dx * sin_a + dy * cos_a
+        return lx, ly
+
     if op == "ellipse":
-        cx = float(layer.get("cx", width / 2.0))
-        cy = float(layer.get("cy", height / 2.0))
         rx = max(0.5, float(layer.get("rx", 4.0)))
         ry = max(0.5, float(layer.get("ry", 4.0)))
-        rad = math.radians(float(layer.get("angle", 0.0)))
-        cos_a = math.cos(-rad)
-        sin_a = math.sin(-rad)
-        scale = min(rx, ry)
+        rx2, ry2 = rx * rx, ry * ry
+        rx4, ry4 = rx2 * rx2, ry2 * ry2
+        min_r = min(rx, ry)
         for y in range(height):
             for x in range(width):
-                dx = x - cx
-                dy = y - cy
-                lx = dx * cos_a - dy * sin_a
-                ly = dx * sin_a + dy * cos_a
-                q = math.sqrt((lx * lx) / (rx * rx) + (ly * ly) / (ry * ry))
-                sdf[y * width + x] = (q - 1.0) * scale
+                lx, ly = transform_pt(x, y)
+                q = math.sqrt((lx * lx) / rx2 + (ly * ly) / ry2)
+                if q < 1e-6:
+                    d = -min_r
+                else:
+                    grad = math.sqrt((lx * lx) / rx4 + (ly * ly) / ry4)
+                    d = (q * (q - 1.0)) / max(1e-6, grad)
+                sdf[y * width + x] = abs(d) - onion_w if onion_w > 0 else d
 
     elif op == "rect":
-        x0 = float(layer.get("x", 0))
-        y0 = float(layer.get("y", 0))
         w = max(1.0, float(layer.get("w", 4)))
         h = max(1.0, float(layer.get("h", 4)))
         r = max(0.0, float(layer.get("rx", 0)))
-        cx = x0 + (w - 1.0) * 0.5
-        cy = y0 + (h - 1.0) * 0.5
         bx = max(0.1, w * 0.5 - r)
         by = max(0.1, h * 0.5 - r)
         for y in range(height):
             for x in range(width):
-                qx = abs(x - cx) - bx
-                qy = abs(y - cy) - by
-                out_dist = math.sqrt(max(qx, 0.0) ** 2 + max(qy, 0.0) ** 2)
+                lx, ly = transform_pt(x, y)
+                qx = abs(lx) - bx
+                qy = abs(ly) - by
+                out_dist = math.hypot(max(qx, 0.0), max(qy, 0.0))
                 in_dist = min(max(qx, qy), 0.0)
-                sdf[y * width + x] = out_dist + in_dist - r
+                d = out_dist + in_dist - r
+                sdf[y * width + x] = abs(d) - onion_w if onion_w > 0 else d
 
     elif op == "polygon" and isinstance(layer.get("points"), list) and len(layer["points"]) >= 3:
-        pts = layer["points"]
+        pts = [(float(p[0]) - piv_x, float(p[1]) - piv_y) for p in layer["points"]]
         n = len(pts)
+        r_round = max(0.0, float(layer.get("rx", 0.0) or 0.0))
         for y in range(height):
             for x in range(width):
+                lx, ly = transform_pt(x, y)
                 inside = False
                 min_dist_sq = 1e9
                 j = n - 1
                 for i in range(n):
-                    xi, yi = float(pts[i][0]), float(pts[i][1])
-                    xj, yj = float(pts[j][0]), float(pts[j][1])
+                    xi, yi = pts[i]
+                    xj, yj = pts[j]
                     vx, vy = xj - xi, yj - yi
-                    wx, wy = x - xi, y - yi
+                    wx, wy = lx - xi, ly - yi
                     len_sq = vx * vx + vy * vy or 1e-7
                     t = max(0.0, min(1.0, (wx * vx + wy * vy) / len_sq))
                     dx = wx - vx * t
                     dy = wy - vy * t
                     min_dist_sq = min(min_dist_sq, dx * dx + dy * dy)
                     denom = (yj - yi) if (yj - yi) != 0 else 1e-7
-                    if ((yi > y) != (yj > y)) and (x < (xj - xi) * (y - yi) / denom + xi):
+                    if ((yi > ly) != (yj > ly)) and (lx < (xj - xi) * (ly - yi) / denom + xi):
                         inside = not inside
                     j = i
                 dist = math.sqrt(min_dist_sq)
-                sdf[y * width + x] = -dist if inside else dist
+                d = (-dist if inside else dist) - r_round
+                sdf[y * width + x] = abs(d) - onion_w if onion_w > 0 else d
+
+    elif op in ("capsule", "uneven_capsule"):
+        r1 = max(0.5, float(layer.get("r1", layer.get("r", layer.get("rx", 3.0)))))
+        r2 = max(0.5, float(layer.get("r2", r1)))
+        if isinstance(layer.get("points"), list) and len(layer["points"]) >= 2:
+            pts = [(float(p[0]) - piv_x, float(p[1]) - piv_y) for p in layer["points"]]
+            n_seg = len(pts) - 1
+            for y in range(height):
+                for x in range(width):
+                    lx, ly = transform_pt(x, y)
+                    min_d = 1e9
+                    for s_i in range(n_seg):
+                        ra = r1 + (r2 - r1) * (s_i / float(n_seg))
+                        rb = r1 + (r2 - r1) * ((s_i + 1) / float(n_seg))
+                        d_seg = _sd_uneven_capsule_local(lx, ly, pts[s_i][0], pts[s_i][1], pts[s_i + 1][0], pts[s_i + 1][1], ra, rb)
+                        if d_seg < min_d:
+                            min_d = d_seg
+                    sdf[y * width + x] = abs(min_d) - onion_w if onion_w > 0 else min_d
+        else:
+            x1 = float(layer.get("x1", piv_x)) - piv_x
+            y1 = float(layer.get("y1", piv_y - 4)) - piv_y
+            x2 = float(layer.get("x2", piv_x)) - piv_x
+            y2 = float(layer.get("y2", piv_y + 4)) - piv_y
+            for y in range(height):
+                for x in range(width):
+                    lx, ly = transform_pt(x, y)
+                    d = _sd_uneven_capsule_local(lx, ly, x1, y1, x2, y2, r1, r2)
+                    sdf[y * width + x] = abs(d) - onion_w if onion_w > 0 else d
+
+    elif op == "vesica":
+        rx = max(0.5, float(layer.get("rx", layer.get("w", 4.0))))
+        ry = max(0.5, float(layer.get("ry", layer.get("r", 7.0))))
+        for y in range(height):
+            for x in range(width):
+                lx, ly = transform_pt(x, y)
+                d = _sd_vesica_local(lx, ly, rx, ry)
+                sdf[y * width + x] = abs(d) - onion_w if onion_w > 0 else d
+
+    elif op == "moon":
+        ra = max(1.0, float(layer.get("r1", layer.get("r", layer.get("rx", 6.0)))))
+        rb = max(0.5, float(layer.get("r2", layer.get("ry", ra * 0.8))))
+        d_off = float(layer.get("d", layer.get("offset", ra * 0.45)))
+        for y in range(height):
+            for x in range(width):
+                lx, ly = transform_pt(x, y)
+                d = _sd_moon_local(lx, ly, d_off, ra, rb)
+                sdf[y * width + x] = abs(d) - onion_w if onion_w > 0 else d
+
+    elif op == "bezier_sdf" and isinstance(layer.get("points"), list) and len(layer["points"]) >= 3:
+        pts = [(float(p[0]) - piv_x, float(p[1]) - piv_y) for p in layer["points"][:3]]
+        r1 = max(0.5, float(layer.get("r1", layer.get("r", layer.get("thickness", 2.0)))))
+        r2 = max(0.5, float(layer.get("r2", r1)))
+        for y in range(height):
+            for x in range(width):
+                lx, ly = transform_pt(x, y)
+                d = _sd_bezier_local(lx, ly, pts[0], pts[1], pts[2], r1, r2)
+                sdf[y * width + x] = abs(d) - onion_w if onion_w > 0 else d
+
+    elif op in ("star", "ngon"):
+        r = max(1.0, float(layer.get("r", layer.get("rx", 6.0))))
+        n_pts = int(layer.get("n", layer.get("pointsCount", 5)))
+        default_ratio = math.cos(math.pi / max(3, n_pts)) if op == "ngon" else 0.45
+        ratio = float(layer.get("innerRatio", layer.get("m", default_ratio)))
+        for y in range(height):
+            for x in range(width):
+                lx, ly = transform_pt(x, y)
+                d = _sd_star_local(lx, ly, r, n_pts, ratio)
+                sdf[y * width + x] = abs(d) - onion_w if onion_w > 0 else d
 
     mirror = layer.get("mirror", "none")
     smooth_k = float(layer.get("smoothBlend", 0.0) or 0.0)
@@ -321,64 +940,379 @@ def compute_layer_sdf(layer, width, height):
     return sdf
 
 
-def apply_frame_overrides(spec, frame_index=0):
-    frames = spec.get("frames")
-    if not isinstance(frames, list) or frame_index <= 0 or frame_index > len(frames):
-        return spec
-    frame_def = frames[frame_index - 1] or {}
-    cloned = copy.deepcopy(spec)
+# ============================================================================
+# Pillar 4: Kinematic Bone Hierarchy + Analytical 2-Bone IK + Motion Generator
+# ============================================================================
 
-    if isinstance(frame_def.get("grid"), list) and len(frame_def["grid"]) > 0:
+def solve_ik_2bone(root, target, l1, l2, flip=False):
+    """Analytical Law-of-Cosines 2-Bone Inverse Kinematics solver."""
+    ax, ay = float(root[0]), float(root[1])
+    bx, by = float(target[0]), float(target[1])
+    l1 = max(0.5, float(l1))
+    l2 = max(0.5, float(l2))
+    dx = bx - ax
+    dy = by - ay
+    dist = math.hypot(dx, dy)
+    min_d = abs(l1 - l2) + 1e-4
+    max_d = (l1 + l2) - 1e-4
+    d_clamped = max(min_d, min(max_d, dist))
+    cos_a = max(-1.0, min(1.0, (l1 * l1 + d_clamped * d_clamped - l2 * l2) / (2.0 * l1 * d_clamped)))
+    alpha = math.acos(cos_a)
+    base_ang = math.atan2(dy, dx)
+    joint_ang = base_ang - alpha if flip else base_ang + alpha
+    jx = ax + l1 * math.cos(joint_ang)
+    jy = ay + l1 * math.sin(joint_ang)
+    scale = (d_clamped / dist) if dist > 1e-5 else 0.0
+    ex = ax + dx * scale
+    ey = ay + dy * scale
+    r2 = lambda v: math.floor(float(v) * 100.0 + 0.5) / 100.0
+    return [[r2(ax), r2(ay)], [r2(jx), r2(jy)], [r2(ex), r2(ey)]]
+
+
+solve_two_bone_ik = solve_ik_2bone
+
+
+def get_layer_center(layer, width=32, height=32):
+    if isinstance(layer.get("pivot"), list) and len(layer["pivot"]) >= 2:
+        return (float(layer["pivot"][0]), float(layer["pivot"][1]))
+    if "cx" in layer and "cy" in layer:
+        return (float(layer["cx"]), float(layer["cy"]))
+    if "x" in layer and "y" in layer:
+        w = float(layer.get("w", 1))
+        h = float(layer.get("h", 1))
+        return (float(layer["x"]) + (w - 1) * 0.5, float(layer["y"]) + (h - 1) * 0.5)
+    if "x1" in layer and "y1" in layer:
+        return ((float(layer["x1"]) + float(layer.get("x2", layer["x1"]))) * 0.5,
+                (float(layer["y1"]) + float(layer.get("y2", layer["y1"]))) * 0.5)
+    if isinstance(layer.get("points"), list) and len(layer["points"]) > 0:
+        pts = layer["points"]
+        return (sum(float(p[0]) for p in pts) / len(pts), sum(float(p[1]) for p in pts) / len(pts))
+    return ((width - 1) * 0.5, (height - 1) * 0.5)
+
+
+def _translate_and_rotate_layer_inplace(layer, dx, dy, d_angle_deg, pivot_pt):
+    px, py = pivot_pt
+    rad = math.radians(d_angle_deg)
+    cos_a = math.cos(rad)
+    sin_a = math.sin(rad)
+
+    def xform(x, y):
+        rx = x - px
+        ry = y - py
+        return (px + rx * cos_a - ry * sin_a + dx, py + rx * sin_a + ry * cos_a + dy)
+
+    has_verts = False
+    if isinstance(layer.get("cx"), (int, float)) and isinstance(layer.get("cy"), (int, float)):
+        layer["cx"], layer["cy"] = xform(float(layer["cx"]), float(layer["cy"]))
+    elif isinstance(layer.get("x"), (int, float)) and isinstance(layer.get("y"), (int, float)):
+        w = float(layer.get("w", 1))
+        h = float(layer.get("h", 1))
+        cx, cy = xform(float(layer["x"]) + (w - 1) * 0.5, float(layer["y"]) + (h - 1) * 0.5)
+        layer["x"] = cx - (w - 1) * 0.5
+        layer["y"] = cy - (h - 1) * 0.5
+    if isinstance(layer.get("x1"), (int, float)) and isinstance(layer.get("y1"), (int, float)):
+        layer["x1"], layer["y1"] = xform(float(layer["x1"]), float(layer["y1"]))
+        if isinstance(layer.get("x2"), (int, float)) and isinstance(layer.get("y2"), (int, float)):
+            layer["x2"], layer["y2"] = xform(float(layer["x2"]), float(layer["y2"]))
+        has_verts = True
+    if isinstance(layer.get("points"), list):
+        layer["points"] = [list(xform(float(pt[0]), float(pt[1]))) for pt in layer["points"]]
+        has_verts = True
+    if d_angle_deg != 0.0 and not has_verts:
+        layer["angle"] = float(layer.get("angle", 0.0) or 0.0) + d_angle_deg
+
+
+def _compute_procedural_motion_mods(spec, frame_index):
+    motion = spec.get("motion")
+    if not isinstance(motion, dict) or frame_index <= 0:
+        return {}
+    n_frames = max(2, int(motion.get("frames", 4)))
+    m_type = str(motion.get("type", "idle_breathe")).lower()
+    amp = float(motion.get("amplitude", 1.0))
+    squash = float(motion.get("squash", 0.10))
+    phase = (2.0 * math.pi * (frame_index % n_frames)) / float(n_frames)
+    s_val = math.sin(phase)
+    c_val = math.cos(phase)
+
+    mods = {}
+    layers = spec.get("layers") if isinstance(spec.get("layers"), list) else []
+    for idx, layer in enumerate(layers):
+        lid = layer.get("id")
+        if not lid:
+            continue
+        lid_l = lid.lower()
+        has_parent = bool(layer.get("parent"))
+        lag_phase = phase - 0.55 * (1.0 if has_parent else 0.35)
+        s_lag = math.sin(lag_phase)
+
+        if m_type == "idle_breathe":
+            if any(k in lid_l for k in ("body", "core", "torso", "slime", "shell")):
+                scale_x = 1.0 + squash * s_val
+                rx0 = float(layer.get("rx", 6))
+                ry0 = float(layer.get("ry", 6))
+                mods[lid] = {
+                    "drx": rx0 * (scale_x - 1.0),
+                    "dry": ry0 * (1.0 / scale_x - 1.0),
+                    "dy": 0.0 if has_parent else (-s_val * 0.75 * amp)
+                }
+            elif any(k in lid_l for k in ("ear", "crown", "tail", "wing", "head", "hat")):
+                mods[lid] = {
+                    "dy": (-s_lag * 0.25 * amp) if has_parent else (-s_lag * 0.75 * amp),
+                    "dAngle": s_lag * 5.0
+                }
+        elif m_type == "swim_cycle":
+            if "flipper" in lid_l or "fin" in lid_l:
+                sign = -1.0 if "back" in lid_l else 1.0
+                mods[lid] = {"dAngle": sign * s_val * 16.0, "dy": -sign * s_val * 0.8 * amp}
+            elif "tail" in lid_l:
+                mods[lid] = {"dx": s_lag * 1.2 * amp}
+        elif m_type == "walk_cycle":
+            if "leg" in lid_l or "foot" in lid_l or "paw" in lid_l:
+                sign = -1.0 if ("mid" in lid_l or "back" in lid_l) else 1.0
+                mods[lid] = {"dy": sign * s_val * 1.5 * amp, "dAngle": sign * c_val * 10.0}
+            elif "body" in lid_l or "torso" in lid_l:
+                mods[lid] = {"dy": -abs(s_val) * 0.8 * amp}
+        elif m_type == "jump_arc":
+            if "shadow" in lid_l:
+                mods[lid] = {"drx": -max(0.0, s_val) * 2.0 * amp}
+            elif any(k in lid_l for k in ("body", "core", "torso")):
+                scale_x = 1.0 - squash * s_val
+                rx0 = float(layer.get("rx", 6))
+                ry0 = float(layer.get("ry", 6))
+                mods[lid] = {
+                    "dy": 0.0 if has_parent else (-s_val * 1.8 * amp),
+                    "drx": rx0 * (scale_x - 1.0),
+                    "dry": ry0 * (1.0 / scale_x - 1.0)
+                }
+            elif "ear" in lid_l or "tail" in lid_l:
+                mods[lid] = {
+                    "dy": 0.0 if has_parent else (-s_val * 1.8 * amp),
+                    "dAngle": -c_val * 10.0
+                }
+        elif m_type == "wave":
+            mods[lid] = {"dy": math.sin(phase - idx * 0.45) * 1.2 * amp}
+    return mods
+
+
+def get_frame_count(spec):
+    extra = len(spec.get("frames")) if isinstance(spec.get("frames"), list) else 0
+    motion_frames = 0
+    if isinstance(spec.get("motion"), dict):
+        motion_frames = max(0, int(spec["motion"].get("frames", 0)) - 1)
+    return 1 + max(extra, motion_frames)
+
+
+def apply_frame_overrides(spec, frame_index=0):
+    cloned = copy.deepcopy(spec or {})
+    width = clamp_size(cloned.get("width") or (cloned.get("size") or [32, 32])[0], 32)
+    height = clamp_size(cloned.get("height") or (cloned.get("size") or [32, 32])[1], 32)
+
+    frames = cloned.get("frames") if isinstance(cloned.get("frames"), list) else []
+    frame_def = frames[frame_index - 1] if (0 < frame_index <= len(frames)) else {}
+
+    if isinstance(frame_def, dict) and isinstance(frame_def.get("grid"), list) and len(frame_def["grid"]) > 0:
         cloned["grid"] = frame_def["grid"]
 
-    layer_mods = frame_def.get("layers") or frame_def.get("overrides") or {}
-    if isinstance(cloned.get("layers"), list) and isinstance(layer_mods, dict):
+    motion_mods = _compute_procedural_motion_mods(cloned, frame_index) if frame_index > 0 else {}
+    explicit_mods = (frame_def.get("layers") or frame_def.get("overrides") or {}) if isinstance(frame_def, dict) else {}
+
+    layer_mods = {}
+    for k, v in motion_mods.items():
+        layer_mods[k] = copy.deepcopy(v)
+    if isinstance(explicit_mods, dict):
+        for k, v in explicit_mods.items():
+            if k in layer_mods and isinstance(v, dict):
+                layer_mods[k].update(v)
+            else:
+                layer_mods[k] = copy.deepcopy(v)
+
+    if isinstance(cloned.get("layers"), list):
+        orig_centers = {}
+        by_id = {}
+        for lyr in cloned["layers"]:
+            if isinstance(lyr, dict) and lyr.get("id"):
+                orig_centers[lyr["id"]] = get_layer_center(lyr, width, height)
+                by_id[lyr["id"]] = lyr
+
+        # Compute cumulative parent transforms (dx, dy, dAngle, pivot)
+        resolved_xform = {}
+
+        def get_cum_xform(lid, visited=None):
+            if lid in resolved_xform:
+                return resolved_xform[lid]
+            if visited is None:
+                visited = set()
+            if lid in visited or lid not in by_id:
+                return (0.0, 0.0, 0.0, orig_centers.get(lid, ((width - 1) * 0.5, (height - 1) * 0.5)))
+            visited.add(lid)
+            lyr = by_id[lid]
+            mod = layer_mods.get(lid, {}) if isinstance(layer_mods.get(lid), dict) else {}
+            dx = float(mod.get("dx", 0.0) or 0.0)
+            dy = float(mod.get("dy", 0.0) or 0.0)
+            da = float(mod.get("dAngle", 0.0) or 0.0)
+            piv = orig_centers.get(lid, ((width - 1) * 0.5, (height - 1) * 0.5))
+            parent_id = lyr.get("parent")
+            if parent_id and parent_id in by_id:
+                pdx, pdy, pda, ppiv = get_cum_xform(parent_id, visited)
+                dx += pdx
+                dy += pdy
+                da += pda
+                piv = ppiv
+            resolved_xform[lid] = (dx, dy, da, piv)
+            return resolved_xform[lid]
+
         new_layers = []
         for layer in cloned["layers"]:
-            lid = layer.get("id")
-            if not lid or lid not in layer_mods:
-                new_layers.append(layer)
+            if not isinstance(layer, dict):
                 continue
-            mod = layer_mods[lid]
+            lid = layer.get("id")
+            mod = layer_mods.get(lid, {}) if (lid and isinstance(layer_mods.get(lid), dict)) else {}
             if mod.get("hidden"):
                 continue
             updated = copy.deepcopy(layer)
-            updated.update(mod)
-            dx = mod.get("dx")
-            if isinstance(dx, (int, float)):
-                if isinstance(updated.get("cx"), (int, float)):
-                    updated["cx"] += dx
-                if isinstance(updated.get("x"), (int, float)):
-                    updated["x"] += dx
-                if isinstance(updated.get("x1"), (int, float)):
-                    updated["x1"] += dx
-                    updated["x2"] = updated.get("x2", 0) + dx
-                if isinstance(updated.get("points"), list):
-                    updated["points"] = [[pt[0] + dx, pt[1]] for pt in updated["points"]]
-            dy = mod.get("dy")
-            if isinstance(dy, (int, float)):
-                if isinstance(updated.get("cy"), (int, float)):
-                    updated["cy"] += dy
-                if isinstance(updated.get("y"), (int, float)):
-                    updated["y"] += dy
-                if isinstance(updated.get("y1"), (int, float)):
-                    updated["y1"] += dy
-                    updated["y2"] = updated.get("y2", 0) + dy
-                if isinstance(updated.get("points"), list):
-                    updated["points"] = [[pt[0], pt[1] + dy] for pt in updated["points"]]
-            d_angle = mod.get("dAngle")
-            if isinstance(d_angle, (int, float)):
-                updated["angle"] = float(updated.get("angle", 0)) + d_angle
+            for mk, mv in mod.items():
+                if mk not in ("dx", "dy", "dAngle", "drx", "dry", "ikTarget"):
+                    updated[mk] = mv
+
+            dx = float(mod.get("dx", 0.0) or 0.0)
+            dy = float(mod.get("dy", 0.0) or 0.0)
+            d_angle = float(mod.get("dAngle", 0.0) or 0.0)
+            piv = orig_centers.get(lid, get_layer_center(updated, width, height))
+
+            if lid and updated.get("parent") and updated["parent"] in by_id:
+                pdx, pdy, pda, ppiv = get_cum_xform(updated["parent"])
+                if pdx != 0.0 or pdy != 0.0 or pda != 0.0:
+                    _translate_and_rotate_layer_inplace(updated, pdx, pdy, pda, ppiv)
+                    if isinstance(updated.get("pivot"), list) and len(updated["pivot"]) >= 2:
+                        prad = math.radians(pda)
+                        pcos, psin = math.cos(prad), math.sin(prad)
+                        rx = float(updated["pivot"][0]) - ppiv[0]
+                        ry = float(updated["pivot"][1]) - ppiv[1]
+                        updated["pivot"] = [
+                            ppiv[0] + rx * pcos - ry * psin + pdx,
+                            ppiv[1] + rx * psin + ry * pcos + pdy
+                        ]
+                piv = get_layer_center(updated, width, height)
+
+            if dx != 0.0 or dy != 0.0 or d_angle != 0.0:
+                _translate_and_rotate_layer_inplace(updated, dx, dy, d_angle, piv)
+
             drx = mod.get("drx")
             if isinstance(drx, (int, float)) and isinstance(updated.get("rx"), (int, float)):
-                updated["rx"] = max(1, updated["rx"] + drx)
+                updated["rx"] = max(0.5, updated["rx"] + drx)
             dry = mod.get("dry")
             if isinstance(dry, (int, float)) and isinstance(updated.get("ry"), (int, float)):
-                updated["ry"] = max(1, updated["ry"] + dry)
+                updated["ry"] = max(0.5, updated["ry"] + dry)
+
+            # Analytical 2-Bone IK resolution
+            if isinstance(updated.get("ik"), dict):
+                ik_cfg = updated["ik"]
+                root_pt = ik_cfg.get("root") or (updated["points"][0] if isinstance(updated.get("points"), list) and len(updated["points"]) > 0 else [width / 2, height / 2])
+                target_pt = list(mod.get("ikTarget") or ik_cfg.get("target") or [root_pt[0], root_pt[1] + 6])
+                if dx != 0.0 or dy != 0.0:
+                    target_pt[0] += dx
+                    target_pt[1] += dy
+                l1 = float(ik_cfg.get("l1", 5.0))
+                l2 = float(ik_cfg.get("l2", 5.0))
+                flip = bool(ik_cfg.get("flip", False))
+                updated["points"] = solve_ik_2bone(root_pt, target_pt, l1, l2, flip)
+
             new_layers.append(updated)
         cloned["layers"] = new_layers
 
     return cloned
+
+
+# ============================================================================
+# Main Rendering Pipeline (v3.0)
+# ============================================================================
+
+def _register_sdf_tone_symbols(fill_sym, tones, palette_raw, palette_rgba):
+    """
+    Auto-registers the 5 3D SDF shading tones into palette_raw & palette_rgba so
+    symbol_buffer stores distinct symbols and 'Bake Layers -> Grid' is 100% lossless.
+    """
+    tone_syms = {"base": fill_sym or "S"}
+    pool = "1234567890abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ@#$%&*+=~^?!"
+    for tone_name in ("deepShadow", "shadow", "highlight", "specular"):
+        rgba = tones[tone_name]
+        # Check if an existing palette entry already matches closely
+        matched_sym = None
+        for k, existing_rgba in palette_rgba.items():
+            if k in (".", " "):
+                continue
+            if (
+                abs(existing_rgba[0] - rgba[0]) +
+                abs(existing_rgba[1] - rgba[1]) +
+                abs(existing_rgba[2] - rgba[2]) <= 10 and
+                abs(existing_rgba[3] - rgba[3]) <= 15
+            ):
+                matched_sym = k
+                break
+        if matched_sym:
+            tone_syms[tone_name] = matched_sym
+        else:
+            for ch in pool:
+                if ch not in palette_raw and ch not in (".", " "):
+                    hex_col = rgba_to_hex(rgba[0], rgba[1], rgba[2], rgba[3])
+                    palette_raw[ch] = hex_col
+                    palette_rgba[ch] = rgba
+                    tone_syms[tone_name] = ch
+                    break
+            else:
+                tone_syms[tone_name] = fill_sym or "S"
+    return tone_syms
+
+
+def apply_cellular_rules(rules, width, height, symbol_buffer, buffer, resolve_color_fn):
+    """Pillar 5: MarkovJunior-style local cellular rewrite rules pass."""
+    if not isinstance(rules, list) or not rules:
+        return
+    for r_idx, rule in enumerate(rules):
+        if not isinstance(rule, dict):
+            continue
+        r_type = str(rule.get("type", "top_coat")).lower()
+        target = str(rule.get("target", "S"))
+        replace = str(rule.get("replace", "L"))
+        prob = float(rule.get("prob", 0.75))
+        seed = int(rule.get("seed", 42 + r_idx * 31))
+        rep_rgba = resolve_color_fn(replace)
+        if rep_rgba[3] <= 0:
+            continue
+
+        snap = list(symbol_buffer)
+        if r_type == "top_coat":
+            for y in range(1, height):
+                for x in range(width):
+                    idx = y * width + x
+                    if snap[idx] == target and snap[(y - 1) * width + x] in (".", " ", "O"):
+                        if hash2d(x, y, seed) <= prob:
+                            symbol_buffer[idx] = replace
+                            b_idx = idx * 4
+                            buffer[b_idx:b_idx + 4] = bytes(rep_rgba)
+        elif r_type == "bottom_drip":
+            max_len = max(1, int(rule.get("length", 2)))
+            for y in range(height - 2, -1, -1):
+                for x in range(width):
+                    idx = y * width + x
+                    if snap[idx] == target and snap[(y + 1) * width + x] == ".":
+                        if hash2d(x, y, seed) <= prob:
+                            for d_step in range(1, max_len + 1):
+                                ny = y + d_step
+                                if ny < height and snap[ny * width + x] == ".":
+                                    n_idx = ny * width + x
+                                    symbol_buffer[n_idx] = replace
+                                    b_idx = n_idx * 4
+                                    buffer[b_idx:b_idx + 4] = bytes(rep_rgba)
+        elif r_type in ("nw_glint", "highlight_glint"):
+            for y in range(1, height - 1):
+                for x in range(1, width - 1):
+                    idx = y * width + x
+                    if snap[idx] == target and snap[(y - 1) * width + x] != target and snap[y * width + (x - 1)] != target:
+                        if hash2d(x, y, seed) <= prob:
+                            symbol_buffer[idx] = replace
+                            b_idx = idx * 4
+                            buffer[b_idx:b_idx + 4] = bytes(rep_rgba)
 
 
 def render_sprite(spec_input, frame_index=0):
@@ -389,6 +1323,7 @@ def render_sprite(spec_input, frame_index=0):
     palette_raw = resolve_full_palette(spec)
     post = spec.get("postProcess") if isinstance(spec.get("postProcess"), dict) else {}
     global_sdf_shading = bool(post.get("sdfShading"))
+    use_sel_out = bool(post.get("selOut"))
 
     palette_rgba = {".": (0, 0, 0, 0), " ": (0, 0, 0, 0)}
     for k, v in palette_raw.items():
@@ -402,11 +1337,32 @@ def render_sprite(spec_input, frame_index=0):
         return parse_color(key_or_hex)
 
     buffer = bytearray(width * height * 4)
+    normal_buffer = bytearray(width * height * 4)
+    for i in range(width * height):
+        normal_buffer[i * 4] = 128
+        normal_buffer[i * 4 + 1] = 128
+        normal_buffer[i * 4 + 2] = 255
+        normal_buffer[i * 4 + 3] = 0
     symbol_buffer = ["."] * (width * height)
 
+    def set_normal_pixel(x, y, nx, ny, nz):
+        ix = js_round(x)
+        iy = js_round(y)
+        if ix < 0 or ix >= width or iy < 0 or iy >= height:
+            return
+        if abs(nx) < 1e-9:
+            nx = 0.0
+        if abs(ny) < 1e-9:
+            ny = 0.0
+        idx = (iy * width + ix) * 4
+        normal_buffer[idx] = max(0, min(255, js_round((nx * 0.5 + 0.5) * 255.0)))
+        normal_buffer[idx + 1] = max(0, min(255, js_round((-ny * 0.5 + 0.5) * 255.0)))
+        normal_buffer[idx + 2] = max(0, min(255, js_round((nz * 0.5 + 0.5) * 255.0)))
+        normal_buffer[idx + 3] = 255
+
     def blend_pixel(x, y, rgba, sym=None):
-        ix = int(round(x))
-        iy = int(round(y))
+        ix = js_round(x)
+        iy = js_round(y)
         if ix < 0 or ix >= width or iy < 0 or iy >= height:
             return
         sr, sg, sb, sa = rgba
@@ -423,41 +1379,79 @@ def render_sprite(spec_input, frame_index=0):
             dst_a = buffer[idx + 3] / 255.0
             out_a = src_a + dst_a * (1.0 - src_a)
             if out_a > 0:
-                buffer[idx] = min(255, int(round((sr * src_a + buffer[idx] * dst_a * (1.0 - src_a)) / out_a)))
-                buffer[idx + 1] = min(255, int(round((sg * src_a + buffer[idx + 1] * dst_a * (1.0 - src_a)) / out_a)))
-                buffer[idx + 2] = min(255, int(round((sb * src_a + buffer[idx + 2] * dst_a * (1.0 - src_a)) / out_a)))
-                buffer[idx + 3] = min(255, int(round(out_a * 255)))
-        if sym:
+                buffer[idx] = min(255, js_round((sr * src_a + buffer[idx] * dst_a * (1.0 - src_a)) / out_a))
+                buffer[idx + 1] = min(255, js_round((sg * src_a + buffer[idx + 1] * dst_a * (1.0 - src_a)) / out_a))
+                buffer[idx + 2] = min(255, js_round((sb * src_a + buffer[idx + 2] * dst_a * (1.0 - src_a)) / out_a))
+                buffer[idx + 3] = min(255, js_round(out_a * 255.0))
+        if sym and (sa >= 128 or symbol_buffer[iy * width + ix] == "."):
             symbol_buffer[iy * width + ix] = sym
 
-    def rasterize_sdf_field(sdf_field, layer):
-        full_mask = bytearray(width * height)
+    def rasterize_sdf_field(sdf_field, layer, sub_sdfs=None):
+        raw_mask = bytearray(width * height)
         max_depth = 1.0
         for i in range(width * height):
             if sdf_field[i] <= 0.0:
-                full_mask[i] = 1
+                raw_mask[i] = 1
                 if -sdf_field[i] > max_depth:
                     max_depth = -sdf_field[i]
 
-        fill_rgba = resolve_color(layer.get("fill"))
+        op_name = str(layer.get("op", "")).lower()
+        prune_spurs = op_name not in ("polygon", "star", "ngon", "rect") or float(layer.get("smoothBlend", 0) or 0) > 0
+        full_mask = clean_sdf_mask(raw_mask, sdf_field, width, height, prune_spurs=prune_spurs)
+
+        fill_sym = layer.get("fill")
+        fill_rgba = resolve_color(fill_sym)
         outline_key = layer.get("outline")
         outline_rgba = resolve_color(outline_key) if outline_key else None
         dither_key = layer.get("ditherColor")
         dither_rgba = resolve_color(dither_key) if dither_key else fill_rgba
-        dither_mode = layer.get("dither", "none")
+        dither_mode = layer.get("dither") or layer.get("shader") or "none"
+        shader_scale = float(layer.get("shaderScale", 5.0) or 5.0)
+        shader_seed = int(layer.get("seed", 0) or 0)
         use_sdf_3d = bool(layer.get("sdf") or global_sdf_shading) and fill_rgba[3] >= 200
 
-        height_field = None
-        tones = None
-        if use_sdf_3d:
-            tones = derive_sdf_shading_tones(fill_rgba)
-            height_field = [0.0] * (width * height)
-            for i in range(width * height):
-                if full_mask[i]:
-                    t = max(0.0, min(1.0, -sdf_field[i] / max_depth))
-                    height_field[i] = math.sqrt(max(0.0, 1.0 - (1.0 - t) ** 2)) * max_depth
+        tones = derive_sdf_shading_tones(fill_rgba)
+        tone_syms = _register_sdf_tone_symbols(fill_sym, tones, palette_raw, palette_rgba) if use_sdf_3d else None
 
-        lx, ly, lz = -0.52, -0.62, 0.58
+        # Determine soft crease color for internal 2.5D anatomical overlap creases
+        crease_sym = layer.get("creaseColor")
+        crease_rgba = None
+        if crease_sym:
+            crease_rgba = resolve_color(crease_sym)
+        else:
+            if "S" in palette_rgba and fill_sym == "W":
+                crease_sym = "S"
+                crease_rgba = palette_rgba["S"]
+            else:
+                crease_rgba = tones["shadow"]
+                crease_sym = tone_syms["shadow"] if tone_syms else fill_sym
+
+        # Detect 1px internal anatomical creases between overlapping sub-shapes when crease=True and front_z > back_z
+        crease_mask = bytearray(width * height)
+        base_z = sub_sdfs[0][1] if (sub_sdfs and len(sub_sdfs) > 0) else 0.0
+        if sub_sdfs and len(sub_sdfs) >= 2 and fill_rgba[3] >= 200:
+            for k_idx in range(len(sub_sdfs)):
+                front_sdf, front_z, front_crease = sub_sdfs[k_idx]
+                if not front_crease:
+                    continue
+                for prev_idx in range(len(sub_sdfs)):
+                    if prev_idx == k_idx:
+                        continue
+                    back_sdf, back_z, _ = sub_sdfs[prev_idx]
+                    if front_z <= back_z:
+                        continue
+                    for y in range(1, height - 1):
+                        for x in range(1, width - 1):
+                            idx = y * width + x
+                            if not full_mask[idx]:
+                                continue
+                            df = front_sdf[idx]
+                            db = back_sdf[idx]
+                            # 1px interior rim of front part overlapping inside back part
+                            if -0.95 <= df <= 0.15 and db <= -0.45:
+                                crease_mask[idx] = 1
+
+        lx_light, ly_light, lz_light = -0.52, -0.62, 0.58
 
         for y in range(height):
             for x in range(width):
@@ -471,49 +1465,86 @@ def render_sprite(spec_input, frame_index=0):
                     not full_mask[(y - 1) * width + x] or
                     not full_mask[(y + 1) * width + x]
                 )
+
+                # Continuous unclamped SDF gradient multiplied by analytical spherical dome derivative dz/dt
+                d_l = sdf_field[y * width + max(0, x - 1)]
+                d_r = sdf_field[y * width + min(width - 1, x + 1)]
+                d_u = sdf_field[max(0, y - 1) * width + x]
+                d_d = sdf_field[min(height - 1, y + 1) * width + x]
+                gx = (d_r - d_l) * 0.5
+                gy = (d_d - d_u) * 0.5
+
+                # Blend foreground sub-shape normal differential (dZ / dN) when elevated sub-shape overlaps
+                if sub_sdfs and len(sub_sdfs) >= 2:
+                    top_z = base_z
+                    top_sdf = None
+                    for s_sdf, s_z, _ in sub_sdfs:
+                        if s_z > top_z and s_sdf[idx] <= 0.0:
+                            top_z = s_z
+                            top_sdf = s_sdf
+                    if top_sdf is not None:
+                        fg_gx = (top_sdf[y * width + min(width - 1, x + 1)] - top_sdf[y * width + max(0, x - 1)]) * 0.5
+                        fg_gy = (top_sdf[min(height - 1, y + 1) * width + x] - top_sdf[max(0, y - 1) * width + x]) * 0.5
+                        gx = gx * 0.45 + fg_gx * 0.55
+                        gy = gy * 0.45 + fg_gy * 0.55
+
+                t_depth = max(0.0, min(1.0, -sdf_field[idx] / max(1.5, max_depth)))
+                dz_dt = 0.65 * (1.0 - t_depth) / math.sqrt(max(0.16, t_depth * (2.0 - t_depth)))
+                nx = gx * dz_dt
+                ny = gy * dz_dt
+                nz = 1.0
+                inv_len = 1.0 / math.sqrt(nx * nx + ny * ny + nz * nz)
+                nx *= inv_len
+                ny *= inv_len
+                nz *= inv_len
+                if fill_rgba[3] >= 180 or (outline_rgba and outline_rgba[3] >= 180 and is_edge):
+                    set_normal_pixel(x, y, nx, ny, nz)
+
                 if outline_rgba and outline_rgba[3] > 0 and is_edge:
-                    blend_pixel(x, y, outline_rgba, outline_key)
-                elif fill_rgba[3] > 0:
-                    if use_sdf_3d and height_field:
-                        z_l = height_field[y * width + (x - 1)] if x > 0 else 0.0
-                        z_r = height_field[y * width + (x + 1)] if x < width - 1 else 0.0
-                        z_u = height_field[(y - 1) * width + x] if y > 0 else 0.0
-                        z_d = height_field[(y + 1) * width + x] if y < height - 1 else 0.0
-
-                        nx = -(z_r - z_l) * 0.65
-                        ny = -(z_d - z_u) * 0.65
-                        nz = 1.0
-                        inv_len = 1.0 / math.sqrt(nx * nx + ny * ny + nz * nz)
-                        nx *= inv_len
-                        ny *= inv_len
-                        nz *= inv_len
-
-                        bayer = BAYER_2X2[y & 1][x & 1]
-                        intensity = (nx * lx + ny * ly + nz * lz) + bayer
-
-                        chosen_rgba = tones["base"]
-                        if intensity > 0.86:
-                            chosen_rgba = tones["specular"]
-                        elif intensity > 0.66:
-                            chosen_rgba = tones["highlight"]
-                        elif intensity < 0.25:
-                            chosen_rgba = tones["deepShadow"]
-                        elif intensity < 0.44:
-                            chosen_rgba = tones["shadow"]
-
-                        if dither_mode != "none" and check_dither(dither_mode, x, y):
-                            chosen_rgba = dither_rgba
-                        blend_pixel(x, y, chosen_rgba, layer.get("fill"))
+                    if (use_sel_out or layer.get("selOut")) and (nx * lx_light + ny * ly_light + nz * lz_light) > 0.25:
+                        sel_rgba = (
+                            int((outline_rgba[0] + tones["deepShadow"][0]) * 0.5),
+                            int((outline_rgba[1] + tones["deepShadow"][1]) * 0.5),
+                            int((outline_rgba[2] + tones["deepShadow"][2]) * 0.5),
+                            outline_rgba[3]
+                        )
+                        blend_pixel(x, y, sel_rgba, outline_key)
                     else:
-                        use_dither = check_dither(dither_mode, x, y)
+                        blend_pixel(x, y, outline_rgba, outline_key)
+                elif crease_mask[idx] and crease_rgba:
+                    blend_pixel(x, y, crease_rgba, crease_sym)
+                elif fill_rgba[3] > 0:
+                    if use_sdf_3d and tone_syms:
+                        bayer = BAYER_2X2[y & 1][x & 1]
+                        intensity = (nx * lx_light + ny * ly_light + nz * lz_light) + bayer
+
+                        chosen_name = "base"
+                        if intensity > 0.86:
+                            chosen_name = "specular"
+                        elif intensity > 0.66:
+                            chosen_name = "highlight"
+                        elif intensity < 0.25:
+                            chosen_name = "deepShadow"
+                        elif intensity < 0.44:
+                            chosen_name = "shadow"
+
+                        chosen_rgba = tones[chosen_name]
+                        chosen_sym = tone_syms[chosen_name]
+
+                        if dither_mode != "none" and check_dither(dither_mode, x, y, nx, ny, shader_scale, shader_seed):
+                            chosen_rgba = dither_rgba if dither_key else tones["deepShadow"]
+                            chosen_sym = dither_key if dither_key else tone_syms["deepShadow"]
+                        blend_pixel(x, y, chosen_rgba, chosen_sym)
+                    else:
+                        use_dither = check_dither(dither_mode, x, y, nx, ny, shader_scale, shader_seed)
                         blend_pixel(
                             x, y,
                             dither_rgba if use_dither else fill_rgba,
-                            (dither_key or layer.get("fill")) if use_dither else layer.get("fill")
+                            (dither_key or fill_sym) if use_dither else fill_sym
                         )
 
     def plot_point_with_mirror(x, y, thickness, rgba, sym, mirror):
-        r = max(1, int(round(thickness or 1)))
+        r = max(1, js_round(thickness or 1))
         half = (r - 1) // 2
 
         def put(px, py):
@@ -530,8 +1561,8 @@ def render_sprite(spec_input, frame_index=0):
             put(width - 1 - x, height - 1 - y)
 
     def draw_bresenham_line(x0, y0, x1, y1, thickness, rgba, sym, mirror):
-        ix0, iy0 = int(round(x0)), int(round(y0))
-        ix1, iy1 = int(round(x1)), int(round(y1))
+        ix0, iy0 = js_round(x0), js_round(y0)
+        ix1, iy1 = js_round(x1), js_round(y1)
         dx = abs(ix1 - ix0)
         sx = 1 if ix0 < ix1 else -1
         dy = -abs(iy1 - iy0)
@@ -558,32 +1589,48 @@ def render_sprite(spec_input, frame_index=0):
             continue
         op = str(layer["op"]).lower()
 
-        if op in ("ellipse", "rect", "polygon"):
+        if op in SDF_SHAPE_OPS:
             combined_sdf = compute_layer_sdf(layer, width, height)
+            has_explicit_z = ("z" in layer) or bool(layer.get("crease"))
+            sub_sdfs = [(list(combined_sdf), float(layer.get("z", 0)), has_explicit_z)]
             while (
                 i + 1 < len(layers) and
                 isinstance(layers[i + 1], dict) and
                 not layers[i + 1].get("hidden") and
-                str(layers[i + 1].get("op", "")).lower() in ("ellipse", "rect", "polygon") and
-                float(layers[i + 1].get("smoothBlend", 0) or 0) > 0 and
-                layers[i + 1].get("fill") == layer.get("fill")
+                str(layers[i + 1].get("op", "")).lower() in SDF_SHAPE_OPS and
+                (
+                    (float(layers[i + 1].get("smoothBlend", 0) or 0) > 0 and layers[i + 1].get("fill") == layer.get("fill")) or
+                    str(layers[i + 1].get("opMode", "")).lower() in ("subtract", "smooth_subtract", "intersect", "union", "smooth_union")
+                )
             ):
                 next_layer = layers[i + 1]
                 next_sdf = compute_layer_sdf(next_layer, width, height)
-                k = float(next_layer.get("smoothBlend", 0))
+                k = float(next_layer.get("smoothBlend", 0) or 0)
+                op_mode = next_layer.get("opMode") or ("smooth_union" if k > 0 else "union")
                 for p in range(width * height):
-                    combined_sdf[p] = smin(combined_sdf[p], next_sdf[p], k)
+                    combined_sdf[p] = csg_combine(combined_sdf[p], next_sdf[p], op_mode, k)
+                if str(op_mode).lower() in ("union", "smooth_union"):
+                    next_has_z = ("z" in next_layer) or bool(next_layer.get("crease"))
+                    sub_sdfs.append((next_sdf, float(next_layer.get("z", 0)), next_has_z))
                 i += 1
-            rasterize_sdf_field(combined_sdf, layer)
+            rasterize_sdf_field(combined_sdf, layer, sub_sdfs)
 
         elif op == "line":
             col_key = layer.get("color") or layer.get("fill") or "O"
             rgba = resolve_color(col_key)
-            draw_bresenham_line(
-                layer.get("x1", 0), layer.get("y1", 0),
-                layer.get("x2", 0), layer.get("y2", 0),
-                layer.get("thickness", 1), rgba, col_key, layer.get("mirror", "none")
-            )
+            if isinstance(layer.get("points"), list) and len(layer["points"]) >= 2:
+                pts = layer["points"]
+                for s_i in range(len(pts) - 1):
+                    draw_bresenham_line(
+                        pts[s_i][0], pts[s_i][1], pts[s_i + 1][0], pts[s_i + 1][1],
+                        layer.get("thickness", 1), rgba, col_key, layer.get("mirror", "none")
+                    )
+            else:
+                draw_bresenham_line(
+                    layer.get("x1", 0), layer.get("y1", 0),
+                    layer.get("x2", 0), layer.get("y2", 0),
+                    layer.get("thickness", 1), rgba, col_key, layer.get("mirror", "none")
+                )
 
         elif op == "curve" and isinstance(layer.get("points"), list) and len(layer["points"]) >= 3:
             col_key = layer.get("color") or layer.get("fill") or "O"
@@ -603,18 +1650,26 @@ def render_sprite(spec_input, frame_index=0):
                 prev_x, prev_y = nx, ny
 
         elif op in ("stamp", "stamp_grid") and isinstance(layer.get("grid"), list):
-            ox = int(round(float(layer.get("x", 0))))
-            oy = int(round(float(layer.get("y", 0))))
+            ox = js_round(float(layer.get("x", 0)))
+            oy = js_round(float(layer.get("y", 0)))
             mirror = layer.get("mirror", "none")
             cmap = layer.get("map") if isinstance(layer.get("map"), dict) else {}
-            for sy, row in enumerate(layer["grid"]):
-                row_s = str(row or "")
-                for sx, ch in enumerate(row_s):
-                    if ch in (".", " "):
-                        continue
+            st_angle = float(layer.get("angle", 0.0) or 0.0)
+            if abs(st_angle) > 0.5:
+                rot_pts = rotate_stamp_epx(layer["grid"], st_angle)
+                for sx, sy, ch in rot_pts:
                     c_key = cmap.get(ch, ch)
                     rgba = resolve_color(c_key)
-                    plot_point_with_mirror(ox + sx, oy + sy, 1, rgba, ch, mirror)
+                    plot_point_with_mirror(ox + sx, oy + sy, 1, rgba, c_key, mirror)
+            else:
+                for sy, row in enumerate(layer["grid"]):
+                    row_s = str(row or "")
+                    for sx, ch in enumerate(row_s):
+                        if ch in (".", " "):
+                            continue
+                        c_key = cmap.get(ch, ch)
+                        rgba = resolve_color(c_key)
+                        plot_point_with_mirror(ox + sx, oy + sy, 1, rgba, c_key, mirror)
 
         elif op == "pixels" and isinstance(layer.get("points"), list):
             col_key = layer.get("color") or layer.get("fill") or "O"
@@ -638,6 +1693,10 @@ def render_sprite(spec_input, frame_index=0):
                 if ch in (".", " "):
                     continue
                 blend_pixel(x, y, resolve_color(ch), ch)
+
+    # Apply MarkovJunior-style cellular rewrite rules if defined
+    if isinstance(spec.get("rules"), list):
+        apply_cellular_rules(spec["rules"], width, height, symbol_buffer, buffer, resolve_color)
 
     sym_mode = spec.get("symmetry", "none")
     if sym_mode in ("horizontal", "quad"):
@@ -687,13 +1746,13 @@ def render_sprite(spec_input, frame_index=0):
                 br_diff = not same_col(idx, down_idx) and not same_col(idx, right_idx)
 
                 if tl_diff and not br_diff:
-                    buffer[idx] = min(255, int(round(copy_buf[idx] + (255 - copy_buf[idx]) * strength)))
-                    buffer[idx + 1] = min(255, int(round(copy_buf[idx + 1] + (255 - copy_buf[idx + 1]) * (strength * 1.1))))
-                    buffer[idx + 2] = min(255, int(round(copy_buf[idx + 2] + (255 - copy_buf[idx + 2]) * (strength * 0.7))))
+                    buffer[idx] = min(255, js_round(copy_buf[idx] + (255 - copy_buf[idx]) * strength))
+                    buffer[idx + 1] = min(255, js_round(copy_buf[idx + 1] + (255 - copy_buf[idx + 1]) * (strength * 1.1)))
+                    buffer[idx + 2] = min(255, js_round(copy_buf[idx + 2] + (255 - copy_buf[idx + 2]) * (strength * 0.7)))
                 elif br_diff and not tl_diff:
-                    buffer[idx] = max(0, int(round(copy_buf[idx] * (1.0 - strength * 1.1))))
-                    buffer[idx + 1] = max(0, int(round(copy_buf[idx + 1] * (1.0 - strength))))
-                    buffer[idx + 2] = max(0, int(round(copy_buf[idx + 2] * (1.0 - strength * 0.8))))
+                    buffer[idx] = max(0, js_round(copy_buf[idx] * (1.0 - strength * 1.1)))
+                    buffer[idx + 1] = max(0, js_round(copy_buf[idx + 1] * (1.0 - strength)))
+                    buffer[idx + 2] = max(0, js_round(copy_buf[idx + 2] * (1.0 - strength * 0.8)))
 
     if post.get("autoOutline"):
         out_rgba = parse_color(post.get("outlineColor") or palette_raw.get("O") or "#14182e")
@@ -713,16 +1772,790 @@ def render_sprite(spec_input, frame_index=0):
                     buffer[idx:idx + 4] = bytes(out_rgba)
                     symbol_buffer[y * width + x] = "O"
 
+    # Pillar 2: Compute Felzenszwalb EDT normals (and optional 3D bevel shading) for non-SDF active pixels
+    alpha_mask = [1 if buffer[i * 4 + 3] >= 180 else 0 for i in range(width * height)]
+    if any(alpha_mask):
+        edt_sdf = compute_edt_sdf(alpha_mask, width, height)
+        max_edt = max([1.0] + [-edt_sdf[i] for i in range(width * height) if alpha_mask[i]])
+        lx_light, ly_light, lz_light = -0.52, -0.62, 0.58
+        for y in range(height):
+            for x in range(width):
+                idx = y * width + x
+                if not alpha_mask[idx]:
+                    continue
+                if normal_buffer[idx * 4 + 3] == 0:
+                    dl = edt_sdf[y * width + max(0, x - 1)]
+                    dr = edt_sdf[y * width + min(width - 1, x + 1)]
+                    du = edt_sdf[max(0, y - 1) * width + x]
+                    dd = edt_sdf[min(height - 1, y + 1) * width + x]
+                    gx = (dr - dl) * 0.5
+                    gy = (dd - du) * 0.5
+                    gl = math.hypot(gx, gy)
+                    t_d = max(0.0, min(1.0, -edt_sdf[idx] / max_edt))
+                    slope = (1.0 - t_d) ** 0.85 * 0.78
+                    nx = (gx / gl) * slope if gl > 1e-5 else 0.0
+                    ny = (gy / gl) * slope if gl > 1e-5 else 0.0
+                    nz = math.sqrt(max(0.05, 1.0 - nx * nx - ny * ny))
+                    set_normal_pixel(x, y, nx, ny, nz)
+                    if global_sdf_shading and -edt_sdf[idx] > 0.6:
+                        b_idx = idx * 4
+                        r0, g0, b0, a0 = buffer[b_idx], buffer[b_idx + 1], buffer[b_idx + 2], buffer[b_idx + 3]
+                        if (r0 + g0 + b0) >= 110 and symbol_buffer[idx] != "O":
+                            tones = derive_sdf_shading_tones((r0, g0, b0, a0))
+                            tone_syms = _register_sdf_tone_symbols(symbol_buffer[idx], tones, palette_raw, palette_rgba)
+                            bayer = BAYER_2X2[y & 1][x & 1]
+                            intensity = (nx * lx_light + ny * ly_light + nz * lz_light) + bayer
+                            chosen_name = "base"
+                            if intensity > 0.86:
+                                chosen_name = "specular"
+                            elif intensity > 0.66:
+                                chosen_name = "highlight"
+                            elif intensity < 0.25:
+                                chosen_name = "deepShadow"
+                            elif intensity < 0.44:
+                                chosen_name = "shadow"
+                            c_rgba = tones[chosen_name]
+                            buffer[b_idx] = c_rgba[0]
+                            buffer[b_idx + 1] = c_rgba[1]
+                            buffer[b_idx + 2] = c_rgba[2]
+                            symbol_buffer[idx] = tone_syms[chosen_name]
+
     diagnostics = analyze_buffer(width, height, buffer)
     return {
         "width": width,
         "height": height,
         "buffer": buffer,
+        "normal_buffer": normal_buffer,
         "symbol_buffer": symbol_buffer,
+        "resolved_palette": palette_raw,
         "warnings": warnings,
         "diagnostics": diagnostics
     }
 
+
+def bake_to_grid(render_result, palette=None):
+    width = render_result["width"]
+    height = render_result["height"]
+    buffer = render_result["buffer"]
+    symbol_buffer = render_result["symbol_buffer"]
+    resolved = palette if palette is not None else render_result.get("resolved_palette", {})
+    if "." not in resolved:
+        resolved["."] = "transparent"
+
+    pool = (
+        "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
+        "!@#$%^&*()-_=+[]{}|;:,.<>?/~`"
+        "αβγδεζηθικλμνξοπρστυφχψωΑΒΓΔΕΖΗΘΙΚΛΜΝΞΟΠΡΣΤΥΦΧΨΩ"
+    )
+    rgba_to_sym = {}
+    for k, v in list(resolved.items()):
+        if k != ".":
+            rgba_to_sym[parse_color(v)] = k
+
+    rows = []
+    for y in range(height):
+        row_chars = []
+        for x in range(width):
+            idx = (y * width + x) * 4
+            r, g, b, a = buffer[idx], buffer[idx + 1], buffer[idx + 2], buffer[idx + 3]
+            if a == 0:
+                row_chars.append(".")
+                continue
+            sym = symbol_buffer[y * width + x] or "."
+            rgba = (r, g, b, a)
+            if sym != "." and sym in resolved and parse_color(resolved[sym]) == rgba:
+                row_chars.append(sym)
+            elif rgba in rgba_to_sym:
+                row_chars.append(rgba_to_sym[rgba])
+            else:
+                new_sym = next((ch for ch in pool if ch not in resolved and ch != "."), "O")
+                resolved[new_sym] = rgba_to_hex(r, g, b, a)
+                rgba_to_sym[rgba] = new_sym
+                row_chars.append(new_sym)
+        rows.append("".join(row_chars))
+    return rows
+
+
+# ============================================================================
+# Pillar 5: 100% LLM-Free Parametric Archetype Generator & Genome Mutator
+# ============================================================================
+
+ARCHETYPE_LIST = (
+    "sword", "axe", "shield", "potion", "gem", "slime",
+    "beetle", "turtle", "bunny", "crystal_monolith", "spaceship", "autotile_blob47"
+)
+
+
+def generate_archetype(archetype="sword", seed=42, width=32, height=32):
+    """Generates a complete, game-ready PixelDSL v3.0 sprite specification purely from mathematics."""
+    rng = SeededRNG(seed)
+    arch = str(archetype or "sword").lower().strip()
+    w = clamp_size(width, 32)
+    h = clamp_size(height, 32)
+    cx = (w - 1) * 0.5
+    cy = (h - 1) * 0.5
+    sc = min(w, h) / 32.0
+
+    r1 = lambda v: math.floor(float(v) * 10.0 + 0.5) / 10.0
+    r2 = lambda v: math.floor(float(v) * 100.0 + 0.5) / 100.0
+
+    hue_main = rng.range(0, 360)
+    hue_acc = (hue_main + rng.choice([120, 150, 180, 210, 60])) % 360.0
+    col_main = rgba_to_hex(*oklch_to_rgb(rng.range(0.60, 0.74), rng.range(0.14, 0.22), hue_main))
+    col_acc = rgba_to_hex(*oklch_to_rgb(rng.range(0.68, 0.82), rng.range(0.16, 0.24), hue_acc))
+    col_steel = rgba_to_hex(*oklch_to_rgb(0.78, 0.04, (hue_main + 220) % 360))
+    col_wood = rgba_to_hex(*oklch_to_rgb(0.48, 0.11, 55.0))
+
+    spec = {
+        "name": f"proc_{arch}_s{seed}_{w}x{h}",
+        "prompt": f"Procedural {arch} (seed={seed}, {w}x{h}) — 100% LLM-Free PixelDSL v3.0",
+        "width": w,
+        "height": h,
+        "symmetry": "none",
+        "rle": False,
+        "ramps": {
+            "M": {"base": col_main, "light": "L", "dark": "D", "outline": "O"},
+            "A": {"base": col_acc, "light": "W", "dark": "B", "outline": "O"},
+            "S": {"base": col_steel, "light": "w", "dark": "d", "outline": "O"},
+            "H": {"base": col_wood, "light": "h", "dark": "b", "outline": "O"}
+        },
+        "palette": {
+            ".": "transparent",
+            "O": "#14182e",
+            "e": "#0e101c",
+            "w": "#ffffff",
+            "a": "#14182e44"
+        },
+        "postProcess": {
+            "autoOutline": False,
+            "outlineColor": "#14182e",
+            "autoShading": False,
+            "shadingStrength": 0.16,
+            "sdfShading": True,
+            "selOut": True
+        },
+        "layers": [],
+        "frames": [],
+        "grid": []
+    }
+
+    if arch == "sword":
+        blade_w = rng.range(2.8, 4.4) * sc
+        tip_w = rng.range(0.8, 1.5) * sc
+        guard_w = rng.range(5.5, 8.5) * sc
+        spec["layers"] = [
+            {"id": "shadow", "op": "ellipse", "cx": cx, "cy": r1(h - 3 * sc), "rx": r1(6 * sc), "ry": r1(1.5 * sc), "fill": "a"},
+            {"id": "pommel", "op": "ellipse", "cx": cx, "cy": r1(h - 4.5 * sc), "rx": r1(2.2 * sc), "ry": r1(2.2 * sc), "fill": "A", "outline": "O", "sdf": True},
+            {"id": "grip", "op": "uneven_capsule", "x1": cx, "y1": r1(h - 6 * sc), "x2": cx, "y2": r1(h - 11 * sc), "r1": r1(1.6 * sc), "r2": r1(1.9 * sc), "fill": "H", "outline": "O", "sdf": True},
+            {"id": "blade", "op": "uneven_capsule", "x1": cx, "y1": r1(h - 11 * sc), "x2": cx, "y2": r1(4.5 * sc), "r1": r1(blade_w), "r2": r1(tip_w), "fill": "S", "outline": "O", "sdf": True},
+            {"id": "blade_tip", "op": "vesica", "cx": cx, "cy": r1(7.5 * sc), "rx": r1(blade_w * 0.95), "ry": r1(5.0 * sc), "fill": "S", "outline": "O", "sdf": True, "smoothBlend": 1.5},
+            {"id": "fuller", "op": "uneven_capsule", "x1": cx, "y1": r1(h - 12 * sc), "x2": cx, "y2": r1(9 * sc), "r1": r1(1.0 * sc), "r2": r1(0.6 * sc), "fill": "M", "sdf": True},
+            {"id": "guard", "op": "vesica", "cx": cx, "cy": r1(h - 11 * sc), "rx": r1(guard_w), "ry": r1(2.2 * sc), "angle": rng.range(-8, 8), "fill": "A", "outline": "O", "sdf": True},
+            {"id": "gem", "op": "ellipse", "cx": cx, "cy": r1(h - 11 * sc), "rx": r1(1.8 * sc), "ry": r1(1.8 * sc), "fill": "M", "outline": "O", "sdf": True}
+        ]
+        spec["motion"] = {"type": "idle_breathe", "frames": 4, "amplitude": 0.8, "squash": 0.04}
+
+    elif arch == "axe":
+        head_y = r1(11 * sc)
+        reach = r1(rng.range(7.5, 10.5) * sc)
+        spec["layers"] = [
+            {"id": "shadow", "op": "ellipse", "cx": cx, "cy": r1(h - 3 * sc), "rx": r1(7 * sc), "ry": r1(1.5 * sc), "fill": "a"},
+            {"id": "haft", "op": "uneven_capsule", "x1": cx, "y1": r1(h - 4 * sc), "x2": cx, "y2": r1(4 * sc), "r1": r1(1.8 * sc), "r2": r1(2.2 * sc), "fill": "H", "outline": "O", "sdf": True},
+            {"id": "blade_wing", "op": "moon", "cx": r1(cx - 3.5 * sc), "cy": head_y, "r": reach, "r2": r1(reach * 0.78), "d": r1(reach * 0.42), "angle": 180, "fill": "S", "outline": "O", "mirror": "x", "sdf": True},
+            {"id": "socket", "op": "rect", "x": r1(cx - 2.5 * sc), "y": r1(head_y - 3 * sc), "w": r1(5 * sc), "h": r1(6 * sc), "rx": r1(1.5 * sc), "fill": "A", "outline": "O", "sdf": True},
+            {"id": "core_gem", "op": "ellipse", "cx": cx, "cy": head_y, "rx": r1(1.8 * sc), "ry": r1(2.2 * sc), "fill": "M", "outline": "O", "sdf": True}
+        ]
+
+    elif arch == "shield":
+        rx_s = r1(rng.range(9.5, 11.5) * sc)
+        ry_s = r1(rng.range(11.0, 12.5) * sc)
+        spec["layers"] = [
+            {"id": "shadow", "op": "ellipse", "cx": cx, "cy": r1(h - 3 * sc), "rx": r1(8 * sc), "ry": r1(2 * sc), "fill": "a"},
+            {"id": "rim", "op": "vesica", "cx": cx, "cy": cy, "rx": rx_s, "ry": ry_s, "fill": "S", "outline": "O", "sdf": True},
+            {"id": "field", "op": "vesica", "cx": cx, "cy": cy, "rx": r1(rx_s - 2.2 * sc), "ry": r1(ry_s - 2.2 * sc), "fill": "M", "outline": "O", "sdf": True, "dither": rng.choice(["worley", "checker", "none"]), "shaderScale": 6.0, "seed": seed},
+            {"id": "emblem", "op": "star", "cx": cx, "cy": cy, "r": r1(5.5 * sc), "n": rng.choice([4, 5, 6]), "innerRatio": 0.48, "fill": "A", "outline": "O", "sdf": True}
+        ]
+
+    elif arch == "potion":
+        body_r = r1(rng.range(7.5, 9.5) * sc)
+        by = r1(cy + 3.5 * sc)
+        spec["layers"] = [
+            {"id": "shadow", "op": "ellipse", "cx": cx, "cy": r1(h - 3 * sc), "rx": r1(7 * sc), "ry": r1(1.8 * sc), "fill": "a"},
+            {"id": "cork", "op": "rect", "x": r1(cx - 2.2 * sc), "y": r1(3.5 * sc), "w": r1(4.4 * sc), "h": r1(3.5 * sc), "rx": r1(1.0 * sc), "fill": "H", "outline": "O", "sdf": True},
+            {"id": "neck", "op": "rect", "x": r1(cx - 3.2 * sc), "y": r1(6.5 * sc), "w": r1(6.4 * sc), "h": r1(4.5 * sc), "rx": r1(1.0 * sc), "fill": "S", "outline": "O", "sdf": True},
+            {"id": "flask_outer", "op": "ellipse", "cx": cx, "cy": by, "rx": body_r, "ry": body_r, "fill": "S", "outline": "O", "sdf": True},
+            {"id": "liquid", "op": "ellipse", "cx": cx, "cy": r1(by + 1.0 * sc), "rx": r1(body_r - 1.6 * sc), "ry": r1(body_r - 2.0 * sc), "fill": "M", "outline": "O", "sdf": True, "dither": "voronoi", "shaderScale": 4.5, "seed": seed},
+            {"id": "glint", "op": "ellipse", "cx": r1(cx - body_r * 0.45), "cy": r1(by - body_r * 0.35), "rx": r1(1.6 * sc), "ry": r1(2.6 * sc), "angle": -25, "fill": "w"}
+        ]
+        spec["motion"] = {"type": "idle_breathe", "frames": 4, "amplitude": 0.7, "squash": 0.06}
+
+    elif arch == "gem":
+        n_sides = rng.choice([5, 6, 8])
+        spec["layers"] = [
+            {"id": "shadow", "op": "ellipse", "cx": cx, "cy": r1(h - 3.5 * sc), "rx": r1(6.5 * sc), "ry": r1(1.8 * sc), "fill": "a"},
+            {"id": "body_gem", "op": "ngon", "cx": cx, "cy": cy, "r": r1(10.5 * sc), "n": n_sides, "fill": "M", "outline": "O", "sdf": True, "dither": "worley", "shaderScale": 5.5, "seed": seed},
+            {"id": "inner_core", "op": "star", "cx": cx, "cy": cy, "r": r1(6.5 * sc), "n": n_sides, "innerRatio": 0.62, "fill": "A", "outline": "O", "sdf": True},
+            {"id": "spec", "op": "ellipse", "cx": r1(cx - 2.5 * sc), "cy": r1(cy - 3.0 * sc), "rx": r1(1.8 * sc), "ry": r1(1.2 * sc), "angle": -30, "fill": "w"}
+        ]
+        spec["motion"] = {"type": "idle_breathe", "frames": 4, "amplitude": 1.0, "squash": 0.05}
+
+    elif arch == "slime":
+        rx_b = r1(rng.range(9.0, 10.5) * sc)
+        ry_b = r1(rng.range(7.2, 8.6) * sc)
+        spec["layers"] = [
+            {"id": "shadow", "op": "ellipse", "cx": cx, "cy": r1(h - 4 * sc), "rx": r1(rx_b * 1.05), "ry": r1(2.2 * sc), "fill": "a"},
+            {"id": "crown", "op": "star", "cx": cx, "cy": r1(cy - ry_b - 1.2 * sc), "r": r1(3.8 * sc), "n": 5, "innerRatio": 0.55, "fill": "A", "outline": "O", "sdf": True, "parent": "slime_body"},
+            {"id": "slime_body", "op": "ellipse", "cx": cx, "cy": r1(cy + 2 * sc), "rx": rx_b, "ry": ry_b, "fill": "M", "outline": "O", "sdf": True, "smoothBlend": 3.0},
+            {"id": "slime_lobes", "op": "ellipse", "cx": r1(cx - rx_b * 0.68), "cy": r1(cy + 5.2 * sc), "rx": r1(4.6 * sc), "ry": r1(3.6 * sc), "fill": "M", "outline": "O", "mirror": "x", "sdf": True, "smoothBlend": 3.0},
+            {"id": "slime_top", "op": "ellipse", "cx": cx, "cy": r1(cy - 2.8 * sc), "rx": r1(rx_b * 0.62), "ry": r1(4.2 * sc), "fill": "M", "outline": "O", "sdf": True, "smoothBlend": 2.5},
+            {"id": "eye_l", "op": "ellipse", "cx": r1(cx - 3.5 * sc), "cy": r1(cy + 1.0 * sc), "rx": max(1.0, r1(1.5 * sc)), "ry": max(1.2, r1(2.0 * sc)), "fill": "e", "mirror": "x", "parent": "slime_body"},
+            {"id": "glint", "op": "pixels", "color": "w", "mirror": "x", "points": [[js_round(cx - 4 * sc), js_round(cy)]], "parent": "slime_body"}
+        ]
+        spec["motion"] = {"type": "idle_breathe", "frames": 4, "amplitude": r2(1.0 * sc), "squash": 0.12}
+
+    elif arch == "beetle":
+        spec["layers"] = [
+            {"id": "shadow", "op": "ellipse", "cx": cx, "cy": r1(cy + 2 * sc), "rx": r1(10 * sc), "ry": r1(10 * sc), "fill": "a"},
+            {"id": "mandibles", "op": "moon", "cx": r1(cx - 2.5 * sc), "cy": r1(5.5 * sc), "r": r1(3.0 * sc), "r2": r1(2.2 * sc), "d": r1(1.3 * sc), "angle": -90, "fill": "A", "outline": "O", "mirror": "x", "sdf": True},
+            {"id": "leg_front", "op": "bezier_sdf", "points": [[r1(cx - 5 * sc), r1(cy - 4 * sc)], [r1(cx - 10 * sc), r1(cy - 7 * sc)], [r1(cx - 12 * sc), r1(cy - 11 * sc)]], "r1": r1(1.4 * sc), "r2": r1(0.9 * sc), "fill": "H", "outline": "O", "mirror": "x", "sdf": True},
+            {"id": "leg_mid", "op": "bezier_sdf", "points": [[r1(cx - 6 * sc), r1(cy)], [r1(cx - 11 * sc), r1(cy)], [r1(cx - 13 * sc), r1(cy - 2 * sc)]], "r1": r1(1.4 * sc), "r2": r1(0.9 * sc), "fill": "H", "outline": "O", "mirror": "x", "sdf": True},
+            {"id": "leg_back", "op": "bezier_sdf", "points": [[r1(cx - 5 * sc), r1(cy + 5 * sc)], [r1(cx - 10 * sc), r1(cy + 8 * sc)], [r1(cx - 12 * sc), r1(cy + 12 * sc)]], "r1": r1(1.4 * sc), "r2": r1(0.9 * sc), "fill": "H", "outline": "O", "mirror": "x", "sdf": True},
+            {"id": "thorax", "op": "ellipse", "cx": cx, "cy": r1(10.5 * sc), "rx": r1(6.5 * sc), "ry": r1(4.0 * sc), "fill": "A", "outline": "O", "sdf": True},
+            {"id": "abdomen", "op": "ellipse", "cx": cx, "cy": r1(cy + 3.5 * sc), "rx": r1(8.0 * sc), "ry": r1(9.5 * sc), "fill": "M", "outline": "O", "sdf": True, "dither": "worley", "shaderScale": 4.8, "seed": seed},
+            {"id": "seam", "op": "line", "x1": cx, "y1": js_round(11 * sc), "x2": cx, "y2": js_round(cy + 12 * sc), "thickness": 1, "color": "O"}
+        ]
+        spec["motion"] = {"type": "walk_cycle", "frames": 4, "amplitude": r2(1.0 * sc), "squash": 0.05}
+
+    elif arch == "turtle":
+        spec["layers"] = [
+            {"id": "shadow", "op": "ellipse", "cx": cx, "cy": r1(cy + 1.5 * sc), "rx": r1(11 * sc), "ry": r1(11 * sc), "fill": "a"},
+            {"id": "flipper_front", "op": "vesica", "cx": r1(cx - 9.5 * sc), "cy": r1(cy - 4.5 * sc), "rx": r1(2.8 * sc), "ry": r1(5.5 * sc), "angle": 55, "fill": "A", "outline": "O", "mirror": "x", "sdf": True},
+            {"id": "flipper_back", "op": "vesica", "cx": r1(cx - 7.5 * sc), "cy": r1(cy + 7.5 * sc), "rx": r1(2.2 * sc), "ry": r1(4.2 * sc), "angle": -45, "fill": "A", "outline": "O", "mirror": "x", "sdf": True},
+            {"id": "head", "op": "ellipse", "cx": cx, "cy": r1(5.5 * sc), "rx": r1(3.8 * sc), "ry": r1(3.8 * sc), "fill": "A", "outline": "O", "sdf": True},
+            {"id": "shell_rim", "op": "ellipse", "cx": cx, "cy": r1(cy + 1.0 * sc), "rx": r1(8.8 * sc), "ry": r1(10.5 * sc), "fill": "H", "outline": "O", "sdf": True},
+            {"id": "shell_dome", "op": "ellipse", "cx": cx, "cy": r1(cy + 1.0 * sc), "rx": r1(7.5 * sc), "ry": r1(9.0 * sc), "fill": "M", "outline": "O", "sdf": True, "dither": "worley", "shaderScale": 5.2, "seed": seed},
+            {"id": "eyes", "op": "pixels", "color": "e", "mirror": "x", "points": [[js_round(cx - 2.5 * sc), js_round(4.0 * sc)]]}
+        ]
+        spec["motion"] = {"type": "swim_cycle", "frames": 4, "amplitude": r2(1.0 * sc), "squash": 0.04}
+
+    elif arch == "bunny":
+        spec["layers"] = [
+            {"id": "shadow", "op": "ellipse", "cx": cx, "cy": r1(h - 3.5 * sc), "rx": r1(8.5 * sc), "ry": r1(1.5 * sc), "fill": "a"},
+            {"id": "ear_back", "op": "uneven_capsule", "x1": r1(cx + 1 * sc), "y1": r1(cy - 3 * sc), "x2": r1(cx - 2 * sc), "y2": r1(5.5 * sc), "r1": r1(2.1 * sc), "r2": r1(1.4 * sc), "fill": "A", "outline": "O", "sdf": True, "parent": "body"},
+            {"id": "tail", "op": "ellipse", "cx": r1(cx - 9.0 * sc), "cy": r1(cy + 4.5 * sc), "rx": r1(2.6 * sc), "ry": r1(2.6 * sc), "fill": "S", "outline": "O", "sdf": True, "parent": "body"},
+            {"id": "body", "op": "ellipse", "cx": cx, "cy": r1(cy + 4.5 * sc), "rx": r1(6.2 * sc), "ry": r1(5.0 * sc), "angle": -8, "fill": "S", "outline": "O", "sdf": True, "smoothBlend": 2.0, "z": 1},
+            {"id": "thigh", "op": "ellipse", "cx": r1(cx - 4.5 * sc), "cy": r1(cy + 5.5 * sc), "rx": r1(4.8 * sc), "ry": r1(3.8 * sc), "angle": -10, "fill": "S", "outline": "O", "sdf": True, "smoothBlend": 1.8, "z": 2, "crease": True, "parent": "body"},
+            {"id": "head", "op": "ellipse", "cx": r1(cx + 4.5 * sc), "cy": r1(cy - 1.0 * sc), "rx": r1(4.8 * sc), "ry": r1(4.5 * sc), "fill": "S", "outline": "O", "sdf": True, "smoothBlend": 1.6, "z": 1, "parent": "body"},
+            {"id": "ear_front", "op": "uneven_capsule", "x1": r1(cx + 3.5 * sc), "y1": r1(cy - 3 * sc), "x2": r1(cx + 1.0 * sc), "y2": r1(5.5 * sc), "r1": r1(2.2 * sc), "r2": r1(1.5 * sc), "fill": "S", "outline": "O", "sdf": True, "smoothBlend": 1.4, "z": 2, "crease": True, "parent": "body"},
+            {"id": "eye", "op": "ellipse", "cx": r1(cx + 6.5 * sc), "cy": r1(cy - 2.0 * sc), "rx": max(1.0, r1(1.3 * sc)), "ry": max(1.2, r1(1.6 * sc)), "fill": "e", "parent": "body"}
+        ]
+        spec["motion"] = {"type": "jump_arc", "frames": 4, "amplitude": r2(1.0 * sc), "squash": 0.10}
+
+    elif arch == "crystal_monolith":
+        spec["layers"] = [
+            {"id": "shadow", "op": "ellipse", "cx": cx, "cy": r1(h - 3.5 * sc), "rx": r1(9.0 * sc), "ry": r1(2.0 * sc), "fill": "a"},
+            {"id": "pedestal", "op": "rect", "x": r1(cx - 6.5 * sc), "y": r1(h - 8.5 * sc), "w": r1(13 * sc), "h": r1(4.0 * sc), "rx": r1(1.0 * sc), "fill": "H", "outline": "O", "sdf": True},
+            {"id": "monolith_body", "op": "vesica", "cx": cx, "cy": r1(cy - 1.5 * sc), "rx": r1(5.2 * sc), "ry": r1(10.5 * sc), "fill": "M", "outline": "O", "sdf": True, "dither": "worley", "shaderScale": 5.5, "seed": seed},
+            {"id": "shard_orbit", "op": "vesica", "cx": r1(cx - 8.5 * sc), "cy": cy, "rx": r1(2.0 * sc), "ry": r1(4.5 * sc), "angle": -18, "fill": "A", "outline": "O", "mirror": "x", "sdf": True},
+            {"id": "core_star", "op": "star", "cx": cx, "cy": r1(cy - 1.5 * sc), "r": r1(3.8 * sc), "n": 4, "innerRatio": 0.45, "fill": "w", "outline": "O", "sdf": True}
+        ]
+        spec["motion"] = {"type": "idle_breathe", "frames": 4, "amplitude": r2(1.0 * sc), "squash": 0.04}
+
+    elif arch == "spaceship":
+        spec["layers"] = [
+            {"id": "wings", "op": "polygon", "points": [[cx, r1(6 * sc)], [r1(cx - 12 * sc), r1(cy + 6 * sc)], [r1(cx - 10 * sc), r1(h - 5 * sc)], [cx, r1(cy + 4 * sc)]], "fill": "S", "outline": "O", "mirror": "x", "sdf": True},
+            {"id": "thrusters", "op": "rect", "x": r1(cx - 6.5 * sc), "y": r1(h - 7.5 * sc), "w": r1(3.5 * sc), "h": r1(4 * sc), "rx": r1(1.0 * sc), "fill": "A", "outline": "O", "mirror": "x", "sdf": True},
+            {"id": "hull", "op": "vesica", "cx": cx, "cy": cy, "rx": r1(5.2 * sc), "ry": r1(11.5 * sc), "fill": "M", "outline": "O", "sdf": True},
+            {"id": "cockpit", "op": "vesica", "cx": cx, "cy": r1(cy - 1.5 * sc), "rx": r1(2.6 * sc), "ry": r1(5.0 * sc), "fill": "A", "outline": "O", "sdf": True}
+        ]
+        spec["motion"] = {"type": "idle_breathe", "frames": 4, "amplitude": r2(0.8 * sc), "squash": 0.03}
+
+    else:  # autotile_blob47 / procedural stone-moss terrain block
+        pad_b = max(1.5, r1(2.5 * sc))
+        spec["layers"] = [
+            {"id": "block_base", "op": "rect", "x": pad_b, "y": pad_b, "w": r1(w - 2 * pad_b), "h": r1(h - 2 * pad_b), "rx": r1(2.5 * sc), "fill": "M", "outline": "O", "sdf": True, "dither": "worley", "shaderScale": 6.0, "seed": seed},
+            {"id": "moss_cap", "op": "ellipse", "cx": cx, "cy": max(2.5, r1(6.5 * sc)), "rx": r1(9.5 * sc), "ry": r1(3.5 * sc), "fill": "A", "outline": "O", "sdf": True, "domainWarp": {"amp": r2(1.4 * sc), "freq": 0.25, "seed": seed}}
+        ]
+        spec["rules"] = [
+            {"type": "bottom_drip", "target": "A", "replace": "A", "length": max(1, js_round(2 * sc)), "prob": 0.45, "seed": seed}
+        ]
+
+    return spec
+
+
+def mutate_spec(spec_input, seed=101, rate=0.25):
+    """Pillar 5: Evolutionary Genome Mutator (creates a valid mutated offspring from any PixelDSL spec)."""
+    rng = SeededRNG(seed)
+    child = copy.deepcopy(spec_input or {})
+    w = clamp_size(child.get("width"), 32)
+    h = clamp_size(child.get("height"), 32)
+    r1 = lambda v: math.floor(float(v) * 10.0 + 0.5) / 10.0
+    child["name"] = re.sub(r"_mut\d+$", "", str(child.get("name", "sprite"))) + f"_mut{seed}"
+
+    def jitter_hex(hex_str):
+        rgba = parse_color(hex_str)
+        if rgba[3] == 0:
+            return hex_str
+        L, C, hue = rgb_to_oklch(rgba[0], rgba[1], rgba[2])
+        if C < 0.02 and L > 0.9:
+            return hex_str
+        L_new = max(0.15, min(0.95, L + rng.range(-0.08, 0.08) * rate))
+        C_new = max(0.0, min(0.28, C + rng.range(-0.05, 0.06) * rate))
+        h_new = (hue + rng.range(-55.0, 55.0) * rate) % 360.0
+        nr, ng, nb = oklch_to_rgb(L_new, C_new, h_new)
+        return rgba_to_hex(nr, ng, nb, rgba[3])
+
+    if isinstance(child.get("ramps"), dict):
+        for k, cfg in child["ramps"].items():
+            if isinstance(cfg, str):
+                child["ramps"][k] = jitter_hex(cfg)
+            elif isinstance(cfg, dict) and cfg.get("base"):
+                cfg["base"] = jitter_hex(cfg["base"])
+
+    if isinstance(child.get("palette"), dict):
+        for k, col in list(child["palette"].items()):
+            if k not in (".", " ", "O", "w", "e") and isinstance(col, str) and col.startswith("#"):
+                child["palette"][k] = jitter_hex(col)
+
+    shaders = ["none", "worley", "voronoi", "turing", "scales", "bayer4x4", "checker"]
+    if isinstance(child.get("layers"), list):
+        for lyr in child["layers"]:
+            if not isinstance(lyr, dict):
+                continue
+            for prop in ("rx", "ry", "r", "r1", "r2", "w", "h"):
+                if isinstance(lyr.get(prop), (int, float)) and lyr[prop] >= 2:
+                    delta = lyr[prop] * rng.range(-0.22, 0.22) * rate
+                    lyr[prop] = r1(max(1.0, min(max(w, h) * 0.44, float(lyr[prop]) + delta)))
+            if isinstance(lyr.get("smoothBlend"), (int, float)) and lyr["smoothBlend"] > 0:
+                lyr["smoothBlend"] = r1(max(0.5, lyr["smoothBlend"] + rng.range(-1.2, 1.2) * rate))
+            if lyr.get("dither") and rng.next_float() < rate * 0.65:
+                lyr["dither"] = rng.choice(shaders)
+                lyr["seed"] = seed
+
+    return child
+
+
+# ============================================================================
+# Pillar 6: Pure-Python RFC-2083 5-Filter PNG Decoder + Chroma-Key Strip
+#           Importer & SLIC Edge-Snapping Superpixel Pixelizer
+# ============================================================================
+
+def _paeth_predictor(a, b, c):
+    p = a + b - c
+    pa = abs(p - a)
+    pb = abs(p - b)
+    pc = abs(p - c)
+    if pa <= pb and pa <= pc:
+        return a
+    if pb <= pc:
+        return b
+    return c
+
+
+def decode_png_bytes(png_bytes):
+    """Pure-Python RFC-2083 5-Filter PNG Decoder (supports RGB, RGBA, Palette, Grayscale)."""
+    if png_bytes[:8] != b"\x89PNG\r\n\x1a\n":
+        raise ValueError("Not a valid PNG signature")
+    pos = 8
+    width = height = bit_depth = color_type = 0
+    plte = []
+    trns = b""
+    idat_parts = []
+
+    while pos + 8 <= len(png_bytes):
+        length = struct.unpack(">I", png_bytes[pos:pos + 4])[0]
+        chunk_type = png_bytes[pos + 4:pos + 8]
+        chunk_data = png_bytes[pos + 8:pos + 8 + length]
+        pos += 12 + length
+        if chunk_type == b"IHDR":
+            width, height, bit_depth, color_type, _, _, _ = struct.unpack(">IIBBBBB", chunk_data[:13])
+        elif chunk_type == b"PLTE":
+            plte = [(chunk_data[i], chunk_data[i + 1], chunk_data[i + 2]) for i in range(0, len(chunk_data), 3)]
+        elif chunk_type == b"tRNS":
+            trns = chunk_data
+        elif chunk_type == b"IDAT":
+            idat_parts.append(chunk_data)
+        elif chunk_type == b"IEND":
+            break
+
+    raw = zlib.decompress(b"".join(idat_parts))
+    channels = {0: 1, 2: 3, 3: 1, 4: 2, 6: 4}.get(color_type, 4)
+    bpp = max(1, (channels * bit_depth) // 8)
+    stride = width * bpp
+
+    recon = bytearray(width * height * bpp)
+    src_pos = 0
+    for y in range(height):
+        f_type = raw[src_pos]
+        src_pos += 1
+        row_out = y * stride
+        prev_out = (y - 1) * stride
+        for x in range(stride):
+            val = raw[src_pos + x]
+            a = recon[row_out + x - bpp] if x >= bpp else 0
+            b = recon[prev_out + x] if y > 0 else 0
+            c = recon[prev_out + x - bpp] if (y > 0 and x >= bpp) else 0
+            if f_type == 1:
+                val = (val + a) & 0xFF
+            elif f_type == 2:
+                val = (val + b) & 0xFF
+            elif f_type == 3:
+                val = (val + ((a + b) >> 1)) & 0xFF
+            elif f_type == 4:
+                val = (val + _paeth_predictor(a, b, c)) & 0xFF
+            recon[row_out + x] = val
+        src_pos += stride
+
+    rgba = bytearray(width * height * 4)
+    for i in range(width * height):
+        if color_type == 6:
+            rgba[i * 4:i * 4 + 4] = recon[i * 4:i * 4 + 4]
+        elif color_type == 2:
+            rgba[i * 4:i * 4 + 3] = recon[i * 3:i * 3 + 3]
+            rgba[i * 4 + 3] = 255
+        elif color_type == 3:
+            idx = recon[i]
+            r, g, b = plte[idx] if idx < len(plte) else (0, 0, 0)
+            a = trns[idx] if idx < len(trns) else 255
+            rgba[i * 4:i * 4 + 4] = bytes((r, g, b, a))
+        elif color_type == 0:
+            v = recon[i]
+            rgba[i * 4:i * 4 + 4] = bytes((v, v, v, 255))
+        elif color_type == 4:
+            v = recon[i * 2]
+            a = recon[i * 2 + 1]
+            rgba[i * 4:i * 4 + 4] = bytes((v, v, v, a))
+    return width, height, rgba
+
+
+def read_image_rgba(filepath):
+    """
+    Reads an image into (width, height, rgba_bytearray).
+    Uses pure-Python RFC-2083 decoder for PNGs, and automatically converts JPEG-disguised
+    files (such as heroes/*/*.png with JFIF headers) in-memory when needed.
+    """
+    path = Path(filepath).resolve()
+    raw_bytes = path.read_bytes()
+    if raw_bytes[:8] == b"\x89PNG\r\n\x1a\n":
+        return decode_png_bytes(raw_bytes)
+    # Fallback for JPEG/BMP files saved with .png extension on Windows
+    ps_script = (
+        f'Add-Type -AssemblyName System.Drawing; '
+        f'$b=[System.Drawing.Bitmap]::FromFile("{str(path)}"); '
+        f'$ms=New-Object System.IO.MemoryStream; '
+        f'$b.Save($ms, [System.Drawing.Imaging.ImageFormat]::Png); '
+        f'$b.Dispose(); '
+        f'[Console]::OpenStandardOutput().Write($ms.ToArray(), 0, $ms.Length)'
+    )
+    enc = base64.b64encode(ps_script.encode("utf-16le")).decode("ascii")
+    png_data = subprocess.check_output(["powershell", "-NoProfile", "-EncodedCommand", enc], stderr=subprocess.DEVNULL)
+    return decode_png_bytes(png_data)
+
+
+def chroma_key_and_despill(width, height, rgba):
+    """Removes #FF00FF chroma-key and flood-fills exterior background from borders + Oklab magenta despill."""
+    out = bytearray(rgba)
+    corners = [(0, 0), (width - 1, 0), (0, height - 1), (width - 1, height - 1)]
+    c_samples = [out[(cy * width + cx) * 4:(cy * width + cx) * 4 + 4] for cx, cy in corners]
+    bg_r, bg_g, bg_b, bg_a = c_samples[0]
+    has_bg_key = bg_a > 200 and (
+        sum(1 for s in c_samples if abs(s[0] - bg_r) + abs(s[1] - bg_g) + abs(s[2] - bg_b) < 48) >= 3
+    )
+
+    # Flood-fill exterior background from perimeter so interior highlights of the same color are preserved
+    bg_mask = bytearray(width * height)
+    if has_bg_key:
+        from collections import deque
+        q = deque()
+        for x in range(width):
+            for y in (0, height - 1):
+                q.append((x, y))
+        for y in range(1, height - 1):
+            for x in (0, width - 1):
+                q.append((x, y))
+        while q:
+            cx, cy = q.popleft()
+            p_idx = cy * width + cx
+            if bg_mask[p_idx]:
+                continue
+            idx4 = p_idx * 4
+            r, g, b, a = out[idx4], out[idx4 + 1], out[idx4 + 2], out[idx4 + 3]
+            is_mag_halo = (r > 115 and b > 115 and g < min(r, b) - 28 and (r + b - 2 * g) > 75)
+            if a < 25 or (abs(r - bg_r) + abs(g - bg_g) + abs(b - bg_b) < 68) or is_mag_halo:
+                bg_mask[p_idx] = 1
+                if cx > 0 and not bg_mask[p_idx - 1]:
+                    q.append((cx - 1, cy))
+                if cx < width - 1 and not bg_mask[p_idx + 1]:
+                    q.append((cx + 1, cy))
+                if cy > 0 and not bg_mask[p_idx - width]:
+                    q.append((cx, cy - 1))
+                if cy < height - 1 and not bg_mask[p_idx + width]:
+                    q.append((cx, cy + 1))
+
+    for i in range(width * height):
+        idx = i * 4
+        r, g, b, a = out[idx], out[idx + 1], out[idx + 2], out[idx + 3]
+        if a < 25 or bg_mask[i]:
+            bg_mask[i] = 1
+            out[idx:idx + 4] = b"\x00\x00\x00\x00"
+            continue
+        # Explicit #FF00FF magenta chroma-key anywhere (handles interior holes / JPEG ringing)
+        if r > 120 and b > 120 and g < min(r, b) - 32 and (r + b - 2 * g) > 80:
+            bg_mask[i] = 1
+            out[idx:idx + 4] = b"\x00\x00\x00\x00"
+
+    # Erode 1px anti-aliased purple/magenta boundary fringe adjacent to bg_mask
+    erode_mask = bytearray(bg_mask)
+    for y in range(height):
+        for x in range(width):
+            i = y * width + x
+            if bg_mask[i]:
+                continue
+            near_bg = (
+                (x > 0 and bg_mask[i - 1]) or
+                (x < width - 1 and bg_mask[i + 1]) or
+                (y > 0 and bg_mask[i - width]) or
+                (y < height - 1 and bg_mask[i + width])
+            )
+            if near_bg:
+                idx = i * 4
+                r, g, b = out[idx], out[idx + 1], out[idx + 2]
+                if r > g + 6 and b > g + 10 and (r + b - 2 * g) > 28:
+                    erode_mask[i] = 1
+                    out[idx:idx + 4] = b"\x00\x00\x00\x00"
+    bg_mask = erode_mask
+
+    # Oklab / RGB chrominance despill on remaining boundary / magenta-tinted pixels
+    for y in range(height):
+        for x in range(width):
+            i = y * width + x
+            if bg_mask[i]:
+                continue
+            idx = i * 4
+            r, g, b, a = out[idx], out[idx + 1], out[idx + 2], out[idx + 3]
+            if r > g + 4 and b > g + 6:
+                # Neutralize purple/magenta bleed by clamping red excess to green and tempering blue
+                excess_r = r - g
+                excess_b = max(0, b - max(r, g))
+                new_r = g
+                new_b = max(g, b - int(excess_r * 0.85 + excess_b * 0.5))
+                out[idx] = max(0, min(255, new_r))
+                out[idx + 2] = max(0, min(255, new_b))
+    return out
+
+
+def slice_strip_segments(width, height, rgba):
+    """Connected-Component / vertical projection auto-slicer for horizontal sprite strips."""
+    col_counts = [0] * width
+    for x in range(width):
+        cnt = 0
+        for y in range(height):
+            if rgba[(y * width + x) * 4 + 3] > 64:
+                cnt += 1
+        col_counts[x] = cnt
+
+    segments = []
+    in_seg = False
+    x_start = 0
+    min_width = max(4, width // 40)
+    for x in range(width):
+        if col_counts[x] > 2 and not in_seg:
+            in_seg = True
+            x_start = x
+        elif col_counts[x] <= 2 and in_seg:
+            in_seg = False
+            if x - x_start >= min_width:
+                segments.append((x_start, x - 1))
+    if in_seg and (width - x_start) >= min_width:
+        segments.append((x_start, width - 1))
+
+    if not segments:
+        return [(0, 0, width - 1, height - 1)]
+
+    bboxes = []
+    for x0, x1 in segments:
+        y0, y1 = height - 1, 0
+        for y in range(height):
+            row_cnt = 0
+            for x in range(x0, x1 + 1):
+                if rgba[(y * width + x) * 4 + 3] > 128:
+                    row_cnt += 1
+            if row_cnt >= 2:
+                y0 = min(y0, y)
+                y1 = max(y1, y)
+        if y1 >= y0:
+            bboxes.append((x0, y0, x1, y1))
+    return bboxes if bboxes else [(0, 0, width - 1, height - 1)]
+
+
+def downsample_superpixel(src_w, src_h, rgba, bbox, target_w, target_h):
+    """
+    SLIC 5D (L, a, b, x, y) superpixel medoid downsampler: preserves sharp silhouette boundaries
+    and selects the perceptual Oklab medoid of each superpixel cell without box-averaging blur.
+    """
+    x0, y0, x1, y1 = bbox
+    bw = max(1, x1 - x0 + 1)
+    bh = max(1, y1 - y0 + 1)
+    margin = 2
+    avail_w = max(4, target_w - 2 * margin)
+    avail_h = max(4, target_h - 2 * margin)
+    scale = min(avail_w / float(bw), avail_h / float(bh))
+    draw_w = max(1, int(round(bw * scale)))
+    draw_h = max(1, int(round(bh * scale)))
+    off_x = (target_w - draw_w) // 2
+    off_y = (target_h - draw_h) // 2
+    cell_radius = max(1.0, 1.0 / scale)
+
+    out = bytearray(target_w * target_h * 4)
+    for ty in range(draw_h):
+        sy_center = y0 + (ty + 0.5) / scale
+        sy0 = max(y0, int(math.floor(y0 + ty / scale)))
+        sy1 = min(y1, int(math.ceil(y0 + (ty + 1.0) / scale)))
+        for tx in range(draw_w):
+            sx_center = x0 + (tx + 0.5) / scale
+            sx0 = max(x0, int(math.floor(x0 + tx / scale)))
+            sx1 = min(x1, int(math.ceil(x0 + (tx + 1.0) / scale)))
+
+            opaque_samples = []
+            step_y = max(1, (sy1 - sy0 + 1) // 3)
+            step_x = max(1, (sx1 - sx0 + 1) // 3)
+            total_s = 0
+            sum_L = sum_a = sum_b = 0.0
+            for sy in range(sy0, sy1 + 1, step_y):
+                for sx in range(sx0, sx1 + 1, step_x):
+                    total_s += 1
+                    idx = (sy * src_w + sx) * 4
+                    if rgba[idx + 3] > 180:
+                        r, g, b = rgba[idx], rgba[idx + 1], rgba[idx + 2]
+                        L, a_lab, b_lab = rgb_to_oklab(r, g, b)
+                        d_spatial = math.hypot(sx - sx_center, sy - sy_center) / cell_radius
+                        sum_L += L
+                        sum_a += a_lab
+                        sum_b += b_lab
+                        opaque_samples.append((d_spatial, L, a_lab, b_lab, r, g, b))
+
+            if len(opaque_samples) * 2 < total_s:
+                continue
+
+            n_op = float(len(opaque_samples))
+            mean_L, mean_a, mean_b = sum_L / n_op, sum_a / n_op, sum_b / n_op
+            # Select 5D SLIC medoid (closest sample to cluster Oklab centroid + spatial center)
+            best_sample = min(
+                opaque_samples,
+                key=lambda s: ((s[1] - mean_L) ** 2 + (s[2] - mean_a) ** 2 + (s[3] - mean_b) ** 2) + 0.015 * (s[0] ** 2)
+            )
+            _, _, _, _, r_best, g_best, b_best = best_sample
+            dst_idx = ((off_y + ty) * target_w + (off_x + tx)) * 4
+            out[dst_idx:dst_idx + 4] = bytes((r_best, g_best, b_best, 255))
+
+    # Prune isolated 1px JPEG dust specks
+    snap = bytearray(out)
+    for y in range(target_h):
+        for x in range(target_w):
+            idx = (y * target_w + x) * 4
+            if snap[idx + 3] == 0:
+                continue
+            n_cnt = 0
+            for dy in (-1, 0, 1):
+                for dx in (-1, 0, 1):
+                    if dx == 0 and dy == 0:
+                        continue
+                    nx, ny = x + dx, y + dy
+                    if 0 <= nx < target_w and 0 <= ny < target_h:
+                        if snap[(ny * target_w + nx) * 4 + 3] > 0:
+                            n_cnt += 1
+            if n_cnt == 0:
+                out[idx:idx + 4] = b"\x00\x00\x00\x00"
+
+    return out
+
+
+def import_image_to_spec(filepath, target_size=48, max_colors=16):
+    """Pillar 6: End-to-end raw sprite / strip importer into a clean multi-frame PixelDSL spec."""
+    src_w, src_h, raw_rgba = read_image_rgba(filepath)
+    clean_rgba = chroma_key_and_despill(src_w, src_h, raw_rgba)
+    bboxes = slice_strip_segments(src_w, src_h, clean_rgba)
+    # Limit to at most 8 frames
+    bboxes = bboxes[:8]
+
+    tw = clamp_size(target_size, 48)
+    th = clamp_size(target_size, 48)
+    frame_buffers = [downsample_superpixel(src_w, src_h, clean_rgba, bb, tw, th) for bb in bboxes]
+
+    # Oklab palette quantization across all frames
+    unique_cols = {}
+    for fbuf in frame_buffers:
+        for i in range(tw * th):
+            if fbuf[i * 4 + 3] > 128:
+                key = (fbuf[i * 4] >> 3, fbuf[i * 4 + 1] >> 3, fbuf[i * 4 + 2] >> 3)
+                if key not in unique_cols:
+                    unique_cols[key] = [0, fbuf[i * 4], fbuf[i * 4 + 1], fbuf[i * 4 + 2]]
+                unique_cols[key][0] += 1
+
+    sorted_cols = sorted(unique_cols.values(), key=lambda item: -item[0])
+    chosen_lab = []
+    chosen_rgb = []
+    for cnt, r, g, b in sorted_cols:
+        lab = rgb_to_oklab(r, g, b)
+        if all(math.sqrt((lab[0] - c[0]) ** 2 + (lab[1] - c[1]) ** 2 + (lab[2] - c[2]) ** 2) > 0.055 for c in chosen_lab):
+            chosen_lab.append(lab)
+            chosen_rgb.append((r, g, b))
+            if len(chosen_rgb) >= max_colors:
+                break
+    if not chosen_rgb:
+        chosen_lab.append(rgb_to_oklab(255, 255, 255))
+        chosen_rgb.append((255, 255, 255))
+
+    syms = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz1234567890"
+    palette = {".": "transparent"}
+    for idx, (r, g, b) in enumerate(chosen_rgb):
+        palette[syms[idx]] = rgba_to_hex(r, g, b, 255)
+
+    frames_grids = []
+    for fbuf in frame_buffers:
+        rows = []
+        for y in range(th):
+            row_chars = []
+            for x in range(tw):
+                idx = (y * tw + x) * 4
+                if fbuf[idx + 3] <= 128:
+                    row_chars.append(".")
+                else:
+                    lab = rgb_to_oklab(fbuf[idx], fbuf[idx + 1], fbuf[idx + 2])
+                    best_i = min(
+                        range(len(chosen_lab)),
+                        key=lambda ci: (lab[0] - chosen_lab[ci][0]) ** 2 + (lab[1] - chosen_lab[ci][1]) ** 2 + (lab[2] - chosen_lab[ci][2]) ** 2
+                    )
+                    row_chars.append(syms[best_i])
+            rows.append("".join(row_chars))
+        frames_grids.append(rows)
+
+    stem = re.sub(r"[^a-zA-Z0-9_-]", "_", Path(filepath).stem)
+    spec = {
+        "name": f"imported_{stem}_{tw}x{th}",
+        "prompt": f"Imported & Oklab-quantized from {Path(filepath).name} ({len(frames_grids)} frame(s))",
+        "width": tw,
+        "height": th,
+        "symmetry": "none",
+        "rle": False,
+        "palette": palette,
+        "postProcess": {
+            "autoOutline": False,
+            "outlineColor": "#14182e",
+            "autoShading": False,
+            "shadingStrength": 0.16,
+            "sdfShading": False
+        },
+        "layers": [],
+        "frames": [{"grid": g} for g in frames_grids[1:]],
+        "grid": frames_grids[0]
+    }
+    return spec
+
+
+# ============================================================================
+# Diagnostics, PNG Export, Terminal Preview & Studio Sync
+# ============================================================================
 
 def analyze_buffer(width, height, buffer):
     active_count = 0
@@ -900,12 +2733,11 @@ def sync_sprite_to_presets_js(presets_js_path, sprite_key, label, prompt_text, s
     return True
 
 
-def process_spec(spec, base_dir, no_ansi=False, sync_web=True):
+def process_spec(spec, base_dir, no_ansi=False, sync_web=True, export_normals=True):
     name = re.sub(r"[^a-zA-Z0-9_-]", "_", str(spec.get("name") or "sprite"))
     spec["name"] = name
 
-    frames_extra = spec.get("frames") if isinstance(spec.get("frames"), list) else []
-    total_frames = 1 + len(frames_extra)
+    total_frames = get_frame_count(spec)
 
     frame_results = []
     for f_idx in range(total_frames):
@@ -926,6 +2758,10 @@ def process_spec(spec, base_dir, no_ansi=False, sync_web=True):
     png_1x_path = game_ready_dir / f"{name}.png"
     write_png(png_1x_path, w, h, first["buffer"])
 
+    normal_path = game_ready_dir / f"{name}_normal.png"
+    if export_normals:
+        write_png(normal_path, w, h, first["normal_buffer"])
+
     preview_scale = 16 if w <= 16 else (8 if w <= 32 else (4 if w <= 64 else 2))
     pw, ph, pbuf = upscale_buffer(w, h, first["buffer"], preview_scale)
     png_preview_path = game_ready_dir / f"{name}_preview.png"
@@ -939,7 +2775,7 @@ def process_spec(spec, base_dir, no_ansi=False, sync_web=True):
 
     synced = False
     if sync_web:
-        label = f"✨ {name} ({w}×{h})" + (f" [{total_frames}f]" if total_frames > 1 else "")
+        label = spec.get("label") or (f"✨ {name} ({w}×{h})" + (f" [{total_frames}f]" if total_frames > 1 else ""))
         synced = sync_sprite_to_presets_js(
             base_dir / "presets.js",
             name,
@@ -954,7 +2790,7 @@ def process_spec(spec, base_dir, no_ansi=False, sync_web=True):
         pass
 
     print("=" * 64)
-    print(f"[PixelDSL CLI] Sprite: {name} | Size: {w}x{h} px | Frames: {total_frames}")
+    print(f"[PixelDSL CLI v3.0] Sprite: {name} | Size: {w}x{h} px | Frames: {total_frames}")
     print(f"  • Canvas Fill       : {diag['fill_pct']}% ({diag['active_pixels']} px)")
     print(f"  • Bounding Box      : x={diag['bbox'][0]}..{diag['bbox'][2]}, y={diag['bbox'][1]}..{diag['bbox'][3]}")
     print(f"  • Center Offset     : dx={diag['center_offset'][0]}, dy={diag['center_offset'][1]}")
@@ -968,6 +2804,8 @@ def process_spec(spec, base_dir, no_ansi=False, sync_web=True):
 
     print(f"  • Source JSON       : {json_path}")
     print(f"  • PNG (1:1 Native)  : {png_1x_path}")
+    if export_normals:
+        print(f"  • PNG (Normal Map)  : {normal_path}")
     if sheet_path:
         print(f"  • PNG (Sprite Sheet): {sheet_path} ({w * total_frames}x{h} px)")
     print(f"  • PNG (Preview x{preview_scale})  : {png_preview_path}")
@@ -981,7 +2819,7 @@ def process_spec(spec, base_dir, no_ansi=False, sync_web=True):
 
 def main():
     parser = argparse.ArgumentParser(
-        description="PixelDSL CLI v2.5 — 2D Pixel-Art Asset Compiler (8x8..128x128) with SDF & 3D Volume Shading."
+        description="PixelDSL CLI v3.0 — Autonomous 2D Pixel-Art Mathematical Engine & Asset Compiler (8x8..128x128)."
     )
     parser.add_argument(
         "input",
@@ -992,6 +2830,32 @@ def main():
         "--json",
         dest="inline_json",
         help="Pass sprite JSON string directly via argument"
+    )
+    parser.add_argument(
+        "--generate",
+        dest="generate_arch",
+        help=f"Generate a 100%% LLM-free procedural sprite by archetype ({', '.join(ARCHETYPE_LIST)})"
+    )
+    parser.add_argument(
+        "--mutate",
+        dest="mutate_path",
+        help="Mutate an existing sprite JSON file using evolutionary genome perturbation"
+    )
+    parser.add_argument(
+        "--seed",
+        type=int,
+        default=42,
+        help="Random seed for --generate or --mutate (default: 42)"
+    )
+    parser.add_argument(
+        "--size",
+        default="32x32",
+        help="Canvas size WxH for --generate or --import-image (default: 32x32)"
+    )
+    parser.add_argument(
+        "--import-image",
+        dest="import_image",
+        help="Import raw image / sprite strip (chroma-key #FF00FF despill + SLIC superpixel downsampler)"
     )
     parser.add_argument(
         "--no-ansi",
@@ -1006,6 +2870,34 @@ def main():
     args = parser.parse_args()
 
     base_dir = Path(__file__).resolve().parent
+
+    size_parts = str(args.size).lower().split("x")
+    gen_w = clamp_size(size_parts[0], 32)
+    gen_h = clamp_size(size_parts[1] if len(size_parts) > 1 else size_parts[0], gen_w)
+
+    if args.generate_arch:
+        spec = generate_archetype(args.generate_arch, seed=args.seed, width=gen_w, height=gen_h)
+        process_spec(spec, base_dir, no_ansi=args.no_ansi, sync_web=not args.no_sync)
+        return
+
+    if args.mutate_path:
+        m_path = Path(args.mutate_path)
+        if not m_path.exists():
+            print(f"Error: file not found: {m_path}", file=sys.stderr)
+            sys.exit(1)
+        parent_spec = json.loads(m_path.read_text(encoding="utf-8"))
+        spec = mutate_spec(parent_spec, seed=args.seed, rate=0.28)
+        process_spec(spec, base_dir, no_ansi=args.no_ansi, sync_web=not args.no_sync)
+        return
+
+    if args.import_image:
+        imp_path = Path(args.import_image)
+        if not imp_path.exists():
+            print(f"Error: image file not found: {imp_path}", file=sys.stderr)
+            sys.exit(1)
+        spec = import_image_to_spec(imp_path, target_size=gen_w)
+        process_spec(spec, base_dir, no_ansi=args.no_ansi, sync_web=not args.no_sync)
+        return
 
     raw_json = None
     if args.inline_json:

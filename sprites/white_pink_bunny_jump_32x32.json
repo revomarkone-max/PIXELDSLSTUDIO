@@ -1,0 +1,513 @@
+{
+  "name": "white_pink_bunny_jump_32x32",
+  "label": "🐰 White-Pink Bunny 32×32 (6-Frame Jump)",
+  "width": 32,
+  "height": 32,
+  "symmetry": "none",
+  "rle": false,
+  "palette": {
+    ".": "transparent",
+    "O": "#33182c",
+    "W": "#ffffff",
+    "p": "#ffe3ec",
+    "S": "#f7bfd0",
+    "P": "#ff8fab",
+    "N": "#e0527b",
+    "e": "#210d1e",
+    "w": "#ffffff",
+    "a": "#33182c40"
+  },
+  "postProcess": {
+    "autoOutline": false,
+    "outlineColor": "#33182c",
+    "autoShading": false,
+    "shadingStrength": 0.12,
+    "sdfShading": false
+  },
+  "layers": [
+    {
+      "id": "shadow",
+      "op": "ellipse",
+      "cx": 16,
+      "cy": 28,
+      "rx": 9,
+      "ry": 1,
+      "fill": "a"
+    },
+    {
+      "id": "ear_back",
+      "op": "ellipse",
+      "cx": 16,
+      "cy": 8,
+      "rx": 2,
+      "ry": 5,
+      "angle": -22,
+      "fill": "S",
+      "outline": "O"
+    },
+    {
+      "id": "tail",
+      "op": "ellipse",
+      "cx": 6,
+      "cy": 21,
+      "rx": 3,
+      "ry": 3,
+      "fill": "p",
+      "outline": "O"
+    },
+    {
+      "id": "foot_back",
+      "op": "ellipse",
+      "cx": 12,
+      "cy": 26,
+      "rx": 4,
+      "ry": 2,
+      "angle": 5,
+      "fill": "S",
+      "outline": "O"
+    },
+    {
+      "id": "thigh",
+      "op": "ellipse",
+      "cx": 11,
+      "cy": 22,
+      "rx": 5,
+      "ry": 4,
+      "angle": -10,
+      "fill": "W",
+      "outline": "O",
+      "smoothBlend": 1.8,
+      "z": 2,
+      "crease": true
+    },
+    {
+      "id": "body",
+      "op": "ellipse",
+      "cx": 16,
+      "cy": 21,
+      "rx": 6,
+      "ry": 5,
+      "angle": -8,
+      "fill": "W",
+      "outline": "O",
+      "smoothBlend": 2,
+      "z": 1
+    },
+    {
+      "id": "head",
+      "op": "ellipse",
+      "cx": 21,
+      "cy": 15,
+      "rx": 5,
+      "ry": 5,
+      "angle": 5,
+      "fill": "W",
+      "outline": "O",
+      "smoothBlend": 1.6,
+      "z": 1
+    },
+    {
+      "id": "ear_front",
+      "op": "ellipse",
+      "cx": 19,
+      "cy": 8,
+      "rx": 3,
+      "ry": 5,
+      "angle": -16,
+      "fill": "W",
+      "outline": "O",
+      "smoothBlend": 1.4,
+      "z": 2,
+      "crease": true
+    },
+    {
+      "id": "belly_pink",
+      "op": "ellipse",
+      "cx": 15,
+      "cy": 23,
+      "rx": 5,
+      "ry": 2,
+      "angle": -5,
+      "fill": "p",
+      "dither": "checker",
+      "ditherColor": "S"
+    },
+    {
+      "id": "thigh_shade",
+      "op": "ellipse",
+      "cx": 10,
+      "cy": 23,
+      "rx": 3,
+      "ry": 2,
+      "fill": "p"
+    },
+    {
+      "id": "ear_pink",
+      "op": "ellipse",
+      "cx": 19,
+      "cy": 8,
+      "rx": 1,
+      "ry": 3,
+      "angle": -16,
+      "fill": "P"
+    },
+    {
+      "id": "paw_front",
+      "op": "ellipse",
+      "cx": 21,
+      "cy": 25,
+      "rx": 3,
+      "ry": 2,
+      "angle": 15,
+      "fill": "W",
+      "outline": "O"
+    },
+    {
+      "id": "cheek",
+      "op": "pixels",
+      "color": "P",
+      "points": [
+        [
+          21,
+          16
+        ],
+        [
+          22,
+          16
+        ],
+        [
+          21,
+          17
+        ],
+        [
+          22,
+          17
+        ]
+      ]
+    },
+    {
+      "id": "nose",
+      "op": "pixels",
+      "color": "N",
+      "points": [
+        [
+          26,
+          14
+        ],
+        [
+          26,
+          15
+        ],
+        [
+          25,
+          14
+        ]
+      ]
+    },
+    {
+      "id": "eye",
+      "op": "stamp",
+      "x": 22,
+      "y": 12,
+      "grid": [
+        "eP",
+        "ee",
+        "ee"
+      ]
+    }
+  ],
+  "frames": [
+    {
+      "layers": {
+        "shadow": {
+          "drx": 1
+        },
+        "ear_back": {
+          "dy": 2,
+          "dAngle": -16
+        },
+        "ear_front": {
+          "dy": 2,
+          "dAngle": -16
+        },
+        "ear_pink": {
+          "dy": 2,
+          "dAngle": -16
+        },
+        "tail": {
+          "dy": 2,
+          "dx": -1
+        },
+        "thigh": {
+          "dy": 2,
+          "drx": 1,
+          "dry": -1
+        },
+        "body": {
+          "dy": 2,
+          "drx": 1,
+          "dry": -1
+        },
+        "belly_pink": {
+          "dy": 2
+        },
+        "thigh_shade": {
+          "dy": 2
+        },
+        "head": {
+          "dy": 2,
+          "dx": 1
+        },
+        "cheek": {
+          "dy": 2,
+          "dx": 1
+        },
+        "nose": {
+          "dy": 2,
+          "dx": 1
+        },
+        "eye": {
+          "dy": 2,
+          "dx": 1
+        },
+        "paw_front": {
+          "dy": 1,
+          "dx": 1
+        }
+      }
+    },
+    {
+      "layers": {
+        "shadow": {
+          "drx": -2
+        },
+        "ear_back": {
+          "dy": -3,
+          "dAngle": -12
+        },
+        "ear_front": {
+          "dy": -3,
+          "dAngle": -12
+        },
+        "ear_pink": {
+          "dy": -3,
+          "dAngle": -12
+        },
+        "tail": {
+          "dy": -3,
+          "dx": -1
+        },
+        "foot_back": {
+          "dy": -2,
+          "dx": -2,
+          "dAngle": 30
+        },
+        "thigh": {
+          "dy": -3,
+          "dAngle": -15
+        },
+        "body": {
+          "dy": -4,
+          "dAngle": -18
+        },
+        "belly_pink": {
+          "dy": -4,
+          "dAngle": -18
+        },
+        "thigh_shade": {
+          "dy": -3
+        },
+        "head": {
+          "dy": -4,
+          "dx": 1
+        },
+        "cheek": {
+          "dy": -4,
+          "dx": 1
+        },
+        "nose": {
+          "dy": -4,
+          "dx": 1
+        },
+        "eye": {
+          "dy": -4,
+          "dx": 1
+        },
+        "paw_front": {
+          "dy": -5,
+          "dx": 2,
+          "dAngle": -25
+        }
+      }
+    },
+    {
+      "layers": {
+        "shadow": {
+          "drx": -4
+        },
+        "ear_back": {
+          "dy": -3,
+          "dAngle": 6
+        },
+        "ear_front": {
+          "dy": -3,
+          "dAngle": 6
+        },
+        "ear_pink": {
+          "dy": -3,
+          "dAngle": 6
+        },
+        "tail": {
+          "dy": -5
+        },
+        "foot_back": {
+          "dy": -5,
+          "dx": -1,
+          "dAngle": 18
+        },
+        "thigh": {
+          "dy": -5
+        },
+        "body": {
+          "dy": -5
+        },
+        "belly_pink": {
+          "dy": -5
+        },
+        "thigh_shade": {
+          "dy": -5
+        },
+        "head": {
+          "dy": -5
+        },
+        "cheek": {
+          "dy": -5
+        },
+        "nose": {
+          "dy": -5
+        },
+        "eye": {
+          "dy": -5
+        },
+        "paw_front": {
+          "dy": -5,
+          "dx": 1,
+          "dAngle": -10
+        }
+      }
+    },
+    {
+      "layers": {
+        "shadow": {
+          "drx": -2
+        },
+        "ear_back": {
+          "dy": -2,
+          "dAngle": 18
+        },
+        "ear_front": {
+          "dy": -2,
+          "dAngle": 18
+        },
+        "ear_pink": {
+          "dy": -2,
+          "dAngle": 18
+        },
+        "tail": {
+          "dy": -3
+        },
+        "foot_back": {
+          "dy": -4,
+          "dAngle": -12
+        },
+        "thigh": {
+          "dy": -3,
+          "dAngle": 10
+        },
+        "body": {
+          "dy": -3,
+          "dAngle": 12
+        },
+        "belly_pink": {
+          "dy": -3,
+          "dAngle": 12
+        },
+        "thigh_shade": {
+          "dy": -3
+        },
+        "head": {
+          "dy": -2
+        },
+        "cheek": {
+          "dy": -2
+        },
+        "nose": {
+          "dy": -2
+        },
+        "eye": {
+          "dy": -2
+        },
+        "paw_front": {
+          "dy": -2,
+          "dx": 1,
+          "dAngle": 25
+        }
+      }
+    },
+    {
+      "layers": {
+        "shadow": {
+          "drx": 1
+        },
+        "ear_back": {
+          "dy": 1,
+          "dAngle": 10
+        },
+        "ear_front": {
+          "dy": 1,
+          "dAngle": 10
+        },
+        "ear_pink": {
+          "dy": 1,
+          "dAngle": 10
+        },
+        "tail": {
+          "dy": 1
+        },
+        "foot_back": {
+          "dy": 0
+        },
+        "thigh": {
+          "dy": 1,
+          "dry": -1
+        },
+        "body": {
+          "dy": 1,
+          "dry": -1
+        },
+        "belly_pink": {
+          "dy": 1
+        },
+        "thigh_shade": {
+          "dy": 1
+        },
+        "head": {
+          "dy": 1
+        },
+        "cheek": {
+          "dy": 1
+        },
+        "nose": {
+          "dy": 1
+        },
+        "eye": {
+          "dy": 1
+        },
+        "paw_front": {
+          "dy": 0
+        }
+      }
+    }
+  ],
+  "grid": []
+}

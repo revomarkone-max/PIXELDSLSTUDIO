@@ -1,0 +1,119 @@
+{
+  "name": "proc_crystal_monolith_s108_48x48",
+  "prompt": "Procedural crystal_monolith (seed=108, 48x48) — 100% LLM-Free PixelDSL v3.0",
+  "width": 48,
+  "height": 48,
+  "symmetry": "none",
+  "rle": false,
+  "ramps": {
+    "M": {
+      "base": "#00c25c",
+      "light": "L",
+      "dark": "D",
+      "outline": "O"
+    },
+    "A": {
+      "base": "#c78eff",
+      "light": "W",
+      "dark": "B",
+      "outline": "O"
+    },
+    "S": {
+      "base": "#d0adb0",
+      "light": "w",
+      "dark": "d",
+      "outline": "O"
+    },
+    "H": {
+      "base": "#8c4a11",
+      "light": "h",
+      "dark": "b",
+      "outline": "O"
+    }
+  },
+  "palette": {
+    ".": "transparent",
+    "O": "#14182e",
+    "e": "#0e101c",
+    "w": "#ffffff",
+    "a": "#14182e44"
+  },
+  "postProcess": {
+    "autoOutline": false,
+    "outlineColor": "#14182e",
+    "autoShading": false,
+    "shadingStrength": 0.16,
+    "sdfShading": true,
+    "selOut": true
+  },
+  "layers": [
+    {
+      "id": "shadow",
+      "op": "ellipse",
+      "cx": 23.5,
+      "cy": 42.8,
+      "rx": 14.2,
+      "ry": 3.3,
+      "fill": "a"
+    },
+    {
+      "id": "pedestal",
+      "op": "rect",
+      "x": 13.0,
+      "y": 36.8,
+      "w": 21.0,
+      "h": 6.0,
+      "rx": 1,
+      "fill": "H",
+      "outline": "O",
+      "sdf": true
+    },
+    {
+      "id": "monolith_body",
+      "op": "vesica",
+      "cx": 23.5,
+      "cy": 21.2,
+      "rx": 8.2,
+      "ry": 17.2,
+      "fill": "M",
+      "outline": "O",
+      "sdf": true,
+      "dither": "worley",
+      "shaderScale": 5.5,
+      "seed": 108
+    },
+    {
+      "id": "shard_orbit",
+      "op": "vesica",
+      "cx": 10.8,
+      "cy": 23.5,
+      "rx": 3.0,
+      "ry": 6.8,
+      "angle": -18,
+      "fill": "A",
+      "outline": "O",
+      "mirror": "x",
+      "sdf": true
+    },
+    {
+      "id": "core_star",
+      "op": "star",
+      "cx": 23.5,
+      "cy": 21.2,
+      "r": 5.7,
+      "n": 4,
+      "innerRatio": 0.45,
+      "fill": "w",
+      "outline": "O",
+      "sdf": true
+    }
+  ],
+  "frames": [],
+  "grid": [],
+  "motion": {
+    "type": "idle_breathe",
+    "frames": 4,
+    "amplitude": 1.5,
+    "squash": 0.04
+  }
+}

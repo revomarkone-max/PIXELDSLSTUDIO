@@ -9,6 +9,7 @@
   let zoomLevel = "auto";
   let showGridLines = true;
   let showCenterAxes = false;
+  let showNormalMap = false;
   let showOnionSkin = false;
   let isPointerDown = false;
   let strokeSnapshotRecorded = false;
@@ -55,6 +56,7 @@
   const bgSelect = document.getElementById("bgSelect");
   const chkGridLines = document.getElementById("chkGridLines");
   const chkCenterAxes = document.getElementById("chkCenterAxes");
+  const chkNormalMap = document.getElementById("chkNormalMap");
 
   const timelineFrames = document.getElementById("timelineFrames");
   const btnPlayAnim = document.getElementById("btnPlayAnim");
@@ -67,6 +69,7 @@
   const layersList = document.getElementById("layersList");
   const btnAddEllipseLayer = document.getElementById("btnAddEllipseLayer");
   const btnAddRectLayer = document.getElementById("btnAddRectLayer");
+  const selAddAdvancedLayer = document.getElementById("selAddAdvancedLayer");
   const btnShowAllLayers = document.getElementById("btnShowAllLayers");
 
   const inputWidth = document.getElementById("inputWidth");
@@ -80,6 +83,7 @@
   const chkAutoShading = document.getElementById("chkAutoShading");
   const inputShadingStrength = document.getElementById("inputShadingStrength");
   const chkSdfShading = document.getElementById("chkSdfShading");
+  const chkSelOut = document.getElementById("chkSelOut");
 
   const selPalettePreset = document.getElementById("selPalettePreset");
   const paletteList = document.getElementById("paletteList");
@@ -87,10 +91,24 @@
   const btnAddRamp = document.getElementById("btnAddRamp");
 
   const btnExport1x = document.getElementById("btnExport1x");
+  const btnExportNormal = document.getElementById("btnExportNormal");
   const btnExportSheet = document.getElementById("btnExportSheet");
   const btnExportUpscaled = document.getElementById("btnExportUpscaled");
 
-  // Modal Elements
+  // Mutator & Archetype Generator Modal Elements
+  const modalMutate = document.getElementById("modalMutate");
+  const btnOpenMutateModal = document.getElementById("btnOpenMutateModal");
+  const btnCloseMutateModal = document.getElementById("btnCloseMutateModal");
+  const btnCloseMutateFooter = document.getElementById("btnCloseMutateFooter");
+  const selGenArchetype = document.getElementById("selGenArchetype");
+  const inputGenSeed = document.getElementById("inputGenSeed");
+  const btnGenerate3x3Arch = document.getElementById("btnGenerate3x3Arch");
+  const inputMutateRate = document.getElementById("inputMutateRate");
+  const lblMutateRate = document.getElementById("lblMutateRate");
+  const btnEvolve3x3Current = document.getElementById("btnEvolve3x3Current");
+  const mutateGrid3x3 = document.getElementById("mutateGrid3x3");
+
+  // Prompt Modal Elements
   const modalPrompt = document.getElementById("modalPrompt");
   const btnOpenPromptModal = document.getElementById("btnOpenPromptModal");
   const btnClosePromptModal = document.getElementById("btnClosePromptModal");
@@ -341,6 +359,7 @@
     chkAutoShading.checked = Boolean(post.autoShading);
     inputShadingStrength.value = Math.round((Number(post.shadingStrength ?? 0.16)) * 100);
     if (chkSdfShading) chkSdfShading.checked = Boolean(post.sdfShading);
+    if (chkSelOut) chkSelOut.checked = Boolean(post.selOut);
 
     renderLayersList();
     renderPaletteList();
@@ -388,7 +407,12 @@
       layersList.appendChild(gridItem);
     }
 
-    // Procedural layers (displayed top-to-bottom so top of stack is first, or in render order)
+    const sdfShapeOps = [
+      "ellipse", "rect", "polygon", "capsule", "uneven_capsule",
+      "vesica", "moon", "bezier_sdf", "star", "ngon"
+    ];
+
+    // Procedural layers
     for (let i = layers.length - 1; i >= 0; i--) {
       const layer = layers[i];
       const item = document.createElement("div");
@@ -498,7 +522,6 @@
         const propsGrid = document.createElement("div");
         propsGrid.className = "layer-props-inline";
 
-        // If on Frame > 0 and layer has ID, allow editing frame delta overrides (dx, dy, dAngle)
         if (currentFrame > 0 && layer.id) {
           if (!Array.isArray(currentSpec.frames)) currentSpec.frames = [];
           const fDef = currentSpec.frames[currentFrame - 1] || {};
@@ -532,8 +555,8 @@
           addDeltaField("dy", "dy");
           addDeltaField("dAngle°", "dAngle");
         } else {
-          // Base frame properties
-          const numericKeys = ["cx", "cy", "rx", "ry", "x", "y", "w", "h", "angle", "x1", "y1", "x2", "y2"];
+          // Base frame properties (including v3.0 Quilez SDF parameters)
+          const numericKeys = ["cx", "cy", "rx", "ry", "r", "r1", "r2", "d", "n", "innerRatio", "x", "y", "w", "h", "angle", "x1", "y1", "x2", "y2"];
           for (const k of numericKeys) {
             if (typeof layer[k] === "number") {
               const wrap = document.createElement("div");
@@ -541,6 +564,7 @@
               wrap.innerHTML = `<span>${k}</span>`;
               const inp = document.createElement("input");
               inp.type = "number";
+              inp.step = (k === "innerRatio" || k === "r1" || k === "r2") ? "0.1" : "1";
               inp.value = layer[k];
               inp.addEventListener("change", () => {
                 pushUndoState();
@@ -553,11 +577,10 @@
             }
           }
 
-          // SDF Metaball Smooth Blend & 3D Dome toggle for shape layers
-          if (layer.op === "ellipse" || layer.op === "rect" || layer.op === "polygon") {
+          if (sdfShapeOps.includes(String(layer.op || "").toLowerCase())) {
             const blendWrap = document.createElement("div");
             blendWrap.className = "layer-prop-field";
-            blendWrap.title = "SDF Metaball Smooth Union radius with adjacent same-fill layers (0 = off)";
+            blendWrap.title = "SDF Metaball Smooth Blend radius (0 = off)";
             blendWrap.innerHTML = `<span>sBlend</span>`;
             const blendInp = document.createElement("input");
             blendInp.type = "number";
@@ -575,6 +598,77 @@
             });
             blendWrap.appendChild(blendInp);
             propsGrid.appendChild(blendWrap);
+
+            // 2.5D Depth z-order
+            const zWrap = document.createElement("div");
+            zWrap.className = "layer-prop-field";
+            zWrap.title = "2.5D Depth Z-Order (higher z overlaps lower z for anatomical creases)";
+            zWrap.innerHTML = `<span>z-Depth</span>`;
+            const zInp = document.createElement("input");
+            zInp.type = "number";
+            zInp.step = "1";
+            zInp.value = layer.z ?? 1;
+            zInp.addEventListener("change", () => {
+              pushUndoState();
+              layer.z = Number(zInp.value);
+              syncEditorFromSpec();
+              renderAll();
+            });
+            zWrap.appendChild(zInp);
+            propsGrid.appendChild(zWrap);
+
+            // CSG Boolean Mode selector
+            const csgWrap = document.createElement("div");
+            csgWrap.className = "layer-prop-field";
+            csgWrap.title = "CSG Boolean combination mode with previous SDF shape";
+            csgWrap.innerHTML = `<span>CSG Op</span>`;
+            const csgSel = document.createElement("select");
+            csgSel.style.padding = "2px 4px";
+            csgSel.style.fontSize = "10.5px";
+            for (const m of ["", "union", "smooth_union", "subtract", "smooth_subtract", "intersect"]) {
+              const o = document.createElement("option");
+              o.value = m;
+              o.textContent = m || "auto";
+              csgSel.appendChild(o);
+            }
+            csgSel.value = layer.opMode || "";
+            csgSel.addEventListener("change", () => {
+              pushUndoState();
+              if (csgSel.value) layer.opMode = csgSel.value;
+              else delete layer.opMode;
+              syncEditorFromSpec();
+              renderAll();
+            });
+            csgWrap.appendChild(csgSel);
+            propsGrid.appendChild(csgWrap);
+
+            // Surface Micro-Shader selector
+            const shWrap = document.createElement("div");
+            shWrap.className = "layer-prop-field";
+            shWrap.title = "Procedural Surface Micro-Shader / Dither Pattern";
+            shWrap.innerHTML = `<span>Shader</span>`;
+            const shSel = document.createElement("select");
+            shSel.style.padding = "2px 4px";
+            shSel.style.fontSize = "10.5px";
+            for (const s of ["none", "worley", "voronoi", "turing", "scales", "bayer4x4", "blue_noise", "checker", "sparse", "grid"]) {
+              const o = document.createElement("option");
+              o.value = s;
+              o.textContent = s;
+              shSel.appendChild(o);
+            }
+            shSel.value = layer.dither || layer.shader || "none";
+            shSel.addEventListener("change", () => {
+              pushUndoState();
+              if (shSel.value && shSel.value !== "none") layer.dither = shSel.value;
+              else {
+                delete layer.dither;
+                delete layer.shader;
+              }
+              syncEditorFromSpec();
+              renderAll();
+            });
+            shWrap.appendChild(shSel);
+            propsGrid.appendChild(shWrap);
 
             const sdfWrap = document.createElement("div");
             sdfWrap.className = "layer-prop-field";
@@ -595,6 +689,26 @@
             });
             sdfWrap.appendChild(sdfChk);
             propsGrid.appendChild(sdfWrap);
+
+            const creaseWrap = document.createElement("div");
+            creaseWrap.className = "layer-prop-field";
+            creaseWrap.title = "Draw 1px internal anatomical crease where this layer (higher z) overlaps lower-z same-fill layers";
+            creaseWrap.innerHTML = `<span>Crease</span>`;
+            const creaseChk = document.createElement("input");
+            creaseChk.type = "checkbox";
+            creaseChk.checked = Boolean(layer.crease);
+            creaseChk.style.width = "16px";
+            creaseChk.style.height = "16px";
+            creaseChk.style.margin = "2px auto";
+            creaseChk.addEventListener("change", () => {
+              pushUndoState();
+              if (creaseChk.checked) layer.crease = true;
+              else delete layer.crease;
+              syncEditorFromSpec();
+              renderAll();
+            });
+            creaseWrap.appendChild(creaseChk);
+            propsGrid.appendChild(creaseWrap);
           }
         }
         item.appendChild(propsGrid);
@@ -604,7 +718,7 @@
     }
 
     if (layers.length === 0 && !hasGrid) {
-      layersList.innerHTML = `<div style="color: var(--text-muted); font-size: 11.5px; text-align: center; padding: 8px;">No layers yet. Draw on canvas or click + Ellipse / + Rect.</div>`;
+      layersList.innerHTML = `<div style="color: var(--text-muted); font-size: 11.5px; text-align: center; padding: 8px;">No layers yet. Draw on canvas or click + Ellipse / + Rect / + SDF Shape.</div>`;
     }
   }
 
@@ -617,13 +731,14 @@
     currentSpec.layers.push({
       id: `ellipse_${idx}`,
       op: "ellipse",
-      cx: Math.floor(w / 2),
-      cy: Math.floor(h / 2),
+      cx: Number(((w - 1) * 0.5).toFixed(1)),
+      cy: Number(((h - 1) * 0.5).toFixed(1)),
       rx: Math.max(3, Math.floor(w / 5)),
       ry: Math.max(3, Math.floor(h / 5)),
       angle: 0,
       fill: activeSymbol !== "." ? activeSymbol : "S",
       outline: "O",
+      sdf: true,
       mirror: "none"
     });
     selectedLayerIndex = currentSpec.layers.length - 1;
@@ -650,6 +765,7 @@
       rx: 1,
       fill: activeSymbol !== "." ? activeSymbol : "S",
       outline: "O",
+      sdf: true,
       mirror: "none"
     });
     selectedLayerIndex = currentSpec.layers.length - 1;
@@ -657,6 +773,43 @@
     renderLayersList();
     renderAll();
   });
+
+  if (selAddAdvancedLayer) {
+    selAddAdvancedLayer.addEventListener("change", () => {
+      const opType = selAddAdvancedLayer.value;
+      selAddAdvancedLayer.value = "";
+      if (!opType) return;
+      pushUndoState();
+      if (!Array.isArray(currentSpec.layers)) currentSpec.layers = [];
+      const w = PixelDSLRenderer.clampSize(currentSpec.width, 32);
+      const h = PixelDSLRenderer.clampSize(currentSpec.height, 32);
+      const cx = Number(((w - 1) * 0.5).toFixed(1));
+      const cy = Number(((h - 1) * 0.5).toFixed(1));
+      const idx = currentSpec.layers.length + 1;
+      const fillSym = activeSymbol !== "." ? activeSymbol : "S";
+
+      let newLyr = { id: `${opType}_${idx}`, op: opType, fill: fillSym, outline: "O", sdf: true, mirror: "none" };
+      if (opType === "vesica") {
+        Object.assign(newLyr, { cx, cy, rx: Math.max(3, Math.floor(w / 7)), ry: Math.max(6, Math.floor(h / 3.2)), angle: 0 });
+      } else if (opType === "uneven_capsule") {
+        Object.assign(newLyr, { x1: cx, y1: Math.floor(h * 0.72), x2: cx, y2: Math.floor(h * 0.25), r1: 4.0, r2: 2.0 });
+      } else if (opType === "moon") {
+        Object.assign(newLyr, { cx, cy, r: Math.max(5, Math.floor(w / 4)), r2: Math.max(4, Math.floor(w / 5)), d: 3.5, angle: 0 });
+      } else if (opType === "star") {
+        Object.assign(newLyr, { cx, cy, r: Math.max(5, Math.floor(w / 3.5)), n: 5, innerRatio: 0.48, angle: 0 });
+      } else if (opType === "ngon") {
+        Object.assign(newLyr, { cx, cy, r: Math.max(5, Math.floor(w / 3.5)), n: 6, angle: 0 });
+      } else if (opType === "bezier_sdf") {
+        Object.assign(newLyr, { points: [[cx - 6, cy + 5], [cx, cy - 6], [cx + 6, cy + 5]], r1: 2.2, r2: 1.2 });
+      }
+
+      currentSpec.layers.push(newLyr);
+      selectedLayerIndex = currentSpec.layers.length - 1;
+      syncEditorFromSpec();
+      renderLayersList();
+      renderAll();
+    });
+  }
 
   btnShowAllLayers.addEventListener("click", () => {
     pushUndoState();
@@ -901,7 +1054,8 @@
     offCanvas.width = width;
     offCanvas.height = height;
     const offCtx = offCanvas.getContext("2d");
-    const imgData = new ImageData(new Uint8ClampedArray(buffer), width, height);
+    const activeBuf = (showNormalMap && lastRender.normalBuffer) ? lastRender.normalBuffer : buffer;
+    const imgData = new ImageData(new Uint8ClampedArray(activeBuf), width, height);
     offCtx.putImageData(imgData, 0, 0);
 
     ctx.drawImage(offCanvas, 0, 0, width * scale, height * scale);
@@ -1068,11 +1222,53 @@
   btnBakeToGrid.addEventListener("click", () => {
     if (!lastRender) return;
     pushUndoState();
-    currentSpec.grid = PixelDSLRenderer.bakeToGrid(lastRender, PixelDSLRenderer.resolveFullPalette(currentSpec));
+    const totalFrames = PixelDSLRenderer.getFrameCount(currentSpec);
+    const mergedPalette = Object.assign(
+      { ".": "transparent" },
+      PixelDSLRenderer.resolveFullPalette(currentSpec),
+      lastRender.resolvedPalette || {}
+    );
+    const bakedFrames = [];
+    let baseGrid = [];
+    for (let f = 0; f < totalFrames; f++) {
+      const fRender = PixelDSLRenderer.render(currentSpec, f);
+      if (fRender.resolvedPalette) {
+        Object.assign(mergedPalette, fRender.resolvedPalette);
+      }
+      const rows = PixelDSLRenderer.bakeToGrid(fRender, mergedPalette);
+      if (f === 0) {
+        baseGrid = rows;
+      } else {
+        bakedFrames.push({ grid: rows });
+      }
+    }
+    currentSpec.grid = baseGrid;
+    currentSpec.frames = bakedFrames;
+    delete currentSpec.motion;
+    if (!currentSpec.palette) currentSpec.palette = { ".": "transparent" };
+    const collectPaletteFromRows = (rows) => {
+      for (const row of rows) {
+        for (const ch of row) {
+          if (ch !== "." && mergedPalette[ch]) {
+            currentSpec.palette[ch] = mergedPalette[ch];
+          }
+        }
+      }
+    };
+    collectPaletteFromRows(baseGrid);
+    for (const bf of bakedFrames) {
+      collectPaletteFromRows(bf.grid);
+    }
     currentSpec.layers = [];
+    currentSpec.rules = [];
+    if (currentSpec.postProcess) {
+      currentSpec.postProcess.autoOutline = false;
+      currentSpec.postProcess.autoShading = false;
+      currentSpec.postProcess.selOut = false;
+    }
     selectedLayerIndex = -1;
+    syncInspectorFromSpec();
     syncEditorFromSpec();
-    renderLayersList();
     renderAll();
   });
 
@@ -1229,6 +1425,13 @@
     renderAll();
   });
 
+  if (chkNormalMap) {
+    chkNormalMap.addEventListener("change", () => {
+      showNormalMap = chkNormalMap.checked;
+      renderAll();
+    });
+  }
+
   function setCanvasDimensions(w, h) {
     pushUndoState();
     const cw = PixelDSLRenderer.clampSize(w, 32);
@@ -1269,6 +1472,7 @@
     currentSpec.postProcess.autoShading = chkAutoShading.checked;
     currentSpec.postProcess.shadingStrength = Number(inputShadingStrength.value) / 100;
     if (chkSdfShading) currentSpec.postProcess.sdfShading = chkSdfShading.checked;
+    if (chkSelOut) currentSpec.postProcess.selOut = chkSelOut.checked;
     syncEditorFromSpec();
     renderAll();
   }
@@ -1278,6 +1482,7 @@
   chkAutoShading.addEventListener("change", updatePostProcess);
   inputShadingStrength.addEventListener("change", updatePostProcess);
   if (chkSdfShading) chkSdfShading.addEventListener("change", updatePostProcess);
+  if (chkSelOut) chkSelOut.addEventListener("change", updatePostProcess);
 
   selPalettePreset.addEventListener("change", () => {
     pushUndoState();
@@ -1342,10 +1547,11 @@
     renderAll();
   });
 
-  // PNG Export (1:1, Upscaled, and Sprite Sheet)
-  function downloadPNG(scaleFactor) {
+  // PNG Export (1:1, Normal Map, Upscaled, and Sprite Sheet)
+  function downloadPNG(scaleFactor, useNormal = false) {
     if (!lastRender) return;
-    const { width, height, buffer } = lastRender;
+    const { width, height, buffer, normalBuffer } = lastRender;
+    const srcBuf = (useNormal && normalBuffer) ? normalBuffer : buffer;
     const outW = width * scaleFactor;
     const outH = height * scaleFactor;
 
@@ -1353,7 +1559,7 @@
     srcCanvas.width = width;
     srcCanvas.height = height;
     srcCanvas.getContext("2d").putImageData(
-      new ImageData(new Uint8ClampedArray(buffer), width, height),
+      new ImageData(new Uint8ClampedArray(srcBuf), width, height),
       0,
       0
     );
@@ -1367,7 +1573,8 @@
 
     const link = document.createElement("a");
     const baseName = (currentSpec.name || "sprite").replace(/[^a-zA-Z0-9_-]/g, "_");
-    link.download = `${baseName}_${outW}x${outH}.png`;
+    const suffix = useNormal ? "_normal" : "";
+    link.download = `${baseName}${suffix}_${outW}x${outH}.png`;
     link.href = outCanvas.toDataURL("image/png");
     link.click();
   }
@@ -1395,13 +1602,116 @@
     link.click();
   }
 
-  btnExport1x.addEventListener("click", () => downloadPNG(1));
+  btnExport1x.addEventListener("click", () => downloadPNG(1, false));
+  if (btnExportNormal) {
+    btnExportNormal.addEventListener("click", () => downloadPNG(1, true));
+  }
   btnExportSheet.addEventListener("click", downloadSpriteSheet);
   btnExportUpscaled.addEventListener("click", () => {
     const w = lastRender ? lastRender.width : 32;
     const factor = w <= 16 ? 16 : w <= 32 ? 8 : w <= 64 ? 4 : 2;
-    downloadPNG(factor);
+    downloadPNG(factor, false);
   });
+
+  // 3x3 Evolutionary Mutator & Seeded Archetype Generator Modal
+  function populateMutateGrid3x3(mode) {
+    if (!mutateGrid3x3) return;
+    mutateGrid3x3.innerHTML = "";
+    const baseSeed = parseInt(inputGenSeed ? inputGenSeed.value : "42", 10) || 42;
+    const arch = selGenArchetype ? selGenArchetype.value : "sword";
+    const rate = inputMutateRate ? (parseInt(inputMutateRate.value, 10) || 18) / 100 : 0.18;
+    const curW = PixelDSLRenderer.clampSize(currentSpec.width, 32);
+    const curH = PixelDSLRenderer.clampSize(currentSpec.height, 32);
+
+    for (let i = 0; i < 9; i++) {
+      const seed = baseSeed + i * 17;
+      let candidateSpec;
+      let labelText;
+      if (mode === "archetype") {
+        candidateSpec = PixelDSLRenderer.generateArchetype(arch, seed, curW, curH);
+        labelText = `${arch} #${seed}`;
+      } else {
+        candidateSpec = i === 0
+          ? JSON.parse(JSON.stringify(currentSpec))
+          : PixelDSLRenderer.mutateSpec(currentSpec, seed, rate);
+        labelText = i === 0 ? "Current (Parent)" : `Mutant #${seed}`;
+      }
+
+      const rendered = PixelDSLRenderer.render(candidateSpec, 0);
+      const card = document.createElement("div");
+      card.className = "mutate-card";
+
+      const cvs = document.createElement("canvas");
+      const scale = rendered.width <= 32 ? 3 : 2;
+      cvs.width = rendered.width * scale;
+      cvs.height = rendered.height * scale;
+      const tmp = document.createElement("canvas");
+      tmp.width = rendered.width;
+      tmp.height = rendered.height;
+      tmp.getContext("2d").putImageData(
+        new ImageData(new Uint8ClampedArray(rendered.buffer), rendered.width, rendered.height),
+        0,
+        0
+      );
+      const cctx = cvs.getContext("2d");
+      cctx.imageSmoothingEnabled = false;
+      cctx.drawImage(tmp, 0, 0, cvs.width, cvs.height);
+
+      const lbl = document.createElement("span");
+      lbl.className = "mutate-card-label";
+      lbl.textContent = labelText;
+
+      card.appendChild(cvs);
+      card.appendChild(lbl);
+
+      card.addEventListener("click", () => {
+        pushUndoState();
+        currentSpec = JSON.parse(JSON.stringify(candidateSpec));
+        currentFrame = 0;
+        selectedLayerIndex = -1;
+        if (inputGenSeed) inputGenSeed.value = String(seed + 1);
+        pickDefaultActiveSymbol();
+        syncEditorFromSpec();
+        syncInspectorFromSpec();
+        renderAll();
+        populateMutateGrid3x3("mutate");
+      });
+
+      mutateGrid3x3.appendChild(card);
+    }
+  }
+
+  if (btnOpenMutateModal && modalMutate) {
+    btnOpenMutateModal.addEventListener("click", () => {
+      populateMutateGrid3x3("mutate");
+      modalMutate.classList.add("open");
+    });
+  }
+  if (btnCloseMutateModal && modalMutate) {
+    btnCloseMutateModal.addEventListener("click", () => modalMutate.classList.remove("open"));
+  }
+  if (btnCloseMutateFooter && modalMutate) {
+    btnCloseMutateFooter.addEventListener("click", () => modalMutate.classList.remove("open"));
+  }
+  if (modalMutate) {
+    modalMutate.addEventListener("click", (e) => {
+      if (e.target === modalMutate) modalMutate.classList.remove("open");
+    });
+  }
+  if (inputMutateRate && lblMutateRate) {
+    inputMutateRate.addEventListener("input", () => {
+      lblMutateRate.textContent = `${inputMutateRate.value}%`;
+    });
+  }
+  if (btnGenerate3x3Arch) {
+    btnGenerate3x3Arch.addEventListener("click", () => populateMutateGrid3x3("archetype"));
+  }
+  if (btnEvolve3x3Current) {
+    btnEvolve3x3Current.addEventListener("click", () => {
+      if (inputGenSeed) inputGenSeed.value = String((parseInt(inputGenSeed.value, 10) || 42) + 9);
+      populateMutateGrid3x3("mutate");
+    });
+  }
 
   // Prompt Modal
   function refreshPromptModalText() {

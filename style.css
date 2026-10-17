@@ -789,3 +789,54 @@ details.inspector-group[open] > summary {
   line-height: 1.45;
   resize: vertical;
 }
+
+/* 3x3 Evolutionary Mutator & Archetype Generator Modal */
+.mutate-grid-3x3 {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  margin-top: 4px;
+}
+
+.mutate-card {
+  background: var(--bg-input);
+  border: 1.5px solid var(--border);
+  border-radius: 8px;
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  transition: border-color 0.14s, transform 0.1s, background 0.14s;
+}
+
+.mutate-card:hover {
+  border-color: var(--accent);
+  background: rgba(92, 124, 250, 0.10);
+  transform: translateY(-1px);
+}
+
+.mutate-thumb {
+  width: 96px;
+  height: 96px;
+  image-rendering: pixelated;
+  background-color: #131722;
+  border: 1px solid var(--border);
+  border-radius: 5px;
+}
+
+.mutate-card-meta {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  color: var(--text-muted);
+  text-align: center;
+}
+
+.mutate-card-actions {
+  display: flex;
+  gap: 5px;
+  width: 100%;
+  justify-content: center;
+}
+

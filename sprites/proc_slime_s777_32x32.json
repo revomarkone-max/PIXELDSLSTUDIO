@@ -1,0 +1,142 @@
+{
+  "name": "proc_slime_s777_32x32",
+  "prompt": "Procedural slime (seed=777, 32x32) — 100% LLM-Free PixelDSL v3.0",
+  "width": 32,
+  "height": 32,
+  "symmetry": "none",
+  "rle": false,
+  "ramps": {
+    "M": {
+      "base": "#268edd",
+      "light": "L",
+      "dark": "D",
+      "outline": "O"
+    },
+    "A": {
+      "base": "#ff779f",
+      "light": "W",
+      "dark": "B",
+      "outline": "O"
+    },
+    "S": {
+      "base": "#baba9c",
+      "light": "w",
+      "dark": "d",
+      "outline": "O"
+    },
+    "H": {
+      "base": "#8c4a11",
+      "light": "h",
+      "dark": "b",
+      "outline": "O"
+    }
+  },
+  "palette": {
+    ".": "transparent",
+    "O": "#14182e",
+    "e": "#0e101c",
+    "w": "#ffffff",
+    "a": "#14182e44"
+  },
+  "postProcess": {
+    "autoOutline": false,
+    "outlineColor": "#14182e",
+    "autoShading": false,
+    "shadingStrength": 0.16,
+    "sdfShading": true,
+    "selOut": true
+  },
+  "layers": [
+    {
+      "id": "shadow",
+      "op": "ellipse",
+      "cx": 15.5,
+      "cy": 28.0,
+      "rx": 9.9,
+      "ry": 2.2,
+      "fill": "a"
+    },
+    {
+      "id": "crown",
+      "op": "star",
+      "cx": 15.5,
+      "cy": 6.1,
+      "r": 3.8,
+      "n": 5,
+      "innerRatio": 0.55,
+      "fill": "A",
+      "outline": "O",
+      "sdf": true,
+      "parent": "slime_body"
+    },
+    {
+      "id": "slime_body",
+      "op": "ellipse",
+      "cx": 15.5,
+      "cy": 17.5,
+      "rx": 9.4,
+      "ry": 8.2,
+      "fill": "M",
+      "outline": "O",
+      "sdf": true,
+      "smoothBlend": 3.0
+    },
+    {
+      "id": "slime_lobes",
+      "op": "ellipse",
+      "cx": 9.1,
+      "cy": 20.7,
+      "rx": 4.6,
+      "ry": 3.6,
+      "fill": "M",
+      "outline": "O",
+      "mirror": "x",
+      "sdf": true,
+      "smoothBlend": 3.0
+    },
+    {
+      "id": "slime_top",
+      "op": "ellipse",
+      "cx": 15.5,
+      "cy": 12.7,
+      "rx": 5.8,
+      "ry": 4.2,
+      "fill": "M",
+      "outline": "O",
+      "sdf": true,
+      "smoothBlend": 2.5
+    },
+    {
+      "id": "eye_l",
+      "op": "ellipse",
+      "cx": 12.0,
+      "cy": 16.5,
+      "rx": 1.5,
+      "ry": 2.0,
+      "fill": "e",
+      "mirror": "x",
+      "parent": "slime_body"
+    },
+    {
+      "id": "glint",
+      "op": "pixels",
+      "color": "w",
+      "mirror": "x",
+      "points": [
+        [
+          12,
+          16
+        ]
+      ],
+      "parent": "slime_body"
+    }
+  ],
+  "frames": [],
+  "grid": [],
+  "motion": {
+    "type": "idle_breathe",
+    "frames": 4,
+    "amplitude": 1.0,
+    "squash": 0.12
+  }
+}

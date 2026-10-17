@@ -13,7 +13,7 @@
       <button id="btnToggleCodePanel" class="btn active" title="Show / Hide Code &amp; ASCII Grid Editor">
         ⟨⟩ Code
       </button>
-      <span class="brand-badge">8×8 .. 128×128</span>
+      <span class="brand-badge">v3.0 • 8×8..128×128</span>
       <span>PixelDSL Studio</span>
     </div>
 
@@ -22,21 +22,28 @@
       <select id="presetSelect" title="Select sprite from library (presets.js)"></select>
 
       <button id="btnNewSprite" class="btn" title="Create a clean blank sprite canvas">
-        📄 + New Sprite
+        📄 + New
       </button>
 
-      <button id="btnOpenPromptModal" class="btn btn-accent-outline" title="Generate LLM Prompt or copy SKILL.md CLI instructions">
+      <button id="btnOpenMutateModal" class="btn btn-accent-outline" title="100% LLM-Free Procedural Archetype Generator &amp; 3×3 Evolutionary Genome Mutator">
+        🎲 Generate / Mutate
+      </button>
+
+      <button id="btnOpenPromptModal" class="btn" title="Generate LLM Prompt or copy SKILL.md CLI instructions">
         📋 Prompt / SKILL.md
       </button>
 
       <button id="btnExport1x" class="btn btn-primary" title="Download current frame PNG at native 1:1 resolution">
         💾 PNG (1:1)
       </button>
+      <button id="btnExportNormal" class="btn" title="Download tangent-space Normal Map PNG (_normal.png) for 2D game lighting in Godot/Unity">
+        💡 Normal Map
+      </button>
       <button id="btnExportSheet" class="btn" title="Download horizontal Sprite Sheet PNG containing all animation frames">
         🎞️ Sprite Sheet
       </button>
       <button id="btnExportUpscaled" class="btn" title="Download upscaled crisp nearest-neighbor PNG preview">
-        🖼️ PNG (Preview)
+        🖼️ Preview
       </button>
     </div>
   </header>
@@ -118,6 +125,10 @@
             <input type="checkbox" id="chkCenterAxes" />
             <span>Axes</span>
           </label>
+          <label style="display: inline-flex; align-items: center; gap: 4px; cursor: pointer; font-size: 12px;" title="Preview 2.5D Tangent-Space Normal Map (SDF + Felzenszwalb EDT)">
+            <input type="checkbox" id="chkNormalMap" />
+            <span>💡 Normals</span>
+          </label>
 
           <select id="zoomSelect" title="Canvas Zoom">
             <option value="auto">Zoom: Auto</option>
@@ -186,7 +197,16 @@
           <div style="display: flex; gap: 4px; margin-bottom: 7px;">
             <button id="btnAddEllipseLayer" class="btn btn-sm" style="flex: 1; justify-content: center;" title="Add new Ellipse layer">+ Ellipse</button>
             <button id="btnAddRectLayer" class="btn btn-sm" style="flex: 1; justify-content: center;" title="Add new Rect layer">+ Rect</button>
-            <button id="btnShowAllLayers" class="btn btn-sm" title="Unhide all layers">👁 All</button>
+            <select id="selAddAdvancedLayer" title="Add Quilez 2D SDF Primitive Layer" style="padding: 2px 5px; font-size: 11px;">
+              <option value="">+ SDF Shape...</option>
+              <option value="vesica">Vesica (Blade/Leaf)</option>
+              <option value="uneven_capsule">Uneven Capsule (Limb)</option>
+              <option value="moon">Moon (Crescent/Horn)</option>
+              <option value="star">Star (Emblem/Crown)</option>
+              <option value="ngon">N-Gon (Crystal/Gem)</option>
+              <option value="bezier_sdf">Bezier SDF (Curved Limb)</option>
+            </select>
+            <button id="btnShowAllLayers" class="btn btn-sm" title="Unhide all layers">👁</button>
           </div>
           <div id="layersList" class="layers-list"></div>
         </div>
@@ -295,9 +315,16 @@
           </div>
 
           <div class="control-row">
-            <label style="display: flex; align-items: center; gap: 6px; cursor: pointer;" title="Compute 3D spherical heightmap normals, quantized 5-tone pixel-art lighting, and Bayer 2×2 ordered dithering on shape layers">
+            <label style="display: flex; align-items: center; gap: 6px; cursor: pointer;" title="Compute 3D spherical heightmap normals, quantized 5-tone Oklch pixel-art lighting, and Bayer 2×2 ordered dithering on shape layers">
               <input type="checkbox" id="chkSdfShading" />
               <span>3D SDF Volume Shading</span>
+            </label>
+          </div>
+
+          <div class="control-row">
+            <label style="display: flex; align-items: center; gap: 6px; cursor: pointer;" title="Selective Outlining (Sel-Out): tint outline pixels facing the top-left light source with the material's deep shadow tone">
+              <input type="checkbox" id="chkSelOut" />
+              <span>Selective Outlining (Sel-Out)</span>
             </label>
           </div>
         </div>
@@ -305,17 +332,77 @@
     </aside>
   </main>
 
+  <!-- 3x3 Evolutionary Mutator & 100% LLM-Free Archetype Generator Modal -->
+  <div id="modalMutate" class="modal-backdrop">
+    <div class="modal" style="max-width: 720px;">
+      <div class="modal-header">
+        <span>🎲 100% LLM-Free Procedural Archetype Generator &amp; 3×3 Evolutionary Mutator</span>
+        <button id="btnCloseMutateModal" class="btn btn-sm">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="control-row" style="flex-wrap: wrap; background: var(--bg-panel-alt); padding: 10px 12px; border-radius: 7px; border: 1px solid var(--border);">
+          <div style="display: flex; align-items: center; gap: 6px;">
+            <label style="font-size: 11.5px; color: var(--text-muted);">Archetype:</label>
+            <select id="selGenArchetype">
+              <option value="sword">⚔️ Sword (Quilez Vesica + Capsule)</option>
+              <option value="axe">🪓 Battle Axe (Crescent Moon + Haft)</option>
+              <option value="shield">🛡️ Shield (Vesica + Star Emblem)</option>
+              <option value="potion">🧪 Potion Flask (Voronoi Liquid)</option>
+              <option value="gem">💎 Faceted Gem (N-Gon + Worley)</option>
+              <option value="slime">👑 Slime King (Metaball + Crown)</option>
+              <option value="beetle">🪲 Horned Beetle (Bezier Legs + Walk)</option>
+              <option value="turtle">🐢 Sea Turtle (Swim Cycle + Shell)</option>
+              <option value="bunny">🐰 Bunny (2.5D Crease + Jump Arc)</option>
+              <option value="crystal_monolith">🔮 Crystal Monolith (Floating Shards)</option>
+              <option value="spaceship">🚀 Starfighter (Polygon Wings + Hull)</option>
+              <option value="autotile_blob47">🧱 Mossy Stone Block (Domain Warp + Drip)</option>
+            </select>
+          </div>
+
+          <div style="display: flex; align-items: center; gap: 6px;">
+            <label style="font-size: 11.5px; color: var(--text-muted);">Seed:</label>
+            <input type="number" id="inputGenSeed" value="42" style="width: 72px; font-family: var(--font-mono);" />
+          </div>
+
+          <button id="btnGenerate3x3Arch" class="btn btn-primary" title="Generate 9 seeded procedural sprites of the chosen archetype">
+            ⚡ Generate 3×3 Archetypes
+          </button>
+        </div>
+
+        <div class="control-row" style="flex-wrap: wrap; background: var(--bg-panel-alt); padding: 10px 12px; border-radius: 7px; border: 1px solid var(--border);">
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <label style="font-size: 11.5px; color: var(--text-muted);">Mutation Rate:</label>
+            <input type="range" id="inputMutateRate" min="10" max="60" value="28" style="width: 110px; accent-color: var(--accent);" />
+            <span id="lblMutateRate" style="font-family: var(--font-mono); font-size: 11px;">28%</span>
+          </div>
+
+          <button id="btnEvolve3x3Current" class="btn btn-accent-outline" title="Breed 9 evolutionary variations from the currently active sprite">
+            🧬 Evolve 3×3 Offspring from Current Sprite
+          </button>
+        </div>
+
+        <div id="mutateGrid3x3" class="mutate-grid-3x3"></div>
+      </div>
+      <div class="modal-footer">
+        <span style="color: var(--text-muted); font-size: 11.5px; margin-right: auto;">
+          Click <b>✓ Load</b> on any candidate to open in Studio, or <b>🧬 Breed</b> to evolve its next generation!
+        </span>
+        <button id="btnCloseMutateFooter" class="btn">Close</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Prompt & SKILL.md Modal -->
   <div id="modalPrompt" class="modal-backdrop">
     <div class="modal">
       <div class="modal-header">
-        <span>📋 LLM Prompt Builder &amp; CLI Workflow (SKILL.md v2)</span>
+        <span>📋 LLM Prompt Builder &amp; CLI Workflow (SKILL.md v3.0)</span>
         <button id="btnClosePromptModal" class="btn btn-sm">✕</button>
       </div>
       <div class="modal-body">
         <p style="color: var(--text-muted); line-height: 1.45;">
-          For headless generation from any LLM CLI, run <code>python pixeldsl.py sprites/my_sprite.json</code> (or pipe via <code>stdin</code>).
-          It validates edges/centering, prints a TrueColor ANSI preview in the terminal, exports PNGs to <code>game_ready/</code>, and syncs the sprite to this Web Studio!
+          Run <code>python pixeldsl.py sprites/my_sprite.json</code>, or 100% LLM-free <code>python pixeldsl.py --generate sword --seed 42</code>, or <code>python pixeldsl.py --import-image raw.png</code>.
+          It validates edges/centering, exports native PNG + Normal Map (<code>_normal.png</code>) + Sprite Sheet to <code>game_ready/</code>, and syncs to this Web Studio!
         </p>
 
         <div class="control-row">
@@ -348,7 +435,7 @@
             <select id="promptModeSelect">
               <option value="auto" selected>Auto (Grid ≤32, Layers &gt;32)</option>
               <option value="grid">Symbolic Matrix (grid)</option>
-              <option value="layers">Hybrid Layers + Animation (layers)</option>
+              <option value="layers">Hybrid 2.5D SDF Layers + Motion (layers)</option>
             </select>
           </div>
         </div>
