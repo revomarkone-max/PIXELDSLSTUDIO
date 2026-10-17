@@ -1,0 +1,181 @@
+{
+  "id": "avian_bird",
+  "name": "Avian Bird (Eagle / Hawk / Raven)",
+  "category": "creatures",
+  "description": "Parametric avian skeleton with 3-segment articulating wings, aerodynamic core, 3-tier Z-depth, and harmonic flight flap cycle.",
+  "default_view": "side",
+  "canonical_proportions": {
+    "body_length_ratio": 0.36,
+    "wingspan_ratio": 0.78,
+    "head_size_ratio": 0.14,
+    "beak_length_ratio": 0.08,
+    "tail_length_ratio": 0.26
+  },
+  "z_depth_tiers": {
+    "0_back": {
+      "name": "Far Wing (Shadowed)",
+      "z": 0,
+      "tone": "shadow",
+      "bones": ["wing_arm_far", "wing_fore_far", "wing_tip_far"]
+    },
+    "1_core": {
+      "name": "Mid Core (Torso, Tail, Neck, Head, Beak)",
+      "z": 1,
+      "tone": "base",
+      "bones": ["torso", "chest", "tail", "neck", "head", "beak"]
+    },
+    "2_front": {
+      "name": "Near Wing (Illuminated/Creased)",
+      "z": 2,
+      "tone": "highlight",
+      "crease": true,
+      "bones": ["wing_arm_near", "wing_fore_near", "wing_tip_near"]
+    }
+  },
+  "bones": [
+    {
+      "id": "torso",
+      "u": 0.44,
+      "v": 0.52,
+      "length_u": 0.16,
+      "angle": 12,
+      "r1_u": 0.085,
+      "r2_u": 0.095,
+      "z": 1,
+      "fill": "feathers"
+    },
+    {
+      "id": "chest",
+      "parent": "torso",
+      "offset_u": [0.0, 0.0],
+      "length_u": 0.12,
+      "angle": -25,
+      "r1_u": 0.095,
+      "r2_u": 0.08,
+      "z": 1,
+      "fill": "feathers"
+    },
+    {
+      "id": "tail",
+      "parent": "torso",
+      "offset_u": [-0.07, 0.02],
+      "length_u": 0.16,
+      "angle": 160,
+      "r1_u": 0.065,
+      "r2_u": 0.035,
+      "z": 1,
+      "fill": "feathers_dark"
+    },
+    {
+      "id": "neck",
+      "parent": "chest",
+      "offset_u": [0.0, 0.0],
+      "length_u": 0.08,
+      "angle": -45,
+      "r1_u": 0.065,
+      "r2_u": 0.055,
+      "z": 1,
+      "fill": "feathers"
+    },
+    {
+      "id": "head",
+      "parent": "neck",
+      "offset_u": [0.0, 0.0],
+      "length_u": 0.0,
+      "shape": "head_oval",
+      "r1_u": 0.075,
+      "r2_u": 0.07,
+      "z": 1,
+      "fill": "feathers",
+      "features": {
+        "eyes": { "dx_u": 0.03, "dy_u": -0.015, "w_u": 0.022, "h_u": 0.03, "color": "#fbbf24" }
+      }
+    },
+    {
+      "id": "beak",
+      "parent": "head",
+      "offset_u": [0.045, 0.01],
+      "length_u": 0.065,
+      "angle": 25,
+      "r1_u": 0.035,
+      "r2_u": 0.01,
+      "z": 1,
+      "fill": "gold"
+    },
+    {
+      "id": "wing_arm_far",
+      "parent": "chest",
+      "offset_u": [-0.02, -0.04],
+      "length_u": 0.16,
+      "angle": -120,
+      "r1_u": 0.06,
+      "r2_u": 0.05,
+      "z": 0,
+      "fill": "feathers_dark"
+    },
+    {
+      "id": "wing_fore_far",
+      "parent": "wing_arm_far",
+      "offset_u": [0.0, 0.0],
+      "length_u": 0.20,
+      "angle": 45,
+      "r1_u": 0.05,
+      "r2_u": 0.04,
+      "z": 0,
+      "fill": "feathers_dark"
+    },
+    {
+      "id": "wing_tip_far",
+      "parent": "wing_fore_far",
+      "offset_u": [0.0, 0.0],
+      "length_u": 0.18,
+      "angle": 30,
+      "r1_u": 0.04,
+      "r2_u": 0.018,
+      "z": 0,
+      "fill": "feathers_dark"
+    },
+    {
+      "id": "wing_arm_near",
+      "parent": "chest",
+      "offset_u": [0.02, -0.04],
+      "length_u": 0.16,
+      "angle": -120,
+      "r1_u": 0.065,
+      "r2_u": 0.052,
+      "z": 2,
+      "fill": "feathers"
+    },
+    {
+      "id": "wing_fore_near",
+      "parent": "wing_arm_near",
+      "offset_u": [0.0, 0.0],
+      "length_u": 0.20,
+      "angle": 45,
+      "r1_u": 0.052,
+      "r2_u": 0.042,
+      "z": 2,
+      "fill": "feathers"
+    },
+    {
+      "id": "wing_tip_near",
+      "parent": "wing_fore_near",
+      "offset_u": [0.0, 0.0],
+      "length_u": 0.18,
+      "angle": 30,
+      "r1_u": 0.042,
+      "r2_u": 0.02,
+      "z": 2,
+      "fill": "feathers_light"
+    }
+  ],
+  "locomotion": {
+    "flight": {
+      "default_frames": 6,
+      "cadence_type": "wing_flap",
+      "wing_flap_amplitude_deg": 48.0,
+      "wing_fold_amplitude_deg": 28.0,
+      "torso_bob_amplitude": 0.035
+    }
+  }
+}
