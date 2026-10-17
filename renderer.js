@@ -1477,9 +1477,13 @@ class PixelDSLRenderer {
       paletteRGBA[key] = this.parseColor(val);
     }
 
-    const outlineKey = rigDef.outline || "o";
-    const outlineRGBA = paletteRGBA[outlineKey] || this.parseColor(outlineKey);
-    const outlineW = Number(rigDef.outlineWidth || 1.0);
+    const hasOutline = !(
+      (rigDef.outline === "none" || rigDef.outline === null || rigDef.outline === "" || rigDef.outline === "transparent") ||
+      rigDef.outlineWidth === 0
+    );
+    const outlineKey = hasOutline ? (rigDef.outline || "o") : null;
+    const outlineRGBA = (hasOutline && outlineKey) ? (paletteRGBA[outlineKey] || this.parseColor(outlineKey)) : [0, 0, 0, 0];
+    const outlineW = hasOutline ? Number(rigDef.outlineWidth ?? 1.0) : 0.0;
 
     const sortedBones = bonesDef
       .filter((b) => b && b.id && !b.hidden)
@@ -1646,7 +1650,7 @@ class PixelDSLRenderer {
             buffer[idx * 4 + 2] = c[2];
             buffer[idx * 4 + 3] = c[3] !== undefined ? c[3] : 255;
           }
-        } else if (dVal > 0.0 && dVal <= outlineW) {
+        } else if (hasOutline && dVal > 0.0 && dVal <= outlineW && outlineRGBA[3] > 0) {
           buffer[idx * 4] = outlineRGBA[0];
           buffer[idx * 4 + 1] = outlineRGBA[1];
           buffer[idx * 4 + 2] = outlineRGBA[2];

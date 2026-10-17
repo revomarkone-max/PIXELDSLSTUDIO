@@ -1439,9 +1439,15 @@ def render_rig(spec, frame_index=0):
     for k, v in palette_raw.items():
         palette_rgba[k] = parse_color(v)
 
-    outline_key = rig_def.get("outline") or "o"
-    outline_rgba = palette_rgba.get(outline_key) or parse_color(outline_key)
-    outline_w = float(rig_def.get("outlineWidth", 1.0) or 1.0)
+    has_outline = True
+    if "outline" in rig_def and (rig_def["outline"] in (None, "none", "transparent", "") or rig_def.get("outlineWidth") == 0):
+        has_outline = False
+    elif rig_def.get("outlineWidth") == 0:
+        has_outline = False
+
+    outline_key = rig_def.get("outline") if has_outline else None
+    outline_rgba = (palette_rgba.get(outline_key) or parse_color(outline_key)) if (has_outline and outline_key) else (0, 0, 0, 0)
+    outline_w = float(rig_def.get("outlineWidth", 1.0) or 1.0) if has_outline else 0.0
 
     sorted_bones = sorted(bones_def, key=lambda b: float(b.get("z", 0.0) or 0.0))
 
@@ -1572,9 +1578,9 @@ def render_rig(spec, frame_index=0):
                     buffer[idx * 4:idx * 4 + 4] = bytes(crease_c)
                 else:
                     buffer[idx * 4:idx * 4 + 4] = bytes(color_buf[idx])
-            elif 0.0 < d_val <= outline_w:
+            elif has_outline and 0.0 < d_val <= outline_w and outline_rgba[3] > 0:
                 buffer[idx * 4:idx * 4 + 4] = bytes(outline_rgba)
-                symbol_buffer[idx] = outline_key if outline_key in palette_raw else "o"
+                symbol_buffer[idx] = outline_key if (outline_key and outline_key in palette_raw) else "o"
                 normal_buffer[idx * 4:idx * 4 + 4] = bytes([128, 128, 255, 255])
 
     diagnostics = analyze_buffer(width, height, buffer)
