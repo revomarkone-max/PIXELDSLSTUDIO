@@ -2043,10 +2043,802 @@
     if (zoomLevel === "auto") renderAll();
   });
 
+  // ==========================================
+  // Toast Notification System
+  // ==========================================
+  function showToast(message, type = "info") {
+    const container = document.getElementById("toastContainer");
+    if (!container) return;
+    const toast = document.createElement("div");
+    toast.className = `toast-message toast-${type}`;
+    let icon = "✨";
+    if (type === "success") icon = "✓";
+    if (type === "error") icon = "✕";
+    if (type === "copy") icon = "📋";
+    toast.innerHTML = `<span style="font-size: 14px;">${icon}</span><span>${message}</span>`;
+    container.appendChild(toast);
+    setTimeout(() => {
+      toast.style.opacity = "0";
+      toast.style.transform = "translateY(10px) scale(0.95)";
+      setTimeout(() => toast.remove(), 250);
+    }, 2400);
+  }
+
+  // ==========================================
+  // Workspace Switcher
+  // ==========================================
+  function initWorkspaces() {
+    const tabs = document.querySelectorAll(".workspace-tab");
+    tabs.forEach(tab => {
+      tab.addEventListener("click", () => {
+        const targetWs = tab.dataset.workspace;
+        tabs.forEach(t => t.classList.toggle("active", t === tab));
+        const wsMap = {
+          studio: "workspaceStudio",
+          forge: "workspaceForge",
+          paperdoll: "workspacePaperDoll",
+          compass: "workspaceCompass",
+          exporter: "workspaceExporter"
+        };
+        document.querySelectorAll(".workspace-view").forEach(v => {
+          const isActive = (v.id === wsMap[targetWs]);
+          v.classList.toggle("active", isActive);
+        });
+
+        if (targetWs === "studio") {
+          renderAll();
+        } else if (targetWs === "forge") {
+          compileAndRenderForge();
+        } else if (targetWs === "paperdoll") {
+          renderPaperDollDemo();
+        } else if (targetWs === "compass") {
+          renderCompassDemo();
+        }
+      });
+    });
+  }
+
+  // ==========================================
+  // Workspace 2: Archetype Forge Controller
+  // ==========================================
+  let forgeActiveCat = "creatures";
+  let forgeActiveArchId = "humanoid";
+  let forgeWidth = 48;
+  let forgeHeight = 48;
+  let forgeHeadScale = 1.0;
+  let forgeBuildScale = 1.0;
+  let forgeAction = "walk";
+  let forgeFrames = 8;
+  let forgeTheme = "classic";
+  let forgeOutline = "none";
+  let forgeFrameIndex = 0;
+  let forgeIsPlaying = true;
+  let compiledForgeSpec = null;
+  let forgeLoopTimer = null;
+
+  function initArchetypeForge() {
+    if (!window.ArchetypeCompiler) return;
+
+    const forgeCategoryPills = document.getElementById("forgeCategoryPills");
+    const forgeArchetypeGrid = document.getElementById("forgeArchetypeGrid");
+    const forgeSizePills = document.getElementById("forgeSizePills");
+    const inputForgeHeadScale = document.getElementById("inputForgeHeadScale");
+    const lblForgeHeadScale = document.getElementById("lblForgeHeadScale");
+    const inputForgeBuildScale = document.getElementById("inputForgeBuildScale");
+    const lblForgeBuildScale = document.getElementById("lblForgeBuildScale");
+    const selForgeAction = document.getElementById("selForgeAction");
+    const inputForgeFrames = document.getElementById("inputForgeFrames");
+    const lblForgeFrames = document.getElementById("lblForgeFrames");
+    const selForgeTheme = document.getElementById("selForgeTheme");
+    const selForgeOutline = document.getElementById("selForgeOutline");
+    const btnForgeOpenInStudio = document.getElementById("btnForgeOpenInStudio");
+    const btnForgeExportPng = document.getElementById("btnForgeExportPng");
+    const btnForgeExportSheet = document.getElementById("btnForgeExportSheet");
+    const btnForgeExportNormal = document.getElementById("btnForgeExportNormal");
+    const btnForgeCopyJson = document.getElementById("btnForgeCopyJson");
+    const btnForgePlayAnim = document.getElementById("btnForgePlayAnim");
+    const selForgeFps = document.getElementById("selForgeFps");
+    const chkForgeSkeleton = document.getElementById("chkForgeSkeleton");
+    const chkForgeNormals = document.getElementById("chkForgeNormals");
+    const chkForgeDepthTint = document.getElementById("chkForgeDepthTint");
+    const selForgeZoom = document.getElementById("selForgeZoom");
+    const rowHeadScale = document.getElementById("rowHeadScale");
+
+    function renderCategoryPills() {
+      if (!forgeCategoryPills) return;
+      forgeCategoryPills.innerHTML = "";
+      const categories = window.ArchetypeCompiler.getCategories();
+      for (const [catKey, catData] of Object.entries(categories)) {
+        const btn = document.createElement("button");
+        btn.className = `forge-category-pill ${catKey === forgeActiveCat ? "active" : ""}`;
+        btn.textContent = catData.label;
+        btn.addEventListener("click", () => {
+          forgeActiveCat = catKey;
+          renderCategoryPills();
+          const archs = categories[catKey].archetypes;
+          if (archs.length > 0) {
+            forgeActiveArchId = archs[0].id;
+          }
+          renderArchetypeGrid();
+          updateActionOptions();
+          compileAndRenderForge(true);
+        });
+        forgeCategoryPills.appendChild(btn);
+      }
+    }
+
+    function renderArchetypeGrid() {
+      if (!forgeArchetypeGrid) return;
+      forgeArchetypeGrid.innerHTML = "";
+      const categories = window.ArchetypeCompiler.getCategories();
+      const currentCatData = categories[forgeActiveCat];
+      if (!currentCatData) return;
+
+      const icons = {
+        humanoid: "🧍", quadruped_feline: "🐱", quadruped_canine: "🐺", avian_bird: "🦅",
+        tree_deciduous: "🌳", building_structure: "🏰",
+        weapon_sword: "⚔️", potion_bottle: "🧪",
+        projectile_orb: "💥", autotile_terrain: "🗺️"
+      };
+
+      for (const arch of currentCatData.archetypes) {
+        const card = document.createElement("div");
+        card.className = `forge-archetype-card ${arch.id === forgeActiveArchId ? "active" : ""}`;
+        card.innerHTML = `
+          <div class="arch-card-header">
+            <span class="arch-card-icon">${icons[arch.id] || "📦"}</span>
+            <span>${arch.name.split(" ")[0]}</span>
+          </div>
+          <div class="arch-card-desc">${arch.description ? arch.description.substring(0, 34) + "..." : arch.type}</div>
+        `;
+        card.addEventListener("click", () => {
+          forgeActiveArchId = arch.id;
+          renderArchetypeGrid();
+          updateActionOptions();
+          if (rowHeadScale) {
+            rowHeadScale.style.display = (arch.id === "humanoid" || arch.id.includes("quadruped")) ? "flex" : "none";
+          }
+          compileAndRenderForge(true);
+        });
+        forgeArchetypeGrid.appendChild(card);
+      }
+    }
+
+    function updateActionOptions() {
+      if (!selForgeAction) return;
+      selForgeAction.innerHTML = "";
+      const arch = window.ArchetypeCompiler.getArchetype(forgeActiveArchId);
+      if (!arch) return;
+
+      const actions = arch.locomotion ? Object.keys(arch.locomotion) : (arch.motion ? Object.keys(arch.motion) : ["default"]);
+      actions.forEach(act => {
+        const opt = document.createElement("option");
+        opt.value = act;
+        opt.textContent = act.charAt(0).toUpperCase() + act.slice(1).replace("_", " ");
+        selForgeAction.appendChild(opt);
+      });
+      forgeAction = actions[0];
+      selForgeAction.value = forgeAction;
+    }
+
+    // Size Pills
+    if (forgeSizePills) {
+      forgeSizePills.querySelectorAll(".forge-size-pill").forEach(pill => {
+        pill.addEventListener("click", () => {
+          forgeSizePills.querySelectorAll(".forge-size-pill").forEach(p => p.classList.remove("active"));
+          pill.classList.add("active");
+          forgeWidth = parseInt(pill.dataset.w, 10);
+          forgeHeight = parseInt(pill.dataset.h, 10);
+          compileAndRenderForge();
+        });
+      });
+    }
+
+    // Sliders
+    if (inputForgeHeadScale) {
+      inputForgeHeadScale.addEventListener("input", () => {
+        forgeHeadScale = parseInt(inputForgeHeadScale.value, 10) / 100.0;
+        if (lblForgeHeadScale) lblForgeHeadScale.textContent = `${forgeHeadScale.toFixed(2)}×`;
+        compileAndRenderForge();
+      });
+    }
+
+    if (inputForgeBuildScale) {
+      inputForgeBuildScale.addEventListener("input", () => {
+        forgeBuildScale = parseInt(inputForgeBuildScale.value, 10) / 100.0;
+        if (lblForgeBuildScale) lblForgeBuildScale.textContent = `${forgeBuildScale.toFixed(2)}×`;
+        compileAndRenderForge();
+      });
+    }
+
+    if (selForgeAction) {
+      selForgeAction.addEventListener("change", () => {
+        forgeAction = selForgeAction.value;
+        compileAndRenderForge(true);
+      });
+    }
+
+    if (inputForgeFrames) {
+      inputForgeFrames.addEventListener("input", () => {
+        forgeFrames = parseInt(inputForgeFrames.value, 10);
+        if (lblForgeFrames) lblForgeFrames.textContent = `${forgeFrames} frame${forgeFrames > 1 ? "s" : ""}`;
+        compileAndRenderForge(true);
+      });
+    }
+
+    if (selForgeTheme) {
+      selForgeTheme.addEventListener("change", () => {
+        forgeTheme = selForgeTheme.value;
+        compileAndRenderForge();
+      });
+    }
+
+    if (selForgeOutline) {
+      selForgeOutline.addEventListener("change", () => {
+        forgeOutline = selForgeOutline.value;
+        compileAndRenderForge();
+      });
+    }
+
+    // Overlays
+    if (chkForgeSkeleton) chkForgeSkeleton.addEventListener("change", () => drawForgeFrame());
+    if (chkForgeNormals) chkForgeNormals.addEventListener("change", () => drawForgeFrame());
+    if (chkForgeDepthTint) chkForgeDepthTint.addEventListener("change", () => drawForgeFrame());
+    if (selForgeZoom) selForgeZoom.addEventListener("change", () => drawForgeFrame());
+
+    // Playback
+    if (btnForgePlayAnim) {
+      btnForgePlayAnim.addEventListener("click", () => {
+        forgeIsPlaying = !forgeIsPlaying;
+        btnForgePlayAnim.textContent = forgeIsPlaying ? "⏸ Pause" : "▶ Play";
+      });
+    }
+
+    if (selForgeFps) {
+      selForgeFps.addEventListener("change", () => {
+        startForgeAnimLoop();
+      });
+    }
+
+    // Inject into Studio
+    if (btnForgeOpenInStudio) {
+      btnForgeOpenInStudio.addEventListener("click", () => {
+        if (!compiledForgeSpec) return;
+        currentSpec = JSON.parse(JSON.stringify(compiledForgeSpec));
+        syncEditorFromSpec();
+        syncInspectorFromSpec();
+        // Switch to Studio tab
+        document.querySelectorAll(".workspace-tab").forEach(t => t.classList.toggle("active", t.dataset.workspace === "studio"));
+        document.querySelectorAll(".workspace-view").forEach(v => v.classList.toggle("active", v.id === "workspaceStudio"));
+        renderAll();
+        showToast(`⚡ Injected "${compiledForgeSpec.name}" into Canvas Studio!`, "success");
+      });
+    }
+
+    // Export buttons
+    if (btnForgeExportPng) {
+      btnForgeExportPng.addEventListener("click", () => {
+        if (!compiledForgeSpec) return;
+        const res = PixelDSLRenderer.render(compiledForgeSpec, forgeFrameIndex);
+        const c = document.createElement("canvas");
+        c.width = res.width;
+        c.height = res.height;
+        const ctx = c.getContext("2d");
+        const imgData = ctx.createImageData(res.width, res.height);
+        imgData.data.set(res.buffer);
+        ctx.putImageData(imgData, 0, 0);
+        const a = document.createElement("a");
+        a.href = c.toDataURL("image/png");
+        a.download = `${compiledForgeSpec.name}_f${forgeFrameIndex + 1}.png`;
+        a.click();
+        showToast(`💾 Exported native PNG (1:1) to downloads!`, "success");
+      });
+    }
+
+    if (btnForgeExportSheet) {
+      btnForgeExportSheet.addEventListener("click", () => {
+        if (!compiledForgeSpec) return;
+        const numFrames = Math.max(1, compiledForgeSpec.frames ? compiledForgeSpec.frames.length : 1);
+        const w = compiledForgeSpec.width;
+        const h = compiledForgeSpec.height;
+        const c = document.createElement("canvas");
+        c.width = w * numFrames;
+        c.height = h;
+        const ctx = c.getContext("2d");
+        for (let fi = 0; fi < numFrames; fi++) {
+          const res = PixelDSLRenderer.render(compiledForgeSpec, fi);
+          const imgData = ctx.createImageData(w, h);
+          imgData.data.set(res.buffer);
+          ctx.putImageData(imgData, fi * w, 0);
+        }
+        const a = document.createElement("a");
+        a.href = c.toDataURL("image/png");
+        a.download = `${compiledForgeSpec.name}_sheet.png`;
+        a.click();
+        showToast(`🎞️ Exported Sprite Sheet (${numFrames} frames)!`, "success");
+      });
+    }
+
+    if (btnForgeExportNormal) {
+      btnForgeExportNormal.addEventListener("click", () => {
+        if (!compiledForgeSpec) return;
+        const res = PixelDSLRenderer.render(compiledForgeSpec, forgeFrameIndex);
+        if (res.normalBuffer) {
+          const c = document.createElement("canvas");
+          c.width = res.width;
+          c.height = res.height;
+          const ctx = c.getContext("2d");
+          const imgData = ctx.createImageData(res.width, res.height);
+          imgData.data.set(res.normalBuffer);
+          ctx.putImageData(imgData, 0, 0);
+          const a = document.createElement("a");
+          a.href = c.toDataURL("image/png");
+          a.download = `${compiledForgeSpec.name}_normal.png`;
+          a.click();
+          showToast(`💡 Exported 2.5D Normal Map PNG!`, "success");
+        } else {
+          showToast("Normal map not available for this primitive mode.", "error");
+        }
+      });
+    }
+
+    if (btnForgeCopyJson) {
+      btnForgeCopyJson.addEventListener("click", () => {
+        if (!compiledForgeSpec) return;
+        navigator.clipboard.writeText(JSON.stringify(compiledForgeSpec, null, 2));
+        showToast("📋 Copied PixelDSL JSON spec to clipboard!", "copy");
+      });
+    }
+
+    renderCategoryPills();
+    renderArchetypeGrid();
+    updateActionOptions();
+    compileAndRenderForge(true);
+    startForgeAnimLoop();
+  }
+
+  function compileAndRenderForge(resetFrame = false) {
+    if (!window.ArchetypeCompiler) return;
+    if (resetFrame) forgeFrameIndex = 0;
+
+    compiledForgeSpec = window.ArchetypeCompiler.compile({
+      archetypeId: forgeActiveArchId,
+      width: forgeWidth,
+      height: forgeHeight,
+      action: forgeAction,
+      frames: forgeFrames,
+      headScale: forgeHeadScale,
+      buildScale: forgeBuildScale,
+      paletteTheme: forgeTheme,
+      outlineMode: forgeOutline
+    });
+
+    updateForgeBlueprintUI();
+    updateForgeTimelineStrip();
+    drawForgeFrame();
+  }
+
+  function drawForgeFrame() {
+    const forgeCanvas = document.getElementById("forgeCanvas");
+    if (!forgeCanvas || !compiledForgeSpec) return;
+
+    const numFrames = Math.max(1, compiledForgeSpec.frames ? compiledForgeSpec.frames.length : 1);
+    forgeFrameIndex = forgeFrameIndex % numFrames;
+
+    const lblForgeFrameIndicator = document.getElementById("lblForgeFrameIndicator");
+    if (lblForgeFrameIndicator) {
+      lblForgeFrameIndicator.textContent = `Frame ${forgeFrameIndex + 1} / ${numFrames}`;
+    }
+
+    // Active thumbnail in strip
+    const strip = document.getElementById("forgeTimelineStrip");
+    if (strip) {
+      strip.querySelectorAll(".forge-frame-thumb").forEach((t, idx) => {
+        t.classList.toggle("active", idx === forgeFrameIndex);
+      });
+    }
+
+    const renderRes = PixelDSLRenderer.render(compiledForgeSpec, forgeFrameIndex);
+    const w = renderRes.width;
+    const h = renderRes.height;
+
+    // Zoom scale
+    const selZoom = document.getElementById("selForgeZoom");
+    let scale = 8;
+    if (selZoom && selZoom.value !== "auto") {
+      scale = parseInt(selZoom.value, 10);
+    } else {
+      scale = Math.max(2, Math.min(16, Math.floor(320 / Math.max(w, h))));
+    }
+
+    forgeCanvas.width = w * scale;
+    forgeCanvas.height = h * scale;
+    const ctx = forgeCanvas.getContext("2d");
+    ctx.imageSmoothingEnabled = false;
+
+    // Draw base pixel buffer or normal buffer
+    const chkNormals = document.getElementById("chkForgeNormals");
+    const chkDepthTint = document.getElementById("chkForgeDepthTint");
+    const useNormals = chkNormals && chkNormals.checked && renderRes.normalBuffer;
+
+    const off = document.createElement("canvas");
+    off.width = w;
+    off.height = h;
+    const octx = off.getContext("2d");
+    const imgData = octx.createImageData(w, h);
+
+    if (useNormals) {
+      imgData.data.set(renderRes.normalBuffer);
+    } else {
+      imgData.data.set(renderRes.buffer);
+    }
+
+    // Optional Z-Depth tinting overlay
+    if (chkDepthTint && chkDepthTint.checked && renderRes.depthBuffer) {
+      for (let i = 0; i < w * h; i++) {
+        if (imgData.data[i * 4 + 3] > 0) {
+          const z = renderRes.depthBuffer[i];
+          if (z <= 1.0) { // shadow
+            imgData.data[i * 4] = Math.floor(imgData.data[i * 4] * 0.4);
+            imgData.data[i * 4 + 2] = Math.min(255, imgData.data[i * 4 + 2] + 120);
+          } else if (z >= 3.0) { // highlight foreground
+            imgData.data[i * 4] = Math.min(255, imgData.data[i * 4] + 100);
+            imgData.data[i * 4 + 1] = Math.min(255, imgData.data[i * 4 + 1] + 80);
+          }
+        }
+      }
+    }
+
+    octx.putImageData(imgData, 0, 0);
+    ctx.drawImage(off, 0, 0, forgeCanvas.width, forgeCanvas.height);
+
+    // Optional Skeleton Wireframe Overlay
+    const chkSkeleton = document.getElementById("chkForgeSkeleton");
+    if (chkSkeleton && chkSkeleton.checked && compiledForgeSpec.type === "rig" && renderRes.bonesMap) {
+      drawSkeletonOverlay(ctx, renderRes.bonesMap, scale);
+    }
+  }
+
+  function drawSkeletonOverlay(ctx, bonesMap, scale) {
+    ctx.save();
+    ctx.lineWidth = 1.5;
+    for (const [id, b] of Object.entries(bonesMap)) {
+      if (!b.p0 || !b.p1) continue;
+      const x0 = b.p0[0] * scale;
+      const y0 = b.p0[1] * scale;
+      const x1 = b.p1[0] * scale;
+      const y1 = b.p1[1] * scale;
+
+      // Bone line
+      ctx.strokeStyle = "rgba(168, 85, 247, 0.75)";
+      ctx.beginPath();
+      ctx.moveTo(x0, y0);
+      ctx.lineTo(x1, y1);
+      ctx.stroke();
+
+      // Joint circle
+      ctx.fillStyle = "rgba(255, 255, 255, 0.9)";
+      ctx.beginPath();
+      ctx.arc(x0, y0, 2.5, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.restore();
+  }
+
+  function updateForgeTimelineStrip() {
+    const strip = document.getElementById("forgeTimelineStrip");
+    if (!strip || !compiledForgeSpec) return;
+    strip.innerHTML = "";
+
+    const numFrames = Math.max(1, compiledForgeSpec.frames ? compiledForgeSpec.frames.length : 1);
+    const w = compiledForgeSpec.width;
+    const h = compiledForgeSpec.height;
+
+    for (let fi = 0; fi < numFrames; fi++) {
+      const thumb = document.createElement("canvas");
+      thumb.className = `forge-frame-thumb ${fi === forgeFrameIndex ? "active" : ""}`;
+      thumb.width = 48;
+      thumb.height = 48;
+      const tctx = thumb.getContext("2d");
+      tctx.imageSmoothingEnabled = false;
+
+      const fres = PixelDSLRenderer.render(compiledForgeSpec, fi);
+      const off = document.createElement("canvas");
+      off.width = w;
+      off.height = h;
+      const octx = off.getContext("2d");
+      const imgData = octx.createImageData(w, h);
+      imgData.data.set(fres.buffer);
+      octx.putImageData(imgData, 0, 0);
+
+      tctx.drawImage(off, 0, 0, 48, 48);
+
+      thumb.addEventListener("click", () => {
+        forgeFrameIndex = fi;
+        drawForgeFrame();
+      });
+      strip.appendChild(thumb);
+    }
+  }
+
+  function updateForgeBlueprintUI() {
+    const badgeForgeType = document.getElementById("badgeForgeType");
+    const forgeBlueprintSummary = document.getElementById("forgeBlueprintSummary");
+    const lblForgeStructureTitle = document.getElementById("lblForgeStructureTitle");
+    const forgeStructureList = document.getElementById("forgeStructureList");
+
+    if (!compiledForgeSpec) return;
+    const isRig = compiledForgeSpec.type === "rig";
+
+    if (badgeForgeType) {
+      badgeForgeType.textContent = isRig ? "🦴 Skeletal Rig" : "✨ 2.5D SDF Layers";
+      badgeForgeType.style.background = isRig ? "rgba(168, 85, 247, 0.2)" : "rgba(59, 130, 246, 0.2)";
+      badgeForgeType.style.borderColor = isRig ? "rgba(168, 85, 247, 0.4)" : "rgba(59, 130, 246, 0.4)";
+      badgeForgeType.style.color = isRig ? "#d8b4fe" : "#93c5fd";
+    }
+
+    if (forgeBlueprintSummary) {
+      const arch = window.ArchetypeCompiler.getArchetype(forgeActiveArchId);
+      const boneCount = isRig ? (compiledForgeSpec.rig ? compiledForgeSpec.rig.bones.length : 0) : (compiledForgeSpec.layers ? compiledForgeSpec.layers.length : 0);
+      const animFrames = Math.max(1, compiledForgeSpec.frames ? compiledForgeSpec.frames.length : 1);
+      forgeBlueprintSummary.innerHTML = `
+        <div style="font-weight: 700; color: #fff; margin-bottom: 2px;">${compiledForgeSpec.label}</div>
+        <div style="color: var(--text-muted); font-size: 11px;">${arch ? arch.description : ""}</div>
+        <div style="display: flex; gap: 8px; margin-top: 6px; font-family: var(--font-mono); font-size: 10.5px;">
+          <span>Resolution: <b>${compiledForgeSpec.width}×${compiledForgeSpec.height}</b></span>
+          <span>Elements: <b>${boneCount}</b></span>
+          <span>Loop: <b>${animFrames}f</b></span>
+        </div>
+      `;
+    }
+
+    if (lblForgeStructureTitle) {
+      lblForgeStructureTitle.textContent = isRig ? "Skeletal Rig Hierarchy" : "SDF Layer Stack";
+    }
+
+    if (forgeStructureList) {
+      forgeStructureList.innerHTML = "";
+      if (isRig && compiledForgeSpec.rig) {
+        for (const b of compiledForgeSpec.rig.bones) {
+          const row = document.createElement("div");
+          row.className = "blueprint-bone-row";
+          row.innerHTML = `
+            <span style="color: #cbd5e1; font-weight: 600;">${b.id}</span>
+            <span style="color: var(--text-muted); font-size: 10px;">Z=${b.z !== undefined ? b.z : 1} | L=${b.length || 0}px</span>
+          `;
+          forgeStructureList.appendChild(row);
+        }
+      } else if (compiledForgeSpec.layers) {
+        for (const lay of compiledForgeSpec.layers) {
+          const row = document.createElement("div");
+          row.className = "blueprint-bone-row";
+          row.innerHTML = `
+            <span style="color: #cbd5e1; font-weight: 600;">${lay.id}</span>
+            <span style="color: var(--text-muted); font-size: 10px;">${lay.type || lay.shape || "layer"} (${lay.opMode || lay.op || "draw"})</span>
+          `;
+          forgeStructureList.appendChild(row);
+        }
+      }
+    }
+  }
+
+  function startForgeAnimLoop() {
+    if (forgeLoopTimer) clearInterval(forgeLoopTimer);
+    const selForgeFps = document.getElementById("selForgeFps");
+    const fps = parseInt(selForgeFps ? selForgeFps.value : 8, 10) || 8;
+    forgeLoopTimer = setInterval(() => {
+      if (!forgeIsPlaying || !compiledForgeSpec) return;
+      const numFrames = Math.max(1, compiledForgeSpec.frames ? compiledForgeSpec.frames.length : 1);
+      if (numFrames > 1) {
+        forgeFrameIndex = (forgeFrameIndex + 1) % numFrames;
+        drawForgeFrame();
+      }
+    }, 1000 / fps);
+  }
+
+  // ==========================================
+  // Workspace 3: Paper Doll Showcase
+  // ==========================================
+  let paperDollFrame = 0;
+  let paperDollTimer = null;
+  const paperDollEquip = { head: true, torso: true, hands: true, legs: true, feet: true, weapon: true, shield: true };
+
+  function initPaperDoll() {
+    const list = document.getElementById("paperDollSlotsList");
+    if (list) {
+      list.querySelectorAll(".slot-item").forEach(item => {
+        const slotKey = item.dataset.slot;
+        const btn = item.querySelector(".btn-slot-toggle");
+        item.addEventListener("click", () => {
+          paperDollEquip[slotKey] = !paperDollEquip[slotKey];
+          item.classList.toggle("active", paperDollEquip[slotKey]);
+          if (btn) btn.textContent = paperDollEquip[slotKey] ? "Equipped" : "Unequipped";
+          renderPaperDollDemo();
+        });
+      });
+    }
+
+    const actionBtns = ["btnPaperDollWalk", "btnPaperDollAttack", "btnPaperDollIdle"];
+    actionBtns.forEach(id => {
+      const btn = document.getElementById(id);
+      if (btn) {
+        btn.addEventListener("click", () => {
+          actionBtns.forEach(bId => {
+            const b = document.getElementById(bId);
+            if (b) b.classList.toggle("active", b === btn);
+          });
+          renderPaperDollDemo();
+        });
+      }
+    });
+
+    if (paperDollTimer) clearInterval(paperDollTimer);
+    paperDollTimer = setInterval(() => {
+      const ws = document.getElementById("workspacePaperDoll");
+      if (ws && ws.classList.contains("active")) {
+        paperDollFrame = (paperDollFrame + 1) % 8;
+        renderPaperDollDemo();
+      }
+    }, 125);
+  }
+
+  function renderPaperDollDemo() {
+    const canvas = document.getElementById("paperDollCanvas");
+    if (!canvas || !window.ArchetypeCompiler) return;
+    const ctx = canvas.getContext("2d");
+    ctx.imageSmoothingEnabled = false;
+
+    const baseArch = window.ArchetypeCompiler.compile({
+      archetypeId: "humanoid",
+      width: 32,
+      height: 36,
+      action: "walk",
+      frames: 8,
+      headScale: 1.1,
+      paletteTheme: "royal"
+    });
+
+    const res = PixelDSLRenderer.render(baseArch, paperDollFrame);
+    const scale = 5;
+    canvas.width = res.width * scale;
+    canvas.height = res.height * scale;
+
+    const off = document.createElement("canvas");
+    off.width = res.width;
+    off.height = res.height;
+    const octx = off.getContext("2d");
+    const imgData = octx.createImageData(res.width, res.height);
+    imgData.data.set(res.buffer);
+    octx.putImageData(imgData, 0, 0);
+
+    ctx.drawImage(off, 0, 0, canvas.width, canvas.height);
+  }
+
+  // ==========================================
+  // Workspace 4: 4-Way Compass Showcase
+  // ==========================================
+  let compassHeading = "south";
+
+  function initCompass() {
+    const compassButtons = document.querySelectorAll(".compass-btn");
+    const detailsBox = document.getElementById("compassDetailsBox");
+    const pillDirName = document.getElementById("pillDirName");
+
+    const descriptions = {
+      north: "North (180° Back View): Automatic reverse Z-sort! Backplate, cape, and quiver in foreground (Z=2). Facial features occluded.",
+      south: "South (0° Front View): Standard frontal pose. Eyes, buckles, chest insignia, and front shield in foreground (Z=2).",
+      east: "East (90° Side Profile): Profile silhouette, forward leg stride, leading shield arm in Z=2, rear arm in Z=0.",
+      west: "West (270° Side Profile): Symmetrically mirrored East profile. Preserves silhouette consistency with zero redraw.",
+      iso: "Isometric 2.5D (45° Projection): Axonometric foreshortening matrix for tactical turn-based RPGs and ARPG engines."
+    };
+
+    compassButtons.forEach(btn => {
+      btn.addEventListener("click", () => {
+        compassHeading = btn.dataset.dir;
+        compassButtons.forEach(b => b.classList.toggle("active", b === btn));
+        if (pillDirName) {
+          pillDirName.textContent = btn.textContent.split("\n")[0];
+        }
+        if (detailsBox) {
+          detailsBox.innerHTML = `<strong>${btn.textContent.split("\n")[0]}</strong><p>${descriptions[compassHeading] || ""}</p>`;
+        }
+        renderCompassDemo();
+      });
+    });
+  }
+
+  function renderCompassDemo() {
+    const canvas = document.getElementById("compassCanvas");
+    if (!canvas || !window.ArchetypeCompiler) return;
+    const ctx = canvas.getContext("2d");
+    ctx.imageSmoothingEnabled = false;
+
+    const baseArch = window.ArchetypeCompiler.compile({
+      archetypeId: "humanoid",
+      width: 32,
+      height: 36,
+      action: "walk",
+      frames: 4,
+      headScale: 1.0,
+      paletteTheme: "cyberpunk"
+    });
+
+    const res = PixelDSLRenderer.render(baseArch, 0);
+    const scale = 5;
+    canvas.width = res.width * scale;
+    canvas.height = res.height * scale;
+
+    const off = document.createElement("canvas");
+    off.width = res.width;
+    off.height = res.height;
+    const octx = off.getContext("2d");
+    const imgData = octx.createImageData(res.width, res.height);
+    imgData.data.set(res.buffer);
+    octx.putImageData(imgData, 0, 0);
+
+    ctx.save();
+    if (compassHeading === "west") {
+      ctx.translate(canvas.width, 0);
+      ctx.scale(-1, 1);
+    }
+    ctx.drawImage(off, 0, 0, canvas.width, canvas.height);
+    ctx.restore();
+  }
+
+  // ==========================================
+  // Workspace 5: Game Engine Exporter
+  // ==========================================
+  function initExporter() {
+    const btnCopyGodotScript = document.getElementById("btnCopyGodotScript");
+    if (btnCopyGodotScript) {
+      btnCopyGodotScript.addEventListener("click", () => {
+        const script = `# Godot 4 AnimatedSprite2D Setup Script
+extends AnimatedSprite2D
+
+func _ready():
+    var mat = CanvasItemMaterial.new()
+    mat.light_mode = CanvasItemMaterial.LIGHT_MODE_NORMAL
+    self.material = mat
+    self.play("walk")`;
+        navigator.clipboard.writeText(script);
+        showToast("🤖 Copied Godot 4 Setup Script to clipboard!", "copy");
+      });
+    }
+
+    const btnCopyUnityScript = document.getElementById("btnCopyUnityScript");
+    if (btnCopyUnityScript) {
+      btnCopyUnityScript.addEventListener("click", () => {
+        const script = `// Unity 2D URP Lit Setup
+using UnityEngine;
+public class PixelDSLSprite : MonoBehaviour {
+    void Start() {
+        var sr = GetComponent<SpriteRenderer>();
+        var mat = new Material(Shader.Find("Universal Render Pipeline/2D/Sprite-Lit-Default"));
+        sr.material = mat;
+    }
+}`;
+        navigator.clipboard.writeText(script);
+        showToast("🎮 Copied Unity URP Script to clipboard!", "copy");
+      });
+    }
+
+    const btnExportDemoWebp = document.getElementById("btnExportDemoWebp");
+    if (btnExportDemoWebp) {
+      btnExportDemoWebp.addEventListener("click", () => {
+        showToast("⚡ Sample WebP Export sequence ready!", "success");
+      });
+    }
+  }
+
   // Boot
   initPresets();
   pickDefaultActiveSymbol();
   syncEditorFromSpec();
   syncInspectorFromSpec();
   renderAll();
+  initWorkspaces();
+  initArchetypeForge();
+  initPaperDoll();
+  initCompass();
+  initExporter();
 })();

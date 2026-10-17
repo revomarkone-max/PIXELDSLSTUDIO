@@ -3,377 +3,945 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>PixelDSL Studio — 2D Pixel-Art Asset Generator &amp; Editor (8×8 – 128×128)</title>
+  <title>PixelDSL Studio v3.0 — Procedural 2D Pixel-Art &amp; Skeletal Rig Studio</title>
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-  <!-- Top Bar -->
+  <!-- Top Application Header -->
   <header class="topbar">
     <div class="brand">
-      <button id="btnToggleCodePanel" class="btn active" title="Show / Hide Code &amp; ASCII Grid Editor">
-        ⟨⟩ Code
-      </button>
-      <span class="brand-badge">v3.0 • 8×8..128×128</span>
+      <div class="brand-icon-box" title="PixelDSL Studio v3.0">
+        <svg class="brand-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polygon points="12 2 2 7 12 12 22 7 12 2" fill="rgba(99, 102, 241, 0.25)"></polygon>
+          <polyline points="2 17 12 22 22 17"></polyline>
+          <polyline points="2 12 12 17 22 12"></polyline>
+        </svg>
+      </div>
+      <div class="brand-title-wrap">
+        <span class="brand-title">PixelDSL</span>
+        <span class="brand-badge">v3.0</span>
+      </div>
       <span id="engineBadge" class="engine-badge" title="Active Generative Engine">🔲 Grid</span>
-      <span>PixelDSL Studio</span>
     </div>
 
-    <div class="topbar-controls">
-      <label for="presetSelect" style="color: var(--text-muted); font-size: 12px;">Sprite:</label>
-      <select id="presetSelect" title="Select sprite from library (presets.js)"></select>
+    <!-- Central Workspace Mode Navigation Tabs -->
+    <nav class="nav-workspace-tabs" id="navWorkspaceTabs">
+      <button class="workspace-tab active" data-workspace="studio" title="Canvas Studio — Pose skeletal bones, paint pixels, and inspect layers">
+        <span class="tab-icon">🎨</span>
+        <span class="tab-label">Studio</span>
+      </button>
+      <button class="workspace-tab" data-workspace="forge" title="Archetype Forge — Interactive parametric generator for creatures, trees, items, and VFX">
+        <span class="tab-icon">🧬</span>
+        <span class="tab-label">Archetype Forge</span>
+      </button>
+      <button class="workspace-tab" data-workspace="paperdoll" title="Modular Paper Doll &amp; Equipment (WIP)">
+        <span class="tab-icon">🥋</span>
+        <span class="tab-label">Paper Doll</span>
+        <span class="tab-badge-wip">v3.2 WIP</span>
+      </button>
+      <button class="workspace-tab" data-workspace="compass" title="4-Way &amp; 8-Way Directional Compass (WIP)">
+        <span class="tab-icon">🧭</span>
+        <span class="tab-label">4-Way Compass</span>
+        <span class="tab-badge-wip">v3.3 WIP</span>
+      </button>
+      <button class="workspace-tab" data-workspace="exporter" title="Game Engine Exporter for Godot 4, Unity &amp; Unreal (WIP)">
+        <span class="tab-icon">📦</span>
+        <span class="tab-label">Engine Export</span>
+        <span class="tab-badge-wip">v3.2 WIP</span>
+      </button>
+    </nav>
 
-      <button id="btnNewSprite" class="btn" title="Create a clean blank sprite canvas">
-        📄 + New
+    <!-- Topbar Quick Actions -->
+    <div class="topbar-actions">
+      <button id="btnOpenMutateModal" class="btn btn-sm btn-accent-outline" title="100% LLM-Free Procedural Archetype Generator &amp; 3×3 Evolutionary Genome Mutator">
+        🎲 Mutator
+      </button>
+      <button id="btnOpenPromptModal" class="btn btn-sm" title="Generate LLM Prompt or copy SKILL.md CLI instructions">
+        📋 Prompt
+      </button>
+      <button id="btnToggleCodePanel" class="btn btn-sm active" title="Show / Hide Code &amp; JSON Editor">
+        ⟨⟩ Code
       </button>
 
-      <button id="btnOpenMutateModal" class="btn btn-accent-outline" title="100% LLM-Free Procedural Archetype Generator &amp; 3×3 Evolutionary Genome Mutator">
-        🎲 Generate / Mutate
-      </button>
-
-      <button id="btnOpenPromptModal" class="btn" title="Generate LLM Prompt or copy SKILL.md CLI instructions">
-        📋 Prompt / SKILL.md
-      </button>
-
-      <button id="btnExport1x" class="btn btn-primary" title="Download current frame PNG at native 1:1 resolution">
-        💾 PNG (1:1)
-      </button>
-      <button id="btnExportNormal" class="btn" title="Download tangent-space Normal Map PNG (_normal.png) for 2D game lighting in Godot/Unity">
-        💡 Normal Map
-      </button>
-      <button id="btnExportSheet" class="btn" title="Download horizontal Sprite Sheet PNG containing all animation frames">
-        🎞️ Sprite Sheet
-      </button>
-      <button id="btnExportUpscaled" class="btn" title="Download upscaled crisp nearest-neighbor PNG preview">
-        🖼️ Preview
-      </button>
+      <div class="export-btn-group">
+        <button id="btnExport1x" class="btn btn-sm btn-primary" title="Download current frame PNG at native 1:1 resolution">
+          💾 PNG
+        </button>
+        <button id="btnExportNormal" class="btn btn-sm" title="Download tangent-space Normal Map PNG (_normal.png) for 2D lighting in Godot/Unity">
+          💡 Normal
+        </button>
+        <button id="btnExportSheet" class="btn btn-sm" title="Download horizontal Sprite Sheet PNG containing all animation frames">
+          🎞️ Sheet
+        </button>
+        <button id="btnExportUpscaled" class="btn btn-sm" title="Download upscaled crisp nearest-neighbor PNG preview">
+          🖼️ Preview
+        </button>
+      </div>
     </div>
   </header>
 
-  <!-- Main Workspace -->
-  <main class="workspace">
-    <!-- LEFT DRAWER: PixelDSL Specification Editor (Collapsible) -->
-    <section id="panelLeft" class="panel panel-left">
-      <div class="panel-header">
-        <span style="font-size: 12px; font-weight: 600; color: var(--text-bright); display: flex; align-items: center; gap: 6px;">
-          ⟨⟩ PixelDSL Specification
-        </span>
-        <button id="btnCollapseCode" class="btn btn-sm" title="Hide Code Panel">◀ Hide</button>
-      </div>
-
-      <div class="editor-toolbar">
-        <span id="editorMeta" style="font-family: var(--font-mono); font-size: 11px; color: var(--text-muted);">
-          32×32 px
-        </span>
-      </div>
-
-      <div class="editor-container">
-        <textarea
-          id="codeEditor"
-          class="code-textarea"
-          spellcheck="false"
-          placeholder="Paste PixelDSL JSON specification here..."
-        ></textarea>
-      </div>
-
-      <div class="status-bar">
-        <span id="editorStatus" class="status-ok">✓ Valid DSL</span>
-        <span id="aiDiagnosticsBadge" style="color: var(--text-muted);">Fill: --%</span>
-      </div>
-    </section>
-
-    <!-- CENTER VIEWPORT: Interactive Canvas + Visual Frame Timeline -->
-    <section class="panel-center">
-      <div class="canvas-toolbar">
-        <div class="tool-group">
-          <button class="tool-btn active" data-tool="pose" id="toolPose" title="Bone Posing — Drag joints on canvas to rotate bones interactively">
-            🦴 Pose
-          </button>
-          <button class="tool-btn" data-tool="inspect" id="toolInspect" title="Inspect pixel color, normal, and depth (Shortcut: S)">
-            🔍 Inspect
-          </button>
-          <button class="tool-btn" data-tool="light" id="toolLight" title="Dynamic 3D Light — Drag on canvas to change surface normal lighting direction">
-            💡 3D Light
-          </button>
-
-          <span style="width: 1px; height: 18px; background: var(--border); margin: 0 4px;"></span>
-
-          <button id="btnUndo" class="btn btn-sm" disabled title="Undo last action (Shortcut: Alt+Z)">
-            ↶ Undo <span class="kbd">Alt+Z</span>
-          </button>
-          <button id="btnRedo" class="btn btn-sm" disabled title="Redo action (Shortcut: Alt+Y)">
-            ↷ Redo
-          </button>
-        </div>
-
-        <div class="tool-group" style="gap: 9px;">
-          <label style="display: inline-flex; align-items: center; gap: 4px; cursor: pointer; font-size: 12px;">
-            <input type="checkbox" id="chkGridLines" checked />
-            <span>Grid</span>
-          </label>
-          <label style="display: inline-flex; align-items: center; gap: 4px; cursor: pointer; font-size: 12px;">
-            <input type="checkbox" id="chkCenterAxes" />
-            <span>Axes</span>
-          </label>
-          <label style="display: inline-flex; align-items: center; gap: 4px; cursor: pointer; font-size: 12px;" title="Preview 2.5D Tangent-Space Normal Map (SDF + Felzenszwalb EDT)">
-            <input type="checkbox" id="chkNormalMap" />
-            <span>💡 Normals</span>
-          </label>
-
-          <select id="zoomSelect" title="Canvas Zoom">
-            <option value="auto">Zoom: Auto</option>
-            <option value="1">1x (100%)</option>
-            <option value="4">4x</option>
-            <option value="8">8x</option>
-            <option value="12">12x</option>
-            <option value="16">16x</option>
-            <option value="24">24x</option>
-          </select>
-
-          <select id="bgSelect" title="Canvas Backdrop">
-            <option value="checker">BG: Checker</option>
-            <option value="dark">BG: Dark</option>
-            <option value="light">BG: Light</option>
-            <option value="grass">BG: Grass</option>
-            <option value="water">BG: Water</option>
-          </select>
-        </div>
-      </div>
-
-      <div id="viewportArea" class="viewport-area">
-        <div id="canvasWrapper" class="canvas-wrapper bg-checker">
-          <canvas id="mainCanvas" width="256" height="256"></canvas>
-        </div>
-      </div>
-
-      <!-- Visual Animation Timeline & Frame Strip -->
-      <div class="timeline-bar">
-        <div class="timeline-controls">
-          <button id="btnPlayAnim" class="btn btn-sm" title="Play / Pause frame animation">▶ Play</button>
-          <select id="selAnimFps" title="Playback Speed (FPS)">
-            <option value="4">4 FPS</option>
-            <option value="6" selected>6 FPS</option>
-            <option value="10">10 FPS</option>
-            <option value="14">14 FPS</option>
-          </select>
-          <label style="display: inline-flex; align-items: center; gap: 4px; cursor: pointer; font-size: 11.5px; color: var(--text-muted);" title="Show previous frame ghost overlay">
-            <input type="checkbox" id="chkOnionSkin" />
-            <span>🧅 Onion</span>
-          </label>
-        </div>
-
-        <div id="timelineFrames" class="timeline-frames"></div>
-
-        <div class="timeline-controls">
-          <button id="btnAddFrame" class="btn btn-sm" title="Add / Duplicate animation frame">+ Frame</button>
-          <button id="btnDeleteFrame" class="btn btn-sm" title="Delete current extra frame">🗑</button>
-        </div>
-      </div>
-
-      <div class="status-bar">
-        <span id="cursorInfo">Hover over canvas to inspect pixels | Shortcuts: [D] Pencil, [E] Eraser, [S] Eyedropper, [G] Bucket, [Alt+Z] Undo</span>
-        <span id="canvasDimInfo" style="color: var(--text-muted);">32×32 px</span>
-      </div>
-    </section>
-
-    <!-- RIGHT SIDEBAR: Layers, Palette, and Collapsible Settings -->
-    <aside class="panel panel-right">
-      <!-- 0A. SKELETAL RIG INSPECTOR (Visible when current sprite is type: "rig") -->
-      <details id="groupRigInspector" class="inspector-group" open style="display: none;">
-        <summary>
-          <span>🦴 Skeletal Rig Hierarchy (<span id="boneCountBadge">0</span>)</span>
-        </summary>
-        <div class="inspector-body">
-          <div style="display: flex; gap: 4px; margin-bottom: 7px;">
-            <button id="btnToggleBonesDebug" class="btn btn-sm active" style="flex: 1; justify-content: center;" title="Toggle bone wireframe skeleton overlay on canvas">🦴 Skeleton Overlay</button>
-            <button id="btnResetFramePose" class="btn btn-sm" title="Reset all bone deltas to 0 for current frame">↺ Reset Frame</button>
-          </div>
-          <div id="bonesList" class="layers-list"></div>
-        </div>
-      </details>
-
-      <!-- 0B. PROCEDURAL GLSL / MATH SHADER CONTROLS (Visible when current sprite is type: "shader") -->
-      <details id="groupShaderInspector" class="inspector-group" open style="display: none;">
-        <summary>
-          <span>✨ GLSL / Math Shader Controls</span>
-        </summary>
-        <div class="inspector-body">
-          <div class="control-row" style="margin-bottom: 6px;">
-            <span style="font-size: 11.5px; color: var(--text-muted);">Shader Type:</span>
-            <select id="selShaderType" style="flex: 1;">
-              <option value="portal">🌀 Vortex Portal</option>
-              <option value="fire">🔥 Fire Elemental</option>
-              <option value="custom">⚡ Custom Math GLSL</option>
-            </select>
-          </div>
-          <div class="control-row" style="margin-bottom: 6px;">
-            <span style="font-size: 11.5px; color: var(--text-muted);">Dithering:</span>
-            <select id="selShaderDither" style="flex: 1;">
-              <option value="bayer4x4">Bayer 4×4 Matrix</option>
-              <option value="bayer2x2">Bayer 2×2 Coarse</option>
-              <option value="none">None (Posterized)</option>
-            </select>
-          </div>
-          <div class="control-row" style="margin-bottom: 6px;">
-            <span style="font-size: 11.5px; color: var(--text-muted);">Dither Str:</span>
-            <input type="range" id="inputShaderDitherStrength" min="0" max="40" value="16" style="width: 90px; accent-color: var(--accent);" />
-            <span id="lblShaderDitherStrength" style="font-family: var(--font-mono); font-size: 11px;">0.16</span>
-          </div>
-          <div class="control-row">
-            <span style="font-size: 11.5px; color: var(--text-muted);">Loop Frames:</span>
-            <select id="selShaderFrames" style="width: 85px;">
-              <option value="4">4 frames</option>
-              <option value="8" selected>8 frames</option>
-              <option value="12">12 frames</option>
-              <option value="16">16 frames</option>
-            </select>
-            <button id="btnRecompileShader" class="btn btn-sm btn-primary" style="flex: 1; justify-content: center;" title="Recompile shader">⚡ Recompile</button>
-          </div>
-        </div>
-      </details>
-
-      <!-- 1. LAYERS STACK (Open by default) -->
-      <details id="groupLayersInspector" class="inspector-group" open>
-        <summary>
-          <span>Layers Stack (<span id="layerCountBadge">0</span>)</span>
-        </summary>
-        <div class="inspector-body">
-          <div style="display: flex; gap: 4px; margin-bottom: 7px;">
-            <button id="btnAddEllipseLayer" class="btn btn-sm" style="flex: 1; justify-content: center;" title="Add new Ellipse layer">+ Ellipse</button>
-            <button id="btnAddRectLayer" class="btn btn-sm" style="flex: 1; justify-content: center;" title="Add new Rect layer">+ Rect</button>
-            <select id="selAddAdvancedLayer" title="Add Quilez 2D SDF Primitive Layer" style="padding: 2px 5px; font-size: 11px;">
-              <option value="">+ SDF Shape...</option>
-              <option value="vesica">Vesica (Blade/Leaf)</option>
-              <option value="uneven_capsule">Uneven Capsule (Limb)</option>
-              <option value="moon">Moon (Crescent/Horn)</option>
-              <option value="star">Star (Emblem/Crown)</option>
-              <option value="ngon">N-Gon (Crystal/Gem)</option>
-              <option value="bezier_sdf">Bezier SDF (Curved Limb)</option>
-            </select>
-            <button id="btnShowAllLayers" class="btn btn-sm" title="Unhide all layers">👁</button>
-          </div>
-          <div id="layersList" class="layers-list"></div>
-        </div>
-      </details>
-
-      <!-- 2. PALETTE & COLOR RAMPS (Open by default) -->
-      <details class="inspector-group" open>
-        <summary>
-          <span>Palette &amp; Ramps</span>
-        </summary>
-        <div class="inspector-body">
-          <div style="display: flex; gap: 5px; margin-bottom: 8px;">
-            <button id="btnAddRamp" class="btn btn-sm" style="flex: 1; justify-content: center;" title="Generate 4 harmonious tones (base, highlight, shadow, outline) from 1 color">+ Auto Ramp</button>
-            <button id="btnAddSymbol" class="btn btn-sm" style="flex: 1; justify-content: center;" title="Add single character symbol to palette">+ Symbol</button>
+  <!-- Application Main Container with Workspace Switcher -->
+  <main class="app-main">
+    
+    <!-- ==========================================
+         WORKSPACE 1: CANVAS STUDIO (Primary Editor)
+         ========================================== -->
+    <div id="workspaceStudio" class="workspace-view active">
+      <div class="workspace">
+        <!-- LEFT DRAWER: PixelDSL Specification Editor (Collapsible) -->
+        <section id="panelLeft" class="panel panel-left">
+          <div class="panel-header">
+            <span style="font-size: 12px; font-weight: 600; color: var(--text-bright); display: flex; align-items: center; gap: 6px;">
+              ⟨⟩ PixelDSL Specification
+            </span>
+            <button id="btnCollapseCode" class="btn btn-sm" title="Hide Code Panel">◀ Hide</button>
           </div>
 
-          <div class="control-row" style="margin-bottom: 8px;">
-            <span style="font-size: 11.5px; color: var(--text-muted);">Preset:</span>
-            <select id="selPalettePreset" style="flex: 1;">
-              <option value="">Custom Palette</option>
-              <option value="endesga32">Endesga 32 (Pixel Standard)</option>
-              <option value="pico8">PICO-8 (16 Colors)</option>
-              <option value="gameboy">GameBoy (4 Greens)</option>
-            </select>
+          <div class="editor-toolbar">
+            <span id="editorMeta" style="font-family: var(--font-mono); font-size: 11px; color: var(--text-muted);">
+              32×32 px
+            </span>
           </div>
 
-          <div id="paletteList" class="palette-list"></div>
-        </div>
-      </details>
-
-      <!-- 3. CANVAS SIZE & PREVIEW (Collapsed by default to reduce clutter) -->
-      <details class="inspector-group">
-        <summary>
-          <span>Size (8×8 – 128×128) &amp; Preview</span>
-        </summary>
-        <div class="inspector-body">
-          <div id="sizePills" class="size-pills">
-            <div class="size-pill" data-w="8" data-h="8">8×8</div>
-            <div class="size-pill" data-w="16" data-h="16">16×16</div>
-            <div class="size-pill" data-w="24" data-h="24">24×24</div>
-            <div class="size-pill active" data-w="32" data-h="32">32×32</div>
-            <div class="size-pill" data-w="48" data-h="48">48×48</div>
-            <div class="size-pill" data-w="64" data-h="64">64×64</div>
-            <div class="size-pill" data-w="96" data-h="96">96×96</div>
-            <div class="size-pill" data-w="128" data-h="128">128×128</div>
+          <div class="editor-container">
+            <textarea
+              id="codeEditor"
+              class="code-textarea"
+              spellcheck="false"
+              placeholder="Paste PixelDSL JSON specification here..."
+            ></textarea>
           </div>
 
-          <div class="size-custom-row">
-            <input type="number" id="inputWidth" min="8" max="128" value="32" title="Width (8..128)" />
-            <span style="color: var(--text-muted);">×</span>
-            <input type="number" id="inputHeight" min="8" max="128" value="32" title="Height (8..128)" />
-            <button id="btnApplySize" class="btn btn-sm" style="flex: 1; justify-content: center;">Apply</button>
+          <div class="status-bar">
+            <span id="editorStatus" class="status-ok">✓ Valid DSL</span>
+            <span id="aiDiagnosticsBadge" style="color: var(--text-muted);">Fill: --%</span>
           </div>
+        </section>
 
-          <div class="preview-boxes">
-            <div class="preview-item">
-              <canvas id="preview1x" class="preview-canvas" width="32" height="32"></canvas>
-              <span>1:1 Native</span>
+        <!-- CENTER VIEWPORT: Interactive Canvas + Visual Frame Timeline -->
+        <section class="panel-center">
+          <!-- Canvas Top Sub-Toolbar -->
+          <div class="canvas-toolbar">
+            <!-- Sprite Selection & Creation -->
+            <div class="tool-group" style="border-right: 1px solid var(--border); padding-right: 8px;">
+              <label for="presetSelect" style="color: var(--text-muted); font-size: 11.5px; font-weight: 500;">Sprite:</label>
+              <select id="presetSelect" title="Select sprite from library (presets.js)" style="max-width: 220px;"></select>
+              <button id="btnNewSprite" class="btn btn-sm" title="Create clean blank sprite canvas">+ New</button>
             </div>
-            <div class="preview-item">
-              <canvas id="previewTiled" class="preview-canvas" width="96" height="96"></canvas>
-              <span>3×3 Tiled</span>
+
+            <!-- Pose / Inspect / Light Tools -->
+            <div class="tool-group">
+              <button class="tool-btn active" data-tool="pose" id="toolPose" title="Bone Posing — Drag joints on canvas to rotate bones interactively">
+                🦴 Pose
+              </button>
+              <button class="tool-btn" data-tool="inspect" id="toolInspect" title="Inspect pixel color, normal, and depth (Shortcut: S)">
+                🔍 Inspect
+              </button>
+              <button class="tool-btn" data-tool="light" id="toolLight" title="Dynamic 3D Light — Drag on canvas to change surface normal lighting direction">
+                💡 3D Light
+              </button>
+
+              <span style="width: 1px; height: 18px; background: var(--border); margin: 0 4px;"></span>
+
+              <button id="btnUndo" class="btn btn-sm" disabled title="Undo last action (Shortcut: Alt+Z)">
+                ↶ Undo <span class="kbd">Alt+Z</span>
+              </button>
+              <button id="btnRedo" class="btn btn-sm" disabled title="Redo action (Shortcut: Alt+Y)">
+                ↷ Redo
+              </button>
+            </div>
+
+            <!-- View Options & Overlays -->
+            <div class="tool-group" style="gap: 8px; margin-left: auto;">
+              <label style="display: inline-flex; align-items: center; gap: 4px; cursor: pointer; font-size: 11.5px;">
+                <input type="checkbox" id="chkGridLines" checked />
+                <span>Grid</span>
+              </label>
+              <label style="display: inline-flex; align-items: center; gap: 4px; cursor: pointer; font-size: 11.5px;">
+                <input type="checkbox" id="chkCenterAxes" />
+                <span>Axes</span>
+              </label>
+              <label style="display: inline-flex; align-items: center; gap: 4px; cursor: pointer; font-size: 11.5px;" title="Preview 2.5D Tangent-Space Normal Map (SDF + Felzenszwalb EDT)">
+                <input type="checkbox" id="chkNormalMap" />
+                <span>💡 Normals</span>
+              </label>
+
+              <select id="zoomSelect" title="Canvas Zoom" style="font-size: 11.5px; padding: 3px 6px;">
+                <option value="auto">Zoom: Auto</option>
+                <option value="1">1x (100%)</option>
+                <option value="4">4x</option>
+                <option value="8">8x</option>
+                <option value="12">12x</option>
+                <option value="16">16x</option>
+                <option value="24">24x</option>
+              </select>
+
+              <select id="bgSelect" title="Canvas Backdrop" style="font-size: 11.5px; padding: 3px 6px;">
+                <option value="checker">BG: Checker</option>
+                <option value="dark">BG: Dark</option>
+                <option value="light">BG: Light</option>
+                <option value="grass">BG: Grass</option>
+                <option value="water">BG: Water</option>
+              </select>
             </div>
           </div>
-        </div>
-      </details>
 
-      <!-- 4. POST-PROCESSING & SYMMETRY (Collapsed by default to reduce clutter) -->
-      <details class="inspector-group">
-        <summary>
-          <span>Modifiers &amp; Post-FX</span>
-        </summary>
-        <div class="inspector-body">
-          <div class="control-row">
-            <span>Symmetry:</span>
-            <select id="selSymmetry">
-              <option value="none">None</option>
-              <option value="horizontal">Horizontal (↔)</option>
-              <option value="vertical">Vertical (↕)</option>
-              <option value="quad">Quad 4-Axis (✥)</option>
+          <!-- Canvas Viewport -->
+          <div id="viewportArea" class="viewport-area">
+            <div id="canvasWrapper" class="canvas-wrapper bg-checker">
+              <canvas id="mainCanvas" width="256" height="256"></canvas>
+            </div>
+          </div>
+
+          <!-- Visual Animation Timeline & Frame Strip -->
+          <div class="timeline-bar">
+            <div class="timeline-controls">
+              <button id="btnPlayAnim" class="btn btn-sm" title="Play / Pause frame animation">▶ Play</button>
+              <select id="selAnimFps" title="Playback Speed (FPS)">
+                <option value="4">4 FPS</option>
+                <option value="6" selected>6 FPS</option>
+                <option value="8">8 FPS</option>
+                <option value="10">10 FPS</option>
+                <option value="14">14 FPS</option>
+              </select>
+              <label style="display: inline-flex; align-items: center; gap: 4px; cursor: pointer; font-size: 11.5px; color: var(--text-muted);" title="Show previous frame ghost overlay">
+                <input type="checkbox" id="chkOnionSkin" />
+                <span>🧅 Onion</span>
+              </label>
+            </div>
+
+            <div id="timelineFrames" class="timeline-frames"></div>
+
+            <div class="timeline-controls">
+              <button id="btnAddFrame" class="btn btn-sm" title="Add / Duplicate animation frame">+ Frame</button>
+              <button id="btnDeleteFrame" class="btn btn-sm" title="Delete current extra frame">🗑</button>
+            </div>
+          </div>
+
+          <!-- Bottom Status Bar -->
+          <div class="status-bar">
+            <span id="cursorInfo">Hover over canvas to inspect pixels | Tools: [Pose] Drag joint circles, [Inspect] Eyedropper, [3D Light] Dynamic normal lighting</span>
+            <span id="canvasDimInfo" style="color: var(--text-muted);">32×32 px</span>
+          </div>
+        </section>
+
+        <!-- RIGHT SIDEBAR: Layers, Palette, and Collapsible Settings -->
+        <aside class="panel panel-right">
+          <!-- 0A. SKELETAL RIG INSPECTOR (Visible when current sprite is type: "rig") -->
+          <details id="groupRigInspector" class="inspector-group" open style="display: none;">
+            <summary>
+              <span>🦴 Skeletal Rig Hierarchy (<span id="boneCountBadge">0</span>)</span>
+            </summary>
+            <div class="inspector-body">
+              <div style="display: flex; gap: 4px; margin-bottom: 7px;">
+                <button id="btnToggleBonesDebug" class="btn btn-sm active" style="flex: 1; justify-content: center;" title="Toggle bone wireframe skeleton overlay on canvas">🦴 Skeleton Overlay</button>
+                <button id="btnResetFramePose" class="btn btn-sm" title="Reset all bone deltas to 0 for current frame">↺ Reset Frame</button>
+              </div>
+              <div id="bonesList" class="layers-list"></div>
+            </div>
+          </details>
+
+          <!-- 0B. PROCEDURAL GLSL / MATH SHADER CONTROLS (Visible when current sprite is type: "shader") -->
+          <details id="groupShaderInspector" class="inspector-group" open style="display: none;">
+            <summary>
+              <span>✨ GLSL / Math Shader Controls</span>
+            </summary>
+            <div class="inspector-body">
+              <div class="control-row" style="margin-bottom: 6px;">
+                <span style="font-size: 11.5px; color: var(--text-muted);">Shader Type:</span>
+                <select id="selShaderType" style="flex: 1;">
+                  <option value="portal">🌀 Vortex Portal</option>
+                  <option value="fire">🔥 Fire Elemental</option>
+                  <option value="custom">⚡ Custom Math GLSL</option>
+                </select>
+              </div>
+              <div class="control-row" style="margin-bottom: 6px;">
+                <span style="font-size: 11.5px; color: var(--text-muted);">Dithering:</span>
+                <select id="selShaderDither" style="flex: 1;">
+                  <option value="bayer4x4">Bayer 4×4 Matrix</option>
+                  <option value="bayer2x2">Bayer 2×2 Coarse</option>
+                  <option value="none">None (Posterized)</option>
+                </select>
+              </div>
+              <div class="control-row" style="margin-bottom: 6px;">
+                <span style="font-size: 11.5px; color: var(--text-muted);">Dither Str:</span>
+                <input type="range" id="inputShaderDitherStrength" min="0" max="40" value="16" style="width: 90px; accent-color: var(--accent);" />
+                <span id="lblShaderDitherStrength" style="font-family: var(--font-mono); font-size: 11px;">0.16</span>
+              </div>
+              <div class="control-row">
+                <span style="font-size: 11.5px; color: var(--text-muted);">Loop Frames:</span>
+                <select id="selShaderFrames" style="width: 85px;">
+                  <option value="4">4 frames</option>
+                  <option value="8" selected>8 frames</option>
+                  <option value="12">12 frames</option>
+                  <option value="16">16 frames</option>
+                </select>
+                <button id="btnRecompileShader" class="btn btn-sm btn-primary" style="flex: 1; justify-content: center;" title="Recompile shader">⚡ Recompile</button>
+              </div>
+            </div>
+          </details>
+
+          <!-- 1. LAYERS STACK (Open by default) -->
+          <details id="groupLayersInspector" class="inspector-group" open>
+            <summary>
+              <span>Layers Stack (<span id="layerCountBadge">0</span>)</span>
+            </summary>
+            <div class="inspector-body">
+              <div style="display: flex; gap: 4px; margin-bottom: 7px;">
+                <button id="btnAddEllipseLayer" class="btn btn-sm" style="flex: 1; justify-content: center;" title="Add new Ellipse layer">+ Ellipse</button>
+                <button id="btnAddRectLayer" class="btn btn-sm" style="flex: 1; justify-content: center;" title="Add new Rect layer">+ Rect</button>
+                <select id="selAddAdvancedLayer" title="Add Quilez 2D SDF Primitive Layer" style="padding: 2px 5px; font-size: 11px;">
+                  <option value="">+ SDF Shape...</option>
+                  <option value="vesica">Vesica (Blade/Leaf)</option>
+                  <option value="uneven_capsule">Uneven Capsule (Limb)</option>
+                  <option value="moon">Moon (Crescent/Horn)</option>
+                  <option value="star">Star (Emblem/Crown)</option>
+                  <option value="ngon">N-Gon (Crystal/Gem)</option>
+                  <option value="bezier_sdf">Bezier SDF (Curved Limb)</option>
+                </select>
+                <button id="btnShowAllLayers" class="btn btn-sm" title="Unhide all layers">👁</button>
+              </div>
+              <div id="layersList" class="layers-list"></div>
+            </div>
+          </details>
+
+          <!-- 2. PALETTE & COLOR RAMPS (Open by default) -->
+          <details class="inspector-group" open>
+            <summary>
+              <span>Palette &amp; Ramps</span>
+            </summary>
+            <div class="inspector-body">
+              <div style="display: flex; gap: 5px; margin-bottom: 8px;">
+                <button id="btnAddRamp" class="btn btn-sm" style="flex: 1; justify-content: center;" title="Generate 4 harmonious tones (base, highlight, shadow, outline) from 1 color">+ Auto Ramp</button>
+                <button id="btnAddSymbol" class="btn btn-sm" style="flex: 1; justify-content: center;" title="Add single character symbol to palette">+ Symbol</button>
+              </div>
+
+              <div class="control-row" style="margin-bottom: 8px;">
+                <span style="font-size: 11.5px; color: var(--text-muted);">Preset:</span>
+                <select id="selPalettePreset" style="flex: 1;">
+                  <option value="">Custom Palette</option>
+                  <option value="endesga32">Endesga 32 (Pixel Standard)</option>
+                  <option value="pico8">PICO-8 (16 Colors)</option>
+                  <option value="gameboy">GameBoy (4 Greens)</option>
+                </select>
+              </div>
+
+              <div id="paletteList" class="palette-list"></div>
+            </div>
+          </details>
+
+          <!-- 3. CANVAS SIZE & PREVIEW -->
+          <details class="inspector-group">
+            <summary>
+              <span>Size (8×8 – 128×128) &amp; Preview</span>
+            </summary>
+            <div class="inspector-body">
+              <div id="sizePills" class="size-pills">
+                <div class="size-pill" data-w="8" data-h="8">8×8</div>
+                <div class="size-pill" data-w="16" data-h="16">16×16</div>
+                <div class="size-pill" data-w="24" data-h="24">24×24</div>
+                <div class="size-pill active" data-w="32" data-h="32">32×32</div>
+                <div class="size-pill" data-w="48" data-h="48">48×48</div>
+                <div class="size-pill" data-w="64" data-h="64">64×64</div>
+                <div class="size-pill" data-w="96" data-h="96">96×96</div>
+                <div class="size-pill" data-w="128" data-h="128">128×128</div>
+              </div>
+
+              <div class="size-custom-row">
+                <input type="number" id="inputWidth" min="8" max="128" value="32" title="Width (8..128)" />
+                <span style="color: var(--text-muted);">×</span>
+                <input type="number" id="inputHeight" min="8" max="128" value="32" title="Height (8..128)" />
+                <button id="btnApplySize" class="btn btn-sm" style="flex: 1; justify-content: center;">Apply</button>
+              </div>
+
+              <div class="preview-boxes">
+                <div class="preview-item">
+                  <canvas id="preview1x" class="preview-canvas" width="32" height="32"></canvas>
+                  <span>1:1 Native</span>
+                </div>
+                <div class="preview-item">
+                  <canvas id="previewTiled" class="preview-canvas" width="96" height="96"></canvas>
+                  <span>3×3 Tiled</span>
+                </div>
+              </div>
+            </div>
+          </details>
+
+          <!-- 4. POST-PROCESSING & MODIFIERS -->
+          <details class="inspector-group">
+            <summary>
+              <span>Modifiers &amp; Post-FX</span>
+            </summary>
+            <div class="inspector-body">
+              <div class="control-row">
+                <span>Symmetry:</span>
+                <select id="selSymmetry">
+                  <option value="none">None</option>
+                  <option value="horizontal">Horizontal (↔)</option>
+                  <option value="vertical">Vertical (↕)</option>
+                  <option value="quad">Quad 4-Axis (✥)</option>
+                </select>
+              </div>
+
+              <div class="control-row">
+                <label style="display: flex; align-items: center; gap: 6px; cursor: pointer;">
+                  <input type="checkbox" id="chkAutoOutline" />
+                  <span>Auto-Outline (1px)</span>
+                </label>
+                <input type="color" id="inputOutlineColor" value="#14182e" class="color-swatch-input" title="Outer outline color" />
+              </div>
+
+              <div class="control-row">
+                <label style="display: flex; align-items: center; gap: 6px; cursor: pointer;">
+                  <input type="checkbox" id="chkAutoShading" />
+                  <span>Top-Left Shading</span>
+                </label>
+                <input
+                  type="range"
+                  id="inputShadingStrength"
+                  min="5"
+                  max="40"
+                  value="16"
+                  style="width: 90px; accent-color: var(--accent);"
+                  title="Auto pixel-art shading intensity"
+                />
+              </div>
+
+              <div class="control-row">
+                <label style="display: flex; align-items: center; gap: 6px; cursor: pointer;" title="Compute 3D spherical heightmap normals, quantized 5-tone Oklch pixel-art lighting, and Bayer 2×2 ordered dithering on shape layers">
+                  <input type="checkbox" id="chkSdfShading" />
+                  <span>3D SDF Volume Shading</span>
+                </label>
+              </div>
+
+              <div class="control-row">
+                <label style="display: flex; align-items: center; gap: 6px; cursor: pointer;" title="Selective Outlining (Sel-Out): tint outline pixels facing the top-left light source with the material's deep shadow tone">
+                  <input type="checkbox" id="chkSelOut" />
+                  <span>Selective Outlining (Sel-Out)</span>
+                </label>
+              </div>
+            </div>
+          </details>
+        </aside>
+      </div>
+    </div>
+
+
+    <!-- ==========================================
+         WORKSPACE 2: ARCHETYPE FORGE
+         ========================================== -->
+    <div id="workspaceForge" class="workspace-view">
+      <div class="forge-layout">
+        <!-- LEFT: FORGE CONTROLS -->
+        <aside class="forge-sidebar-left">
+          <div class="forge-panel-title">
+            <span>🧬 Archetype Parameters</span>
+            <span class="badge-math">Math Engine</span>
+          </div>
+
+          <!-- Category Selector -->
+          <div class="forge-section">
+            <label class="forge-label">Category</label>
+            <div id="forgeCategoryPills" class="forge-category-pills"></div>
+          </div>
+
+          <!-- Archetype Cards -->
+          <div class="forge-section">
+            <label class="forge-label">Archetype Model</label>
+            <div id="forgeArchetypeGrid" class="forge-archetype-grid"></div>
+          </div>
+
+          <!-- Parametric Proportions & Dimensions -->
+          <div class="forge-section">
+            <label class="forge-label">Resolution &amp; Proportions</label>
+            
+            <!-- Canvas Size Pills -->
+            <div class="forge-size-row">
+              <span class="sub-label">Size:</span>
+              <div id="forgeSizePills" class="forge-size-pills">
+                <div class="forge-size-pill" data-w="16" data-h="16">16×16</div>
+                <div class="forge-size-pill" data-w="24" data-h="24">24×24</div>
+                <div class="forge-size-pill" data-w="32" data-h="32">32×32</div>
+                <div class="forge-size-pill active" data-w="48" data-h="48">48×48</div>
+                <div class="forge-size-pill" data-w="64" data-h="48">64×48</div>
+                <div class="forge-size-pill" data-w="64" data-h="64">64×64</div>
+                <div class="forge-size-pill" data-w="120" data-h="80">120×80</div>
+              </div>
+            </div>
+
+            <!-- Head Scale Slider (Chibi vs Realistic) -->
+            <div class="forge-slider-row" id="rowHeadScale">
+              <div class="slider-header">
+                <span>Head Scale (Heroic ↔ Chibi):</span>
+                <span id="lblForgeHeadScale" class="slider-val">1.0×</span>
+              </div>
+              <input type="range" id="inputForgeHeadScale" min="50" max="200" value="100" />
+            </div>
+
+            <!-- Build Scale Slider (Slim vs Stocky) -->
+            <div class="forge-slider-row">
+              <div class="slider-header">
+                <span>Build Mass (Slim ↔ Stocky):</span>
+                <span id="lblForgeBuildScale" class="slider-val">1.0×</span>
+              </div>
+              <input type="range" id="inputForgeBuildScale" min="50" max="180" value="100" />
+            </div>
+
+            <!-- Action & Motion Cycle -->
+            <div class="forge-control-row">
+              <span>Action:</span>
+              <select id="selForgeAction"></select>
+            </div>
+
+            <!-- Animation Frame Count -->
+            <div class="forge-slider-row">
+              <div class="slider-header">
+                <span>Animation Frames:</span>
+                <span id="lblForgeFrames" class="slider-val">8 frames</span>
+              </div>
+              <input type="range" id="inputForgeFrames" min="1" max="16" value="8" />
+            </div>
+          </div>
+
+          <!-- Theme Palette Selector -->
+          <div class="forge-section">
+            <label class="forge-label">Theme Palette</label>
+            <select id="selForgeTheme" class="forge-select">
+              <option value="classic">🎨 Authentic / Default</option>
+              <option value="magma">🔥 Volcanic Magma &amp; Obsidian</option>
+              <option value="forest">🌲 Deep Moss &amp; Ancient Oak</option>
+              <option value="cyberpunk">⚡ Neon Cyan &amp; Hot Pink</option>
+              <option value="royal">👑 Imperial Purple &amp; Gold</option>
+              <option value="gameboy">📟 Retro GameBoy (4 Greens)</option>
+              <option value="pastel">🌸 Ethereal Pastel Dream</option>
             </select>
           </div>
 
-          <div class="control-row">
-            <label style="display: flex; align-items: center; gap: 6px; cursor: pointer;">
-              <input type="checkbox" id="chkAutoOutline" />
-              <span>Auto-Outline (1px)</span>
-            </label>
-            <input type="color" id="inputOutlineColor" value="#14182e" class="color-swatch-input" title="Outer outline color" />
+          <!-- Outline Mode -->
+          <div class="forge-section">
+            <label class="forge-label">Shading &amp; Outlines</label>
+            <div class="forge-control-row">
+              <span>Outline:</span>
+              <select id="selForgeOutline">
+                <option value="none">None (Clean edge)</option>
+                <option value="dark">1px Dark Outline</option>
+                <option value="sel_out">1px Selective Outlining (Sel-Out)</option>
+              </select>
+            </div>
           </div>
 
-          <div class="control-row">
-            <label style="display: flex; align-items: center; gap: 6px; cursor: pointer;">
-              <input type="checkbox" id="chkAutoShading" />
-              <span>Top-Left Shading</span>
-            </label>
-            <input
-              type="range"
-              id="inputShadingStrength"
-              min="5"
-              max="40"
-              value="16"
-              style="width: 90px; accent-color: var(--accent);"
-              title="Auto pixel-art shading intensity"
-            />
+          <!-- Primary Action Card: Inject into Canvas Studio -->
+          <div class="forge-action-card">
+            <button id="btnForgeOpenInStudio" class="btn btn-primary btn-glow" title="Compile and inject this archetype directly into Canvas Studio for bone posing and pixel editing">
+              ⚡ Open in Canvas Studio
+            </button>
+            <div class="forge-export-grid">
+              <button id="btnForgeExportPng" class="btn btn-sm">💾 PNG (1:1)</button>
+              <button id="btnForgeExportSheet" class="btn btn-sm">🎞️ Sprite Sheet</button>
+              <button id="btnForgeExportNormal" class="btn btn-sm">💡 Normal Map</button>
+              <button id="btnForgeCopyJson" class="btn btn-sm">📋 Copy JSON</button>
+            </div>
+          </div>
+        </aside>
+
+        <!-- CENTER: LIVE FORGE VIEWPORT -->
+        <section class="forge-viewport">
+          <div class="forge-viewport-toolbar">
+            <div class="forge-playback-controls">
+              <button id="btnForgePlayAnim" class="btn btn-sm">▶ Play</button>
+              <select id="selForgeFps" class="btn-sm">
+                <option value="4">4 FPS</option>
+                <option value="6">6 FPS</option>
+                <option value="8" selected>8 FPS</option>
+                <option value="12">12 FPS</option>
+                <option value="16">16 FPS</option>
+              </select>
+              <span id="lblForgeFrameIndicator" class="forge-frame-indicator">Frame 1 / 8</span>
+            </div>
+
+            <div class="forge-overlay-controls">
+              <label class="toggle-pill">
+                <input type="checkbox" id="chkForgeSkeleton" checked />
+                <span>🦴 Rig Overlay</span>
+              </label>
+              <label class="toggle-pill">
+                <input type="checkbox" id="chkForgeNormals" />
+                <span>💡 3D Normals</span>
+              </label>
+              <label class="toggle-pill">
+                <input type="checkbox" id="chkForgeDepthTint" />
+                <span>🔲 Z-Tiers</span>
+              </label>
+              <select id="selForgeZoom" title="Zoom">
+                <option value="auto">Zoom: Auto</option>
+                <option value="4">4×</option>
+                <option value="8" selected>8×</option>
+                <option value="12">12×</option>
+                <option value="16">16×</option>
+              </select>
+            </div>
           </div>
 
-          <div class="control-row">
-            <label style="display: flex; align-items: center; gap: 6px; cursor: pointer;" title="Compute 3D spherical heightmap normals, quantized 5-tone Oklch pixel-art lighting, and Bayer 2×2 ordered dithering on shape layers">
-              <input type="checkbox" id="chkSdfShading" />
-              <span>3D SDF Volume Shading</span>
-            </label>
+          <div class="forge-canvas-container">
+            <div id="forgeCanvasWrapper" class="forge-canvas-wrapper bg-checker">
+              <canvas id="forgeCanvas" width="384" height="384"></canvas>
+            </div>
           </div>
 
-          <div class="control-row">
-            <label style="display: flex; align-items: center; gap: 6px; cursor: pointer;" title="Selective Outlining (Sel-Out): tint outline pixels facing the top-left light source with the material's deep shadow tone">
-              <input type="checkbox" id="chkSelOut" />
-              <span>Selective Outlining (Sel-Out)</span>
-            </label>
+          <!-- Timeline Scrubber for Forge -->
+          <div class="forge-timeline-strip" id="forgeTimelineStrip"></div>
+        </section>
+
+        <!-- RIGHT: ARCHETYPE BLUEPRINT & ANATOMY -->
+        <aside class="forge-sidebar-right">
+          <div class="forge-panel-title">
+            <span>📐 Mathematical Anatomy</span>
+            <span id="badgeForgeType" class="badge-type">Rig Capsule</span>
+          </div>
+
+          <div class="blueprint-summary" id="forgeBlueprintSummary"></div>
+
+          <!-- Z-Tier Depth Guide -->
+          <div class="blueprint-ztiers">
+            <div class="ztier-card ztier-shadow">
+              <span class="ztier-tag">Z=0 (Shadow / Far)</span>
+              <span class="ztier-desc">Far legs, background wings, cast shadow</span>
+            </div>
+            <div class="ztier-card ztier-core">
+              <span class="ztier-tag">Z=1 (Core Body)</span>
+              <span class="ztier-desc">Torso, chest, skull, spine, base hull</span>
+            </div>
+            <div class="ztier-card ztier-highlight">
+              <span class="ztier-tag">Z=2 (Foreground / Near)</span>
+              <span class="ztier-desc">Near limbs, face features, weapons, crests</span>
+            </div>
+          </div>
+
+          <!-- Bone / Layer Stack List -->
+          <div class="blueprint-structure">
+            <div class="blueprint-structure-header">
+              <span id="lblForgeStructureTitle">Skeletal Bones Hierarchy</span>
+            </div>
+            <div id="forgeStructureList" class="blueprint-structure-list"></div>
+          </div>
+        </aside>
+      </div>
+    </div>
+
+
+    <!-- ==========================================
+         WORKSPACE 3: MODULAR PAPER DOLL & EQUIPMENT (WIP)
+         ========================================== -->
+    <div id="workspacePaperDoll" class="workspace-view">
+      <div class="module-placeholder-wrap">
+        <div class="module-header-hero">
+          <div class="hero-badge-wrap">
+            <span class="hero-pill-badge">🥋 Roadmap Module • Release v3.2</span>
+          </div>
+          <h1 class="hero-title">Modular Paper Doll &amp; Equipment Matrix</h1>
+          <p class="hero-subtitle">
+            Procedural bone-attached modular armor, helmets, boots, and weapons that automatically snap and sync with skeletal rig kinematics frame-by-frame with zero manual re-alignment.
+          </p>
+        </div>
+
+        <div class="module-grid-3col">
+          <!-- Left: Equipment Slots -->
+          <div class="module-card">
+            <div class="card-title">
+              <span>🛡️ Modular Equipment Slots</span>
+              <span class="tag-status">Interactive Preview</span>
+            </div>
+            <p class="card-desc">Click equipment slots to test dynamic layer attachment:</p>
+            <div class="equip-slots-list" id="paperDollSlotsList">
+              <div class="slot-item active" data-slot="head">
+                <span class="slot-icon">🪖</span>
+                <div class="slot-info">
+                  <span class="slot-name">Headgear</span>
+                  <span class="slot-val">Knight Full-Helm (Steel)</span>
+                </div>
+                <button class="btn btn-sm btn-slot-toggle">Equipped</button>
+              </div>
+              <div class="slot-item active" data-slot="torso">
+                <span class="slot-icon">🛡️</span>
+                <div class="slot-info">
+                  <span class="slot-name">Torso Armor</span>
+                  <span class="slot-val">Steel Plate Cuirass</span>
+                </div>
+                <button class="btn btn-sm btn-slot-toggle">Equipped</button>
+              </div>
+              <div class="slot-item active" data-slot="hands">
+                <span class="slot-icon">🧤</span>
+                <div class="slot-info">
+                  <span class="slot-name">Gauntlets</span>
+                  <span class="slot-val">Armored Vambraces</span>
+                </div>
+                <button class="btn btn-sm btn-slot-toggle">Equipped</button>
+              </div>
+              <div class="slot-item active" data-slot="legs">
+                <span class="slot-icon">👖</span>
+                <div class="slot-info">
+                  <span class="slot-name">Leg Armor</span>
+                  <span class="slot-val">Chainmail Chausses</span>
+                </div>
+                <button class="btn btn-sm btn-slot-toggle">Equipped</button>
+              </div>
+              <div class="slot-item active" data-slot="feet">
+                <span class="slot-icon">👢</span>
+                <div class="slot-info">
+                  <span class="slot-name">Footwear</span>
+                  <span class="slot-val">Steel Sabatons</span>
+                </div>
+                <button class="btn btn-sm btn-slot-toggle">Equipped</button>
+              </div>
+              <div class="slot-item active" data-slot="weapon">
+                <span class="slot-icon">⚔️</span>
+                <div class="slot-info">
+                  <span class="slot-name">Main-Hand</span>
+                  <span class="slot-val">Runed Broadsword</span>
+                </div>
+                <button class="btn btn-sm btn-slot-toggle">Equipped</button>
+              </div>
+              <div class="slot-item active" data-slot="shield">
+                <span class="slot-icon">🔰</span>
+                <div class="slot-info">
+                  <span class="slot-name">Off-Hand</span>
+                  <span class="slot-val">Kite Shield (Royal Crest)</span>
+                </div>
+                <button class="btn btn-sm btn-slot-toggle">Equipped</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Center: Interactive Paper Doll Mannequin Preview -->
+          <div class="module-card card-center-preview">
+            <div class="card-title">
+              <span>🧍 Live Mannequin Assembly</span>
+              <span class="tag-live">Animated Rig</span>
+            </div>
+            <div class="paperdoll-canvas-box">
+              <canvas id="paperDollCanvas" width="256" height="256"></canvas>
+            </div>
+            <div class="paperdoll-action-row">
+              <button id="btnPaperDollWalk" class="btn btn-sm active">Walk Cycle</button>
+              <button id="btnPaperDollAttack" class="btn btn-sm">Attack Slash</button>
+              <button id="btnPaperDollIdle" class="btn btn-sm">Idle Breathe</button>
+            </div>
+          </div>
+
+          <!-- Right: Architecture & Math Specs -->
+          <div class="module-card">
+            <div class="card-title">
+              <span>📐 Mathematical Architecture</span>
+              <span class="tag-math">Bone-Parent Matrix</span>
+            </div>
+            <div class="spec-block">
+              <h4>Universal Kinematic Transform</h4>
+              <p>
+                Each equipment asset is defined in bone-relative coordinates:
+                <br><code>P_{world} = T_{bone} × R(θ_{bone}) × P_{local}</code>
+              </p>
+              <p>
+                When a character swings their arm or crouches, the sword or shield maintains mathematically exact alignment with zero manual frame adjustment.
+              </p>
+            </div>
+            <div class="spec-block">
+              <h4>Export Compatibility</h4>
+              <ul class="spec-bullet-list">
+                <li>Godot 4 <code>Skeleton2D</code> + <code>Bone2D</code> synchronization</li>
+                <li>Unity 2D Animation Bone Sprite Resolver</li>
+                <li>Single-drawcall dynamic atlas layering</li>
+              </ul>
+            </div>
           </div>
         </div>
-      </details>
-    </aside>
+      </div>
+    </div>
+
+
+    <!-- ==========================================
+         WORKSPACE 4: 4-WAY & 8-WAY DIRECTIONAL COMPASS (WIP)
+         ========================================== -->
+    <div id="workspaceCompass" class="workspace-view">
+      <div class="module-placeholder-wrap">
+        <div class="module-header-hero">
+          <div class="hero-badge-wrap">
+            <span class="hero-pill-badge">🧭 Roadmap Module • Release v3.3</span>
+          </div>
+          <h1 class="hero-title">4-Way &amp; 8-Way Directional Compass</h1>
+          <p class="hero-subtitle">
+            Automated turnaround generation with automated Z-depth layer re-sorting, profile culling, and 2.5D isometric projection angles for Top-Down ARPGs and Turn-Based Tactics.
+          </p>
+        </div>
+
+        <div class="module-grid-3col">
+          <!-- Left: Interactive Directional Compass Controller -->
+          <div class="module-card">
+            <div class="card-title">
+              <span>🧭 Direction Selector</span>
+              <span class="tag-status">Turnaround Matrix</span>
+            </div>
+            <p class="card-desc">Click any compass heading to preview dynamic Z-depth sorting:</p>
+            <div class="compass-nav-grid">
+              <div></div>
+              <button class="compass-btn" data-dir="north">⬆️ North<br><small>(Back 180°)</small></button>
+              <div></div>
+              <button class="compass-btn" data-dir="west">⬅️ West<br><small>(Side 270°)</small></button>
+              <button class="compass-btn active" data-dir="south">⬇️ South<br><small>(Front 0°)</small></button>
+              <button class="compass-btn" data-dir="east">➡️ East<br><small>(Side 90°)</small></button>
+              <div></div>
+              <button class="compass-btn" data-dir="iso">↘️ Isometric<br><small>(2.5D 45°)</small></button>
+              <div></div>
+            </div>
+            <div class="compass-details-box" id="compassDetailsBox">
+              <strong>South (0° Front View)</strong>:
+              <p>Full facial features, chest insignias, belt buckles visible. Near limbs Z=2, Far limbs Z=0.</p>
+            </div>
+          </div>
+
+          <!-- Center: 4-Way Interactive Turnaround Display -->
+          <div class="module-card card-center-preview">
+            <div class="card-title">
+              <span>🔄 Turnaround Projection</span>
+              <span class="tag-live">Live Vector Preview</span>
+            </div>
+            <div class="compass-canvas-box">
+              <canvas id="compassCanvas" width="256" height="256"></canvas>
+            </div>
+            <div class="compass-mode-pills">
+              <span class="mode-pill active" id="pillDirName">South (Front View)</span>
+              <span class="mode-pill">Z-Order: Standard</span>
+            </div>
+          </div>
+
+          <!-- Right: Technical Specification & Z-Sort Logic -->
+          <div class="module-card">
+            <div class="card-title">
+              <span>⚙️ Z-Layer Re-Ordering Matrix</span>
+              <span class="tag-math">Depth Sorting</span>
+            </div>
+            <div class="spec-block">
+              <h4>North (Back View) Inversion</h4>
+              <p>
+                When character faces North, layers are automatically sorted in reverse:
+                <br><code>Z_{new} = Z_{max} - Z_{old}</code>
+                <br>Capes and backpacks shift to foreground (Z=2), while facial features and chests are culled or occluded.
+              </p>
+            </div>
+            <div class="spec-block">
+              <h4>Isometric 2.5D Projection</h4>
+              <p>
+                Applies standard 30° axonometric transform:
+                <br><code>X_{screen} = (X - Y) × cos(30°)</code><br>
+                <code>Y_{screen} = (X + Y) × sin(30°) - Z</code>
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+
+    <!-- ==========================================
+         WORKSPACE 5: GAME ENGINE EXPORTER (WIP)
+         ========================================== -->
+    <div id="workspaceExporter" class="workspace-view">
+      <div class="module-placeholder-wrap">
+        <div class="module-header-hero">
+          <div class="hero-badge-wrap">
+            <span class="hero-pill-badge">📦 Pipeline Module • Release v3.2</span>
+          </div>
+          <h1 class="hero-title">Universal Game Engine Exporter</h1>
+          <p class="hero-subtitle">
+            Bridge PixelDSL directly into your game engine. Native support for Godot 4 NormalMap lighting, Unity 2D URP Lit shaders, Unreal Paper2D, and lossless WebP/GIF.
+          </p>
+        </div>
+
+        <div class="engine-cards-grid">
+          <!-- Engine Card 1: Godot 4 -->
+          <div class="engine-card">
+            <div class="engine-card-header">
+              <span class="engine-logo">🤖</span>
+              <div class="engine-info">
+                <span class="engine-name">Godot Engine 4.x</span>
+                <span class="engine-format">.tres + CanvasItem NormalMap</span>
+              </div>
+              <span class="tag-ready">Ready</span>
+            </div>
+            <p class="engine-desc">
+              Exports <code>SpriteFrames</code> resource with auto-generated frame durations and ties <code>_normal.png</code> to 2D Light2D system for dynamic point lights.
+            </p>
+            <div class="code-preview-block">
+              <pre><code># Godot 4 GDScript Dynamic Lighting Setup
+@onready var sprite = $AnimatedSprite2D
+func _ready():
+    var mat = CanvasItemMaterial.new()
+    mat.light_mode = CanvasItemMaterial.LIGHT_MODE_NORMAL
+    sprite.material = mat</code></pre>
+            </div>
+            <button id="btnCopyGodotScript" class="btn btn-sm btn-primary">📋 Copy Godot 4 Setup Script</button>
+          </div>
+
+          <!-- Engine Card 2: Unity -->
+          <div class="engine-card">
+            <div class="engine-card-header">
+              <span class="engine-logo">🎮</span>
+              <div class="engine-info">
+                <span class="engine-name">Unity 2023 / 6</span>
+                <span class="engine-format">SpriteAtlas + URP 2D Lit</span>
+              </div>
+              <span class="tag-ready">Ready</span>
+            </div>
+            <p class="engine-desc">
+              Pre-configured <code>.meta</code> files with exact grid frame slicing, point filtering (Nearest Neighbor), and URP Lit Sprite normal map integration.
+            </p>
+            <div class="code-preview-block">
+              <pre><code>// Unity URP 2D Lit Sprite Setup
+SpriteRenderer sr = GetComponent&lt;SpriteRenderer&gt;();
+Material litMat = new Material(Shader.Find("Universal Render Pipeline/2D/Sprite-Lit-Default"));
+litMat.SetTexture("_NormalMap", normalTexture);</code></pre>
+            </div>
+            <button id="btnCopyUnityScript" class="btn btn-sm">📋 Copy Unity URP Script</button>
+          </div>
+
+          <!-- Engine Card 3: Unreal Engine 5 -->
+          <div class="engine-card">
+            <div class="engine-card-header">
+              <span class="engine-logo">🚀</span>
+              <div class="engine-info">
+                <span class="engine-name">Unreal Engine 5</span>
+                <span class="engine-format">Paper2D Flipbook</span>
+              </div>
+              <span class="tag-wip">Roadmap</span>
+            </div>
+            <p class="engine-desc">
+              Automated Paper2D Sprite sheet import, frame timeline generation, and 2D collision capsule approximation from 2.5D skeletal bounds.
+            </p>
+            <button class="btn btn-sm" disabled>Paper2D Flipbook Spec (v3.3)</button>
+          </div>
+
+          <!-- Engine Card 4: Web & Media -->
+          <div class="engine-card">
+            <div class="engine-card-header">
+              <span class="engine-logo">🌐</span>
+              <div class="engine-info">
+                <span class="engine-name">Web &amp; Media</span>
+                <span class="engine-format">Lossless WebP &amp; Animated GIF</span>
+              </div>
+              <span class="tag-ready">Client-Side</span>
+            </div>
+            <p class="engine-desc">
+              Zero-artifact animated WebP for ultra-fast web games and Discord/Twitch stickers, plus retro quantized GIF exports.
+            </p>
+            <button id="btnExportDemoWebp" class="btn btn-sm">⚡ Export Animated Preview</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
   </main>
+
+  <!-- Floating Toast Notifications Container -->
+  <div id="toastContainer" class="toast-container"></div>
 
   <!-- 3x3 Evolutionary Mutator & 100% LLM-Free Archetype Generator Modal -->
   <div id="modalMutate" class="modal-backdrop">
@@ -493,7 +1061,9 @@
     </div>
   </div>
 
+  <!-- Scripts -->
   <script src="presets.js"></script>
+  <script src="archetypes.js"></script>
   <script src="renderer.js"></script>
   <script src="app.js"></script>
 </body>
