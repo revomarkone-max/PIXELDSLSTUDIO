@@ -121,3 +121,75 @@ python pixeldsl.py sprites/my_sprite.json
   "grid": []
 }
 ```
+
+---
+
+## 4. Skeletal Capsule Rig Engine (`PixelRig`)
+
+The Rig Engine (`"type": "rig"`) represents character sprites as a topological kinematic bone graph instead of raw pixels or disconnected shapes. It provides ~95% token savings and eliminates 2D spatial drift during animation.
+
+```json
+{
+  "type": "rig",
+  "name": "chibi_hero_rig_32x36",
+  "width": 32,
+  "height": 36,
+  "fps": 6,
+  "palette": {
+    ".": "transparent",
+    "O": "#14182e",
+    "S": "#f2b18d",
+    "C": "#3a7bd5",
+    "P": "#264b87",
+    "H": "#633c24",
+    "w": "#ffffff"
+  },
+  "postProcess": {
+    "autoOutline": false,
+    "outlineColor": "#14182e",
+    "sdfShading": true
+  },
+  "bones": [
+    { "id": "torso", "origin": [16, 17], "length": 9, "r1": 4.5, "r2": 4.0, "angle": 90, "fill": "C", "outline": "O", "z": 3, "crease": true },
+    { "id": "head", "parent": "torso", "offset": [0, -7], "length": 7, "r1": 6.5, "r2": 6.0, "angle": 90, "fill": "S", "outline": "O", "z": 5, "crease": true, "oval": true },
+    { "id": "arm_l", "parent": "torso", "offset": [-4.5, -3], "length": 7, "r1": 2.2, "r2": 1.8, "angle": 105, "fill": "S", "outline": "O", "z": 2, "crease": true },
+    { "id": "leg_l", "parent": "torso", "offset": [-2.5, 4], "length": 8, "r1": 2.8, "r2": 2.2, "angle": 85, "fill": "P", "outline": "O", "z": 2, "crease": true }
+  ],
+  "poses": [
+    {},
+    { "leg_l": { "dAngle": 25 }, "arm_l": { "dAngle": -20 } },
+    { "torso": { "dy": -1 }, "leg_l": { "dAngle": 0 } }
+  ]
+}
+```
+
+---
+
+## 5. Procedural GLSL / Math Shader Engine (`PixelShader`)
+
+The Shader Engine (`"type": "shader"`) evaluates continuous mathematical signed distance fields $f(u, v, t)$ with perceptual `Oklab` palette quantization, Bayer 4×4 ordered dithering, and finite-difference gradient normal maps.
+
+```json
+{
+  "type": "shader",
+  "name": "magic_portal_orb_32x32",
+  "width": 32,
+  "height": 32,
+  "fps": 8,
+  "framesCount": 8,
+  "shaderType": "portal",
+  "dither": "bayer4x4",
+  "ditherStrength": 0.16,
+  "palette": {
+    "1": "#070b19",
+    "2": "#142247",
+    "3": "#264b87",
+    "4": "#3a7bd5",
+    "5": "#60a5fa",
+    "6": "#93c5fd",
+    "7": "#ffffff"
+  },
+  "glsl": "void mainImage(out vec4 fragColor, in vec2 uv, in float time) {\n    vec2 p = uv * 2.0 - 1.0;\n    float r = length(p);\n    float a = atan(p.y, p.x);\n    float spiral = sin(a * 4.0 - time * 6.28318 + r * 6.0);\n    float orb = r - 0.72 + 0.08 * spiral;\n    if (orb > 0.06) { fragColor = vec4(0.0); return; }\n    float core = max(0.0, 1.0 - r / 0.75);\n    float ring = max(0.0, 1.0 - abs(orb) / 0.12);\n    float intensity = clamp(core * 0.7 + ring * 0.9 + 0.25 * spiral, 0.0, 1.0);\n    vec3 col = vec3(sin(intensity * 3.14159) * 0.6, intensity * 0.9, 0.5 + intensity * 0.5);\n    fragColor = vec4(col, 1.0);\n}"
+}
+```
+

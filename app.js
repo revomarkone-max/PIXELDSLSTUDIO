@@ -65,6 +65,26 @@
   const btnAddFrame = document.getElementById("btnAddFrame");
   const btnDeleteFrame = document.getElementById("btnDeleteFrame");
 
+  const engineBadge = document.getElementById("engineBadge");
+
+  // Rig Inspector Elements
+  const groupRigInspector = document.getElementById("groupRigInspector");
+  const boneCountBadge = document.getElementById("boneCountBadge");
+  const bonesList = document.getElementById("bonesList");
+  const btnAddBone = document.getElementById("btnAddBone");
+  const btnToggleBonesDebug = document.getElementById("btnToggleBonesDebug");
+  let showSkeletonDebug = false;
+
+  // Shader Inspector Elements
+  const groupShaderInspector = document.getElementById("groupShaderInspector");
+  const selShaderType = document.getElementById("selShaderType");
+  const selShaderDither = document.getElementById("selShaderDither");
+  const inputShaderDitherStrength = document.getElementById("inputShaderDitherStrength");
+  const lblShaderDitherStrength = document.getElementById("lblShaderDitherStrength");
+  const selShaderFrames = document.getElementById("selShaderFrames");
+  const btnRecompileShader = document.getElementById("btnRecompileShader");
+  const groupLayersInspector = document.getElementById("groupLayersInspector");
+
   const layerCountBadge = document.getElementById("layerCountBadge");
   const layersList = document.getElementById("layersList");
   const btnAddEllipseLayer = document.getElementById("btnAddEllipseLayer");
@@ -361,8 +381,252 @@
     if (chkSdfShading) chkSdfShading.checked = Boolean(post.sdfShading);
     if (chkSelOut) chkSelOut.checked = Boolean(post.selOut);
 
-    renderLayersList();
+    // Update active engine badge
+    if (engineBadge) {
+      if (currentSpec.type === "rig") {
+        engineBadge.textContent = "🦴 Rig Engine (FK)";
+        engineBadge.className = "engine-badge badge-rig";
+      } else if (currentSpec.type === "shader") {
+        engineBadge.textContent = "✨ GLSL Shader";
+        engineBadge.className = "engine-badge badge-shader";
+      } else if (Array.isArray(currentSpec.layers) && currentSpec.layers.length > 0) {
+        engineBadge.textContent = "📐 2.5D SDF";
+        engineBadge.className = "engine-badge badge-layers";
+      } else {
+        engineBadge.textContent = "🔲 Grid";
+        engineBadge.className = "engine-badge badge-grid";
+      }
+    }
+
+    // Toggle inspector panels depending on active spec type
+    if (groupRigInspector && groupShaderInspector && groupLayersInspector) {
+      if (currentSpec.type === "rig") {
+        groupRigInspector.style.display = "";
+        groupShaderInspector.style.display = "none";
+        groupLayersInspector.style.display = "none";
+        renderBonesList();
+      } else if (currentSpec.type === "shader") {
+        groupRigInspector.style.display = "none";
+        groupShaderInspector.style.display = "";
+        groupLayersInspector.style.display = "none";
+        syncShaderInspector();
+      } else {
+        groupRigInspector.style.display = "none";
+        groupShaderInspector.style.display = "none";
+        groupLayersInspector.style.display = "";
+        renderLayersList();
+      }
+    } else {
+      renderLayersList();
+    }
+
     renderPaletteList();
+  }
+
+  // Interactive Skeletal Rig Bones Inspector
+  function renderBonesList() {
+    if (!bonesList) return;
+    bonesList.innerHTML = "";
+    const bones = Array.isArray(currentSpec.bones) ? currentSpec.bones : [];
+    if (boneCountBadge) boneCountBadge.textContent = bones.length;
+
+    const currentPose = (currentFrame > 0 && Array.isArray(currentSpec.poses) && currentSpec.poses[currentFrame - 1])
+      ? currentSpec.poses[currentFrame - 1]
+      : null;
+
+    for (let i = 0; i < bones.length; i++) {
+      const bone = bones[i];
+      const item = document.createElement("div");
+      item.className = "bone-item";
+
+      const mainRow = document.createElement("div");
+      mainRow.className = "layer-row-main";
+
+      const info = document.createElement("div");
+      info.className = "layer-info";
+
+      const badge = document.createElement("span");
+      badge.className = "bone-badge";
+      badge.textContent = bone.parent ? `↳ ${bone.parent}` : "ROOT";
+
+      const nameSpan = document.createElement("span");
+      nameSpan.className = "layer-name";
+      nameSpan.textContent = bone.id || `bone_${i + 1}`;
+
+      info.appendChild(badge);
+      info.appendChild(nameSpan);
+
+      const metaSpan = document.createElement("span");
+      metaSpan.style.fontFamily = "var(--font-mono)";
+      metaSpan.style.fontSize = "10.5px";
+      metaSpan.style.color = "var(--text-muted)";
+      metaSpan.textContent = `L:${bone.length ?? 0} R:${bone.r1 ?? 0}`;
+
+      mainRow.appendChild(info);
+      mainRow.appendChild(metaSpan);
+      item.appendChild(mainRow);
+
+      // Controls row: Angle adjustment slider
+      const ctrlRow = document.createElement("div");
+      ctrlRow.style.display = "flex";
+      ctrlRow.style.alignItems = "center";
+      ctrlRow.style.gap = "6px";
+      ctrlRow.style.marginTop = "2px";
+
+      const angleLabel = document.createElement("span");
+      angleLabel.style.fontSize = "10.5px";
+      angleLabel.style.color = "var(--text-muted)";
+      angleLabel.style.minWidth = "40px";
+      angleLabel.textContent = currentPose ? "dAngle:" : "Angle:";
+
+      const angleSlider = document.createElement("input");
+      angleSlider.type = "range";
+      angleSlider.style.flex = "1";
+      angleSlider.style.accentColor = "var(--accent)";
+
+      const angleVal = document.createElement("span");
+      angleVal.style.fontFamily = "var(--font-mono)";
+      angleVal.style.fontSize = "10.5px";
+      angleVal.style.minWidth = "32px";
+      angleVal.style.textAlign = "right";
+
+      if (currentPose) {
+        angleSlider.min = "-90";
+        angleSlider.max = "90";
+        const curD = (currentPose[bone.id] && typeof currentPose[bone.id].dAngle === "number")
+          ? currentPose[bone.id].dAngle
+          : 0;
+        angleSlider.value = String(curD);
+        angleVal.textContent = `${curD > 0 ? "+" : ""}${curD}°`;
+      } else {
+        angleSlider.min = "-180";
+        angleSlider.max = "180";
+        const curA = typeof bone.angle === "number" ? bone.angle : 0;
+        angleSlider.value = String(curA);
+        angleVal.textContent = `${curA}°`;
+      }
+
+      angleSlider.addEventListener("input", () => {
+        const val = parseInt(angleSlider.value, 10);
+        if (currentPose) {
+          angleVal.textContent = `${val > 0 ? "+" : ""}${val}°`;
+          if (!currentSpec.poses) currentSpec.poses = [];
+          if (!currentSpec.poses[currentFrame - 1]) currentSpec.poses[currentFrame - 1] = {};
+          if (!currentSpec.poses[currentFrame - 1][bone.id]) currentSpec.poses[currentFrame - 1][bone.id] = {};
+          currentSpec.poses[currentFrame - 1][bone.id].dAngle = val;
+        } else {
+          angleVal.textContent = `${val}°`;
+          bone.angle = val;
+        }
+        syncEditorFromSpec();
+        renderAll();
+      });
+
+      ctrlRow.appendChild(angleLabel);
+      ctrlRow.appendChild(angleSlider);
+      ctrlRow.appendChild(angleVal);
+      item.appendChild(ctrlRow);
+
+      bonesList.appendChild(item);
+    }
+
+    if (bones.length === 0) {
+      bonesList.innerHTML = `<div style="color: var(--text-muted); font-size: 11.5px; text-align: center; padding: 8px;">No bones defined in rig spec.</div>`;
+    }
+  }
+
+  // Sync Shader Inspector controls
+  function syncShaderInspector() {
+    if (!groupShaderInspector) return;
+    if (selShaderType) selShaderType.value = currentSpec.shaderType || "custom";
+    if (selShaderDither) selShaderDither.value = currentSpec.dither || "bayer4x4";
+    const dStr = typeof currentSpec.ditherStrength === "number" ? currentSpec.ditherStrength : 0.16;
+    if (inputShaderDitherStrength) inputShaderDitherStrength.value = Math.round(dStr * 100);
+    if (lblShaderDitherStrength) lblShaderDitherStrength.textContent = dStr.toFixed(2);
+    if (selShaderFrames) selShaderFrames.value = String(currentSpec.framesCount || 8);
+  }
+
+  if (btnAddBone) {
+    btnAddBone.addEventListener("click", () => {
+      pushUndoState();
+      if (!Array.isArray(currentSpec.bones)) currentSpec.bones = [];
+      const idx = currentSpec.bones.length + 1;
+      const lastBone = currentSpec.bones[currentSpec.bones.length - 1];
+      const newBone = {
+        id: `bone_${idx}`,
+        parent: lastBone ? lastBone.id : null,
+        length: 6,
+        r1: 3,
+        r2: 2.5,
+        angle: 0,
+        fill: activeSymbol !== "." ? activeSymbol : "S",
+        outline: "O",
+        z: 2,
+        crease: true
+      };
+      if (!lastBone) {
+        newBone.origin = [
+          Math.floor(PixelDSLRenderer.clampSize(currentSpec.width, 32) / 2),
+          Math.floor(PixelDSLRenderer.clampSize(currentSpec.height, 32) / 2)
+        ];
+      }
+      currentSpec.bones.push(newBone);
+      syncEditorFromSpec();
+      renderBonesList();
+      renderAll();
+    });
+  }
+
+  if (btnToggleBonesDebug) {
+    btnToggleBonesDebug.addEventListener("click", () => {
+      showSkeletonDebug = !showSkeletonDebug;
+      btnToggleBonesDebug.classList.toggle("active", showSkeletonDebug);
+      renderAll();
+    });
+  }
+
+  if (selShaderType) {
+    selShaderType.addEventListener("change", () => {
+      pushUndoState();
+      currentSpec.shaderType = selShaderType.value;
+      syncEditorFromSpec();
+      renderAll();
+    });
+  }
+
+  if (selShaderDither) {
+    selShaderDither.addEventListener("change", () => {
+      pushUndoState();
+      currentSpec.dither = selShaderDither.value;
+      syncEditorFromSpec();
+      renderAll();
+    });
+  }
+
+  if (inputShaderDitherStrength && lblShaderDitherStrength) {
+    inputShaderDitherStrength.addEventListener("input", () => {
+      const str = (parseInt(inputShaderDitherStrength.value, 10) || 16) / 100;
+      lblShaderDitherStrength.textContent = str.toFixed(2);
+      currentSpec.ditherStrength = str;
+      syncEditorFromSpec();
+      renderAll();
+    });
+  }
+
+  if (selShaderFrames) {
+    selShaderFrames.addEventListener("change", () => {
+      pushUndoState();
+      currentSpec.framesCount = parseInt(selShaderFrames.value, 10) || 8;
+      syncEditorFromSpec();
+      renderTimelineStrip();
+      renderAll();
+    });
+  }
+
+  if (btnRecompileShader) {
+    btnRecompileShader.addEventListener("click", () => {
+      renderAll();
+    });
   }
 
   // Interactive Layers Viewer & Stack Inspector
@@ -1086,6 +1350,30 @@
       ctx.moveTo(0, midY);
       ctx.lineTo(width * scale, midY);
       ctx.stroke();
+    }
+
+    if (showSkeletonDebug && currentSpec.type === "rig" && lastRender) {
+      const fkMap = PixelDSLRenderer.solveFkRig(currentSpec, currentFrame);
+      ctx.save();
+      for (const [bId, bState] of Object.entries(fkMap)) {
+        ctx.strokeStyle = "rgba(0, 240, 255, 0.85)";
+        ctx.lineWidth = Math.max(1.5, Math.floor(scale / 4));
+        ctx.beginPath();
+        ctx.moveTo(bState.head[0] * scale + scale * 0.5, bState.head[1] * scale + scale * 0.5);
+        ctx.lineTo(bState.tail[0] * scale + scale * 0.5, bState.tail[1] * scale + scale * 0.5);
+        ctx.stroke();
+
+        ctx.fillStyle = "rgba(255, 230, 0, 0.95)";
+        ctx.beginPath();
+        ctx.arc(bState.head[0] * scale + scale * 0.5, bState.head[1] * scale + scale * 0.5, Math.max(2.5, scale * 0.35), 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.fillStyle = "rgba(255, 80, 80, 0.95)";
+        ctx.beginPath();
+        ctx.arc(bState.tail[0] * scale + scale * 0.5, bState.tail[1] * scale + scale * 0.5, Math.max(2.5, scale * 0.35), 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.restore();
     }
 
     if (hoverCoord && hoverCoord.x >= 0 && hoverCoord.x < width && hoverCoord.y >= 0 && hoverCoord.y < height) {

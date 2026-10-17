@@ -1095,11 +1095,17 @@ def _compute_procedural_motion_mods(spec, frame_index):
 
 
 def get_frame_count(spec):
+    if not isinstance(spec, dict):
+        return 1
+    if spec.get("type") in ("shader", "glsl") or "glsl" in spec or "shaderType" in spec:
+        if "framesCount" in spec:
+            return max(1, int(spec["framesCount"]))
     extra = len(spec.get("frames")) if isinstance(spec.get("frames"), list) else 0
     motion_frames = 0
     if isinstance(spec.get("motion"), dict):
         motion_frames = max(0, int(spec["motion"].get("frames", 0)) - 1)
     return 1 + max(extra, motion_frames)
+
 
 
 def apply_frame_overrides(spec, frame_index=0):
@@ -1315,11 +1321,440 @@ def apply_cellular_rules(rules, width, height, symbol_buffer, buffer, resolve_co
                             buffer[b_idx:b_idx + 4] = bytes(rep_rgba)
 
 
-def render_sprite(spec_input, frame_index=0):
-    spec = apply_frame_overrides(spec_input or {}, frame_index)
+BAYER_4X4_NORM = [
+    [-0.5, 0.0, -0.375, 0.125],
+    [0.25, -0.25, 0.375, -0.125],
+    [-0.3125, 0.1875, -0.4375, 0.0625],
+    [0.4375, -0.0625, 0.3125, -0.1875]
+]
+
+SAFE_SHADER_GLOBALS = {
+    "__builtins__": {},
+    "math": math,
+    "sin": math.sin,
+    "cos": math.cos,
+    "tan": math.tan,
+    "asin": math.asin,
+    "acos": math.acos,
+    "atan2": math.atan2,
+    "sqrt": math.sqrt,
+    "hypot": math.hypot,
+    "pow": math.pow,
+    "exp": math.exp,
+    "log": math.log,
+    "floor": math.floor,
+    "ceil": math.ceil,
+    "abs": abs,
+    "min": min,
+    "max": max,
+    "pi": math.pi,
+    "clamp": lambda v, mn, mx: max(mn, min(mx, v)),
+    "smoothstep": lambda e0, e1, x: 0.0 if x <= e0 else (1.0 if x >= e1 else ((x - e0)/(e1 - e0))**2 * (3.0 - 2.0 * ((x - e0)/(e1 - e0)))),
+    "length": lambda x, y: math.hypot(x, y),
+    "smin": lambda a, b, k: smin(a, b, k),
+    "worley": lambda x, y: worley_f1_f2(x, y)[0],
+    "noise": lambda x, y: value_noise2d(x, y)
+}
+
+
+def solve_fk_rig(bones_def, pose=None):
+    """
+    Forward Kinematics solver for skeletal rigs.
+    Computes world-space start and end positions and angles for each bone.
+    """
+    pose = pose or {}
+    bones_by_id = {b["id"]: b for b in bones_def if isinstance(b, dict) and b.get("id")}
+    resolved = {}
+
+    def get_bone_xform(bid, visited=None):
+        if bid in resolved:
+            return resolved[bid]
+        if visited is None:
+            visited = set()
+        if bid in visited or bid not in bones_by_id:
+            return ((0.0, 0.0), (0.0, 0.0), 0.0)
+        visited.add(bid)
+
+        b = bones_by_id[bid]
+        mod = pose.get(bid, {}) if isinstance(pose.get(bid), dict) else {}
+        d_angle = float(mod.get("dAngle", 0.0) or 0.0)
+        dx = float(mod.get("dx", 0.0) or 0.0)
+        dy = float(mod.get("dy", 0.0) or 0.0)
+
+        parent_id = b.get("parent")
+        if parent_id and parent_id in bones_by_id:
+            p_start, p_end, p_angle = get_bone_xform(parent_id, visited)
+            offset = b.get("offset", [0.0, 0.0])
+            prad = math.radians(p_angle)
+            pcos, psin = math.cos(prad), math.sin(prad)
+            rx = float(offset[0]) * pcos - float(offset[1]) * psin
+            ry = float(offset[0]) * psin + float(offset[1]) * pcos
+            start_x = p_end[0] + rx + dx
+            start_y = p_end[1] + ry + dy
+            world_angle = p_angle + float(b.get("angle", 0.0) or 0.0) + d_angle
+        else:
+            start_x = float(b.get("x", 0.0)) + dx
+            start_y = float(b.get("y", 0.0)) + dy
+            world_angle = float(b.get("angle", 0.0) or 0.0) + d_angle
+
+        length = float(b.get("length", 0.0) or 0.0)
+        wrad = math.radians(world_angle)
+        end_x = start_x + length * math.cos(wrad)
+        end_y = start_y + length * math.sin(wrad)
+
+        resolved[bid] = ((start_x, start_y), (end_x, end_y), world_angle)
+        return resolved[bid]
+
+    for b in bones_def:
+        if isinstance(b, dict) and b.get("id"):
+            get_bone_xform(b["id"])
+    return resolved
+
+
+def render_rig(spec, frame_index=0):
+    """
+    Rasterizes a 2.5D Skeletal Capsule Rig into RGBA pixel buffers and normal maps,
+    with 3D volume cel-shading, internal creases, and selective outline.
+    """
     size_arr = spec.get("size") if isinstance(spec.get("size"), list) else [None, None]
     width = clamp_size(spec.get("width") or size_arr[0], 32)
     height = clamp_size(spec.get("height") or size_arr[1], 32)
+
+    rig_def = spec.get("rig", {}) if isinstance(spec.get("rig"), dict) else spec
+    bones_def = rig_def.get("bones", []) if isinstance(rig_def.get("bones"), list) else []
+
+    frames = spec.get("frames", []) if isinstance(spec.get("frames"), list) else []
+    frame_pose = {}
+    if 0 < frame_index <= len(frames):
+        f_def = frames[frame_index - 1]
+        frame_pose = f_def.get("pose") or f_def.get("layers") or {}
+    elif frame_index == 0 and frames and isinstance(frames[0], dict) and ("pose" in frames[0] or "layers" in frames[0]) and len(frames) == 1:
+        f_def = frames[0]
+        frame_pose = f_def.get("pose") or f_def.get("layers") or {}
+
+    fk_results = solve_fk_rig(bones_def, frame_pose)
+
+    palette_raw = resolve_full_palette(spec)
+    palette_rgba = {".": (0, 0, 0, 0), " ": (0, 0, 0, 0)}
+    for k, v in palette_raw.items():
+        palette_rgba[k] = parse_color(v)
+
+    outline_key = rig_def.get("outline") or "o"
+    outline_rgba = palette_rgba.get(outline_key) or parse_color(outline_key)
+    outline_w = float(rig_def.get("outlineWidth", 1.0) or 1.0)
+
+    sorted_bones = sorted(bones_def, key=lambda b: float(b.get("z", 0.0) or 0.0))
+
+    color_buf = [None] * (width * height)
+    z_buf = [-9999.0] * (width * height)
+    bone_id_buf = [None] * (width * height)
+    normal_buffer = bytearray(width * height * 4)
+    for i in range(width * height):
+        normal_buffer[i * 4] = 128
+        normal_buffer[i * 4 + 1] = 128
+        normal_buffer[i * 4 + 2] = 255
+        normal_buffer[i * 4 + 3] = 0
+
+    min_dist_buf = [9999.0] * (width * height)
+    min_dist_bone = [None] * (width * height)
+    symbol_buffer = ["."] * (width * height)
+
+    light_dir = (-0.52, -0.62, 0.58)
+    l_mag = math.hypot(light_dir[0], light_dir[1], light_dir[2])
+    lx, ly, lz = light_dir[0] / l_mag, light_dir[1] / l_mag, light_dir[2] / l_mag
+
+    for b in sorted_bones:
+        if not isinstance(b, dict) or not b.get("id") or b.get("hidden"):
+            continue
+        bid = b["id"]
+        (ax, ay), (bx, by), w_angle = fk_results.get(bid, ((0.0, 0.0), (0.0, 0.0), 0.0))
+        r1 = max(0.5, float(b.get("r1", 2.0) or 2.0))
+        r2 = max(0.5, float(b.get("r2", r1) or r1))
+        z = float(b.get("z", 0.0) or 0.0)
+        fill_key = b.get("fill", "b")
+        fill_rgba = palette_rgba.get(fill_key) or parse_color(fill_key)
+        shape = str(b.get("shape", "capsule")).lower()
+
+        vax = bx - ax
+        vay = by - ay
+        v_len_sq = vax * vax + vay * vay
+
+        for y in range(height):
+            for x in range(width):
+                px = x + 0.5
+                py = y + 0.5
+
+                if shape in ("head_oval", "oval"):
+                    cx, cy = (bx, by) if float(b.get("length", 0.0) or 0.0) > 0 else (ax, ay)
+                    rx, ry = r2, r1
+                    p_loc_x = px - cx
+                    p_loc_y = py - cy
+                    k0 = math.hypot(p_loc_x / rx, p_loc_y / ry)
+                    d = (k0 - 1.0) * min(rx, ry)
+                    qx, qy = cx, cy
+                    eff_r = (rx + ry) * 0.5
+                else:
+                    if v_len_sq < 1e-6:
+                        h_val = 0.0
+                        qx, qy = ax, ay
+                        eff_r = r1
+                    else:
+                        h_val = max(0.0, min(1.0, ((px - ax) * vax + (py - ay) * vay) / v_len_sq))
+                        qx = ax + h_val * vax
+                        qy = ay + h_val * vay
+                        eff_r = r1 + h_val * (r2 - r1)
+                    dist_to_center = math.hypot(px - qx, py - qy)
+                    d = dist_to_center - eff_r
+
+                idx = y * width + x
+                if d < min_dist_buf[idx]:
+                    min_dist_buf[idx] = d
+                    min_dist_bone[idx] = bid
+
+                if d <= 0.0:
+                    if z >= z_buf[idx]:
+                        z_buf[idx] = z
+                        bone_id_buf[idx] = bid
+
+                        vx = (px - qx) / max(0.1, eff_r)
+                        vy = (py - qy) / max(0.1, eff_r)
+                        vz_sq = max(0.0, 1.0 - vx * vx - vy * vy)
+                        vz = math.sqrt(vz_sq)
+
+                        dot = vx * lx + vy * ly + vz * lz
+                        if dot > 0.45:
+                            col = tuple(min(255, int(c * 1.15)) for c in fill_rgba[:3]) + (255,)
+                        elif dot < -0.1:
+                            col = tuple(max(0, int(c * 0.82)) for c in fill_rgba[:3]) + (255,)
+                        else:
+                            col = fill_rgba
+
+                        if isinstance(b.get("features"), dict):
+                            feats = b["features"]
+                            if "eyes" in feats and isinstance(feats["eyes"], dict):
+                                ef = feats["eyes"]
+                                edx = float(ef.get("dx", 2.0) or 2.0)
+                                edy = float(ef.get("dy", 0.0) or 0.0)
+                                ew = float(ef.get("w", 2.0) or 2.0)
+                                eh = float(ef.get("h", 3.0) or 3.0)
+                                head_len = float(b.get("length", 0.0) or 0.0)
+                                eye_center_x = (bx if head_len > 0 else ax) + edx
+                                eye_center_y = (by if head_len > 0 else ay) + edy
+                                if abs(px - eye_center_x) <= ew * 0.5 and abs(py - eye_center_y) <= eh * 0.5:
+                                    eye_c = ef.get("color", "#4e221c")
+                                    col = palette_rgba.get(eye_c) or parse_color(eye_c)
+
+                        color_buf[idx] = col
+                        symbol_buffer[idx] = fill_key if fill_key in palette_raw else "b"
+                        normal_buffer[idx * 4] = max(0, min(255, js_round((vx * 0.5 + 0.5) * 255.0)))
+                        normal_buffer[idx * 4 + 1] = max(0, min(255, js_round((-vy * 0.5 + 0.5) * 255.0)))
+                        normal_buffer[idx * 4 + 2] = max(0, min(255, js_round((vz * 0.5 + 0.5) * 255.0)))
+                        normal_buffer[idx * 4 + 3] = 255
+
+    buffer = bytearray(width * height * 4)
+    for y in range(height):
+        for x in range(width):
+            idx = y * width + x
+            d_val = min_dist_buf[idx]
+            if color_buf[idx] is not None:
+                is_internal_crease = False
+                cur_z = z_buf[idx]
+                for dy, dx in [(-1, 0), (1, 0), (0, -1), (0, 1)]:
+                    ny, nx = y + dy, x + dx
+                    if 0 <= ny < height and 0 <= nx < width:
+                        n_idx = ny * width + nx
+                        if z_buf[n_idx] > -9000.0 and (cur_z - z_buf[n_idx]) >= 1.5:
+                            is_internal_crease = True
+                            break
+                if is_internal_crease:
+                    c = color_buf[idx]
+                    crease_c = (max(0, int(c[0] * 0.72)), max(0, int(c[1] * 0.72)), max(0, int(c[2] * 0.72)), 255)
+                    buffer[idx * 4:idx * 4 + 4] = bytes(crease_c)
+                else:
+                    buffer[idx * 4:idx * 4 + 4] = bytes(color_buf[idx])
+            elif 0.0 < d_val <= outline_w:
+                buffer[idx * 4:idx * 4 + 4] = bytes(outline_rgba)
+                symbol_buffer[idx] = outline_key if outline_key in palette_raw else "o"
+                normal_buffer[idx * 4:idx * 4 + 4] = bytes([128, 128, 255, 255])
+
+    diagnostics = analyze_buffer(width, height, buffer)
+    return {
+        "width": width,
+        "height": height,
+        "buffer": buffer,
+        "normal_buffer": normal_buffer,
+        "symbol_buffer": symbol_buffer,
+        "resolved_palette": palette_raw,
+        "warnings": [],
+        "diagnostics": diagnostics
+    }
+
+
+def render_shader(spec, frame_index=0):
+    """
+    Evaluates procedural mathematical SDF shaders and GLSL-like functions,
+    applying perceptual Oklab palette quantization and Bayer dithering.
+    """
+    size_arr = spec.get("size") if isinstance(spec.get("size"), list) else [None, None]
+    width = clamp_size(spec.get("width") or size_arr[0], 32)
+    height = clamp_size(spec.get("height") or size_arr[1], 32)
+    palette_raw = resolve_full_palette(spec)
+    palette_list = [parse_color(v)[:3] for k, v in palette_raw.items() if k not in (".", " ")]
+    if not palette_list:
+        palette_list = [(7, 11, 25), (38, 75, 135), (96, 165, 250), (255, 255, 255)]
+
+    frames_count = max(1, int(spec.get("framesCount") or len(spec.get("frames", [])) or 1))
+    t = (frame_index / float(frames_count)) if frames_count > 1 else float(spec.get("time", 0.0) or 0.0)
+
+    dither_mode = str(spec.get("dither", "bayer4x4")).lower()
+    dither_str = float(spec.get("ditherStrength", 0.16) or 0.16)
+    shader_type = str(spec.get("shaderType") or spec.get("preset") or "custom").lower()
+
+    pal_oklab = [rgb_to_oklab(c[0], c[1], c[2]) for c in palette_list]
+
+    buffer = bytearray(width * height * 4)
+    normal_buffer = bytearray(width * height * 4)
+    symbol_buffer = ["."] * (width * height)
+
+    pal_keys = [k for k in palette_raw.keys() if k not in (".", " ")]
+    if not pal_keys:
+        pal_keys = ["b", "c", "h", "w"]
+
+    def eval_pixel_sample(u, v, time_val):
+        px = u * 2.0 - 1.0
+        py = v * 2.0 - 1.0
+        r_dist = math.hypot(px, py)
+        ang = math.atan2(py, px)
+
+        if shader_type in ("portal", "vortex", "orb"):
+            spiral = math.sin(ang * 4.0 - time_val * 6.28318 + r_dist * 6.0)
+            orb = r_dist - 0.72 + 0.08 * spiral
+            if orb > 0.06:
+                return 0.0, 0.0, 0.0, 0.0
+            core = max(0.0, 1.0 - r_dist / 0.75)
+            ring = max(0.0, 1.0 - abs(orb) / 0.12)
+            intensity = max(0.0, min(1.0, core * 0.7 + ring * 0.9 + 0.25 * spiral))
+            cr = math.sin(intensity * math.pi) * 0.6
+            cg = intensity * 0.9
+            cb = 0.5 + intensity * 0.5
+            return cr, cg, cb, 1.0
+
+        elif shader_type in ("fire", "flame"):
+            noise_val = value_noise2d((px + 1.0) * 4.0, (py - time_val * 2.0) * 4.0)
+            flame_shape = r_dist - (0.65 - (py + 0.5) * 0.4) + noise_val * 0.25
+            if flame_shape > 0.05 or py < -0.85:
+                return 0.0, 0.0, 0.0, 0.0
+            intensity = max(0.0, min(1.0, 1.0 - flame_shape * 1.5))
+            cr = min(1.0, intensity * 1.4)
+            cg = min(1.0, max(0.0, (intensity - 0.3) * 1.5))
+            cb = min(1.0, max(0.0, (intensity - 0.8) * 3.0))
+            return cr, cg, cb, 1.0
+
+        elif shader_type in ("shield", "forcefield"):
+            hex_grid = math.sin(px * 16.0) * math.cos(py * 16.0)
+            ring = abs(r_dist - 0.75)
+            if ring > 0.15:
+                return 0.0, 0.0, 0.0, 0.0
+            intensity = max(0.0, min(1.0, (1.0 - ring / 0.15) * 0.8 + 0.2 * math.sin(time_val * 6.28 + hex_grid * 4.0)))
+            return 0.2 * intensity, 0.8 * intensity, 1.0 * intensity, 1.0
+
+        else:
+            expr = spec.get("expr") or spec.get("formula")
+            if expr:
+                try:
+                    locs = {"u": u, "v": v, "t": time_val, "r": r_dist, "a": ang, "x": px, "y": py}
+                    val = max(0.0, min(1.0, float(eval(expr, SAFE_SHADER_GLOBALS, locs))))
+                    return val, val, val, (1.0 if val > 0.02 else 0.0)
+                except Exception:
+                    pass
+            wave = math.sin(r_dist * 8.0 - time_val * 6.28) * 0.5 + 0.5
+            if r_dist > 0.85:
+                return 0.0, 0.0, 0.0, 0.0
+            return wave, wave * 0.8, wave * 1.2, 1.0
+
+    intensity_map = [0.0] * (width * height)
+    for y in range(height):
+        v = 1.0 - (y + 0.5) / float(height)
+        for x in range(width):
+            u = (x + 0.5) / float(width)
+            r, g, b, alpha = eval_pixel_sample(u, v, t)
+            idx = y * width + x
+            intensity_map[idx] = (r + g + b) / 3.0 * alpha
+
+            if alpha <= 0.05:
+                buffer[idx * 4:idx * 4 + 4] = bytes([0, 0, 0, 0])
+                continue
+
+            dither_offset = 0.0
+            if dither_mode == "bayer4x4":
+                dither_offset = BAYER_4X4_NORM[y % 4][x % 4] * dither_str
+            elif dither_mode == "bayer2x2":
+                dither_offset = BAYER_2X2[y % 2][x % 2] * dither_str
+
+            rq = max(0.0, min(255.0, (r + dither_offset) * 255.0))
+            gq = max(0.0, min(255.0, (g + dither_offset) * 255.0))
+            bq = max(0.0, min(255.0, (b + dither_offset) * 255.0))
+
+            pL, pa, pb_ok = rgb_to_oklab(rq, gq, bq)
+            best_idx = 0
+            best_dist = 1e9
+            for pi, (tL, ta, tb) in enumerate(pal_oklab):
+                dist = (pL - tL)**2 + (pa - ta)**2 + (pb_ok - tb)**2
+                if dist < best_dist:
+                    best_dist = dist
+                    best_idx = pi
+
+            chosen_col = palette_list[best_idx]
+            buffer[idx * 4:idx * 4 + 4] = bytes([int(chosen_col[0]), int(chosen_col[1]), int(chosen_col[2]), 255])
+            symbol_buffer[idx] = pal_keys[min(best_idx, len(pal_keys) - 1)]
+
+    for y in range(height):
+        for x in range(width):
+            idx = y * width + x
+            if buffer[idx * 4 + 3] == 0:
+                normal_buffer[idx * 4:idx * 4 + 4] = bytes([128, 128, 255, 0])
+                continue
+            left_i = intensity_map[y * width + max(0, x - 1)]
+            right_i = intensity_map[y * width + min(width - 1, x + 1)]
+            up_i = intensity_map[max(0, y - 1) * width + x]
+            down_i = intensity_map[min(height - 1, y + 1) * width + x]
+            gx = (right_i - left_i) * 2.0
+            gy = (down_i - up_i) * 2.0
+            gl = math.hypot(gx, gy)
+            nx = (gx / gl) * 0.7 if gl > 1e-5 else 0.0
+            ny = (gy / gl) * 0.7 if gl > 1e-5 else 0.0
+            nz = math.sqrt(max(0.1, 1.0 - nx * nx - ny * ny))
+            normal_buffer[idx * 4] = max(0, min(255, js_round((nx * 0.5 + 0.5) * 255.0)))
+            normal_buffer[idx * 4 + 1] = max(0, min(255, js_round((-ny * 0.5 + 0.5) * 255.0)))
+            normal_buffer[idx * 4 + 2] = max(0, min(255, js_round((nz * 0.5 + 0.5) * 255.0)))
+            normal_buffer[idx * 4 + 3] = 255
+
+    diagnostics = analyze_buffer(width, height, buffer)
+    return {
+        "width": width,
+        "height": height,
+        "buffer": buffer,
+        "normal_buffer": normal_buffer,
+        "symbol_buffer": symbol_buffer,
+        "resolved_palette": palette_raw,
+        "warnings": [],
+        "diagnostics": diagnostics
+    }
+
+
+def render_sprite(spec_input, frame_index=0):
+    spec_raw = spec_input or {}
+    spec_type = str(spec_raw.get("type", "")).lower()
+    if spec_type == "rig" or ("rig" in spec_raw and isinstance(spec_raw.get("rig"), dict) and "bones" in spec_raw["rig"]):
+        return render_rig(spec_raw, frame_index)
+    if spec_type in ("shader", "glsl") or "glsl" in spec_raw or ("shaderType" in spec_raw and "bones" not in spec_raw.get("rig", {})):
+        return render_shader(spec_raw, frame_index)
+
+    spec = apply_frame_overrides(spec_raw, frame_index)
+    size_arr = spec.get("size") if isinstance(spec.get("size"), list) else [None, None]
+    width = clamp_size(spec.get("width") or size_arr[0], 32)
+    height = clamp_size(spec.get("height") or size_arr[1], 32)
+
     palette_raw = resolve_full_palette(spec)
     post = spec.get("postProcess") if isinstance(spec.get("postProcess"), dict) else {}
     global_sdf_shading = bool(post.get("sdfShading"))
@@ -1679,7 +2114,26 @@ def render_sprite(spec_input, frame_index=0):
                 if isinstance(pt, list) and len(pt) >= 2:
                     plot_point_with_mirror(pt[0], pt[1], 1, rgba, col_key, mirror)
 
+        elif op == "rig" and isinstance(layer.get("bones"), list):
+            sub_res = render_rig(layer, frame_index)
+            sub_buf = sub_res["buffer"]
+            for sy in range(min(height, sub_res["height"])):
+                for sx in range(min(width, sub_res["width"])):
+                    s_idx = (sy * sub_res["width"] + sx) * 4
+                    if sub_buf[s_idx + 3] > 0:
+                        blend_pixel(sx, sy, tuple(sub_buf[s_idx:s_idx + 4]))
+
+        elif op in ("shader", "glsl"):
+            sub_res = render_shader(layer, frame_index)
+            sub_buf = sub_res["buffer"]
+            for sy in range(min(height, sub_res["height"])):
+                for sx in range(min(width, sub_res["width"])):
+                    s_idx = (sy * sub_res["width"] + sx) * 4
+                    if sub_buf[s_idx + 3] > 0:
+                        blend_pixel(sx, sy, tuple(sub_buf[s_idx:s_idx + 4]))
+
         i += 1
+
 
     warnings = []
     if not spec.get("hideGrid") and isinstance(spec.get("grid"), list) and len(spec["grid"]) > 0:
@@ -2723,7 +3177,7 @@ def sync_sprite_to_presets_js(presets_js_path, sprite_key, label, prompt_text, s
         re.DOTALL
     )
     if pattern.search(content):
-        new_content = pattern.sub(assign_code, content)
+        new_content = pattern.sub(lambda _: assign_code, content)
     elif f'name: "{sprite_key}"' in content or f'"name": "{sprite_key}"' in content:
         return True
     else:
@@ -2775,7 +3229,14 @@ def process_spec(spec, base_dir, no_ansi=False, sync_web=True, export_normals=Tr
 
     synced = False
     if sync_web:
-        label = spec.get("label") or (f"✨ {name} ({w}×{h})" + (f" [{total_frames}f]" if total_frames > 1 else ""))
+        if spec.get("label"):
+            label = spec["label"]
+        elif spec.get("type") == "rig":
+            label = f"🦴 {name} ({w}×{h})" + (f" [{total_frames}f]" if total_frames > 1 else "")
+        elif spec.get("type") == "shader":
+            label = f"🌀 {name} ({w}×{h})" + (f" [{total_frames}f]" if total_frames > 1 else "")
+        else:
+            label = f"✨ {name} ({w}×{h})" + (f" [{total_frames}f]" if total_frames > 1 else "")
         synced = sync_sprite_to_presets_js(
             base_dir / "presets.js",
             name,

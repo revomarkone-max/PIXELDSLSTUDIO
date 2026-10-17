@@ -14,6 +14,7 @@
         ⟨⟩ Code
       </button>
       <span class="brand-badge">v3.0 • 8×8..128×128</span>
+      <span id="engineBadge" class="engine-badge" title="Active Generative Engine">🔲 Grid</span>
       <span>PixelDSL Studio</span>
     </div>
 
@@ -188,8 +189,62 @@
 
     <!-- RIGHT SIDEBAR: Layers, Palette, and Collapsible Settings -->
     <aside class="panel panel-right">
+      <!-- 0A. SKELETAL RIG INSPECTOR (Visible when current sprite is type: "rig") -->
+      <details id="groupRigInspector" class="inspector-group" open style="display: none;">
+        <summary>
+          <span>🦴 Skeletal Rig Hierarchy (<span id="boneCountBadge">0</span>)</span>
+        </summary>
+        <div class="inspector-body">
+          <div style="display: flex; gap: 4px; margin-bottom: 7px;">
+            <button id="btnAddBone" class="btn btn-sm" style="flex: 1; justify-content: center;" title="Add new bone to rig hierarchy">+ Bone</button>
+            <button id="btnToggleBonesDebug" class="btn btn-sm" title="Toggle bone wireframe skeleton overlay on canvas">🦴 Overlay</button>
+          </div>
+          <div id="bonesList" class="layers-list"></div>
+        </div>
+      </details>
+
+      <!-- 0B. PROCEDURAL GLSL / MATH SHADER CONTROLS (Visible when current sprite is type: "shader") -->
+      <details id="groupShaderInspector" class="inspector-group" open style="display: none;">
+        <summary>
+          <span>✨ GLSL / Math Shader Controls</span>
+        </summary>
+        <div class="inspector-body">
+          <div class="control-row" style="margin-bottom: 6px;">
+            <span style="font-size: 11.5px; color: var(--text-muted);">Shader Type:</span>
+            <select id="selShaderType" style="flex: 1;">
+              <option value="portal">🌀 Vortex Portal</option>
+              <option value="fire">🔥 Fire Elemental</option>
+              <option value="custom">⚡ Custom Math GLSL</option>
+            </select>
+          </div>
+          <div class="control-row" style="margin-bottom: 6px;">
+            <span style="font-size: 11.5px; color: var(--text-muted);">Dithering:</span>
+            <select id="selShaderDither" style="flex: 1;">
+              <option value="bayer4x4">Bayer 4×4 Matrix</option>
+              <option value="bayer2x2">Bayer 2×2 Coarse</option>
+              <option value="none">None (Posterized)</option>
+            </select>
+          </div>
+          <div class="control-row" style="margin-bottom: 6px;">
+            <span style="font-size: 11.5px; color: var(--text-muted);">Dither Str:</span>
+            <input type="range" id="inputShaderDitherStrength" min="0" max="40" value="16" style="width: 90px; accent-color: var(--accent);" />
+            <span id="lblShaderDitherStrength" style="font-family: var(--font-mono); font-size: 11px;">0.16</span>
+          </div>
+          <div class="control-row">
+            <span style="font-size: 11.5px; color: var(--text-muted);">Loop Frames:</span>
+            <select id="selShaderFrames" style="width: 85px;">
+              <option value="4">4 frames</option>
+              <option value="8" selected>8 frames</option>
+              <option value="12">12 frames</option>
+              <option value="16">16 frames</option>
+            </select>
+            <button id="btnRecompileShader" class="btn btn-sm btn-primary" style="flex: 1; justify-content: center;" title="Recompile shader">⚡ Recompile</button>
+          </div>
+        </div>
+      </details>
+
       <!-- 1. LAYERS STACK (Open by default) -->
-      <details class="inspector-group" open>
+      <details id="groupLayersInspector" class="inspector-group" open>
         <summary>
           <span>Layers Stack (<span id="layerCountBadge">0</span>)</span>
         </summary>
@@ -436,6 +491,8 @@
               <option value="auto" selected>Auto (Grid ≤32, Layers &gt;32)</option>
               <option value="grid">Symbolic Matrix (grid)</option>
               <option value="layers">Hybrid 2.5D SDF Layers + Motion (layers)</option>
+              <option value="rig">🦴 Skeletal Capsule Rig Engine (rig)</option>
+              <option value="shader">✨ Procedural GLSL / Math Shader (shader)</option>
             </select>
           </div>
         </div>

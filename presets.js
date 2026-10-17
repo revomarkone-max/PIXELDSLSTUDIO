@@ -9597,7 +9597,729 @@ window.PIXEL_PRESETS["chibi_clothed_example_32x36"] = {
 }
 };
 
+
+// Auto-synced by pixeldsl.py CLI
+window.PIXEL_PRESETS["chibi_hero_rig_32x36"] = {
+  label: "🦴 Chibi Adventurer Rig (32×36) [5f]",
+  prompt: "Generated via CLI: chibi_hero_rig_32x36",
+  data: {
+  "type": "rig",
+  "name": "chibi_hero_rig_32x36",
+  "label": "🦴 Chibi Adventurer Rig (32×36) [5f]",
+  "author": "PixelDSL Studio",
+  "description": "Procedural 2.5D Skeletal Capsule Rig of a Chibi Adventurer. No character grid — animated solely via bone angle kinematics!",
+  "width": 32,
+  "height": 36,
+  "fps": 6,
+  "palette": {
+    ".": null,
+    "o": "#8a4f26",
+    "b": "#fbd7ba",
+    "h": "#fbe7c3",
+    "C": "#2b5282",
+    "c": "#4299e1",
+    "T": "#3d4852",
+    "G": "#6b4423",
+    "H": "#663300",
+    "W": "#ffffff",
+    "M": "#a0a5ab",
+    "m": "#69717d"
+  },
+  "rig": {
+    "outline": "o",
+    "outlineWidth": 1.0,
+    "bones": [
+      {
+        "id": "pelvis",
+        "x": 16,
+        "y": 21,
+        "length": 0,
+        "angle": 0,
+        "r1": 3.0,
+        "r2": 3.0,
+        "fill": "T",
+        "z": 2
+      },
+      {
+        "id": "torso",
+        "parent": "pelvis",
+        "offset": [
+          0,
+          -1
+        ],
+        "length": 6.5,
+        "angle": -90,
+        "r1": 4.0,
+        "r2": 3.4,
+        "fill": "C",
+        "z": 3
+      },
+      {
+        "id": "head",
+        "parent": "torso",
+        "offset": [
+          0,
+          0
+        ],
+        "length": 6.5,
+        "angle": 0,
+        "r1": 6.5,
+        "r2": 5.5,
+        "shape": "head_oval",
+        "fill": "b",
+        "features": {
+          "eyes": {
+            "dx": 2.5,
+            "dy": 0.5,
+            "w": 2,
+            "h": 3,
+            "color": "#4e221c"
+          }
+        },
+        "z": 5
+      },
+      {
+        "id": "thigh_back",
+        "parent": "pelvis",
+        "offset": [
+          -1.0,
+          1.5
+        ],
+        "length": 5,
+        "angle": 60,
+        "r1": 2.0,
+        "r2": 1.6,
+        "fill": "T",
+        "z": 1
+      },
+      {
+        "id": "shin_back",
+        "parent": "thigh_back",
+        "length": 5,
+        "angle": -20,
+        "r1": 1.6,
+        "r2": 2.0,
+        "fill": "G",
+        "z": 1
+      },
+      {
+        "id": "thigh_front",
+        "parent": "pelvis",
+        "offset": [
+          1.0,
+          1.5
+        ],
+        "length": 5,
+        "angle": 110,
+        "r1": 2.0,
+        "r2": 1.6,
+        "fill": "T",
+        "z": 4
+      },
+      {
+        "id": "shin_front",
+        "parent": "thigh_front",
+        "length": 5,
+        "angle": 25,
+        "r1": 1.6,
+        "r2": 2.0,
+        "fill": "G",
+        "z": 4
+      },
+      {
+        "id": "arm_back",
+        "parent": "torso",
+        "offset": [
+          -2.0,
+          -1.0
+        ],
+        "length": 5.5,
+        "angle": 45,
+        "r1": 1.6,
+        "r2": 1.4,
+        "fill": "b",
+        "z": 1
+      },
+      {
+        "id": "arm_front",
+        "parent": "torso",
+        "offset": [
+          2.0,
+          -1.0
+        ],
+        "length": 5.5,
+        "angle": 135,
+        "r1": 1.6,
+        "r2": 1.4,
+        "fill": "b",
+        "z": 6
+      }
+    ]
+  },
+  "frames": [
+    {
+      "name": "Step 1 (Passing)",
+      "pose": {
+        "pelvis": {
+          "dy": 1
+        },
+        "thigh_back": {
+          "dAngle": -20
+        },
+        "shin_back": {
+          "dAngle": -40
+        },
+        "thigh_front": {
+          "dAngle": -10
+        },
+        "shin_front": {
+          "dAngle": 0
+        },
+        "arm_back": {
+          "dAngle": 15
+        },
+        "arm_front": {
+          "dAngle": -15
+        }
+      }
+    },
+    {
+      "name": "Step 2 (Stride Extension)",
+      "pose": {
+        "pelvis": {
+          "dy": 0
+        },
+        "thigh_back": {
+          "dAngle": -45
+        },
+        "shin_back": {
+          "dAngle": 10
+        },
+        "thigh_front": {
+          "dAngle": 25
+        },
+        "shin_front": {
+          "dAngle": 10
+        },
+        "arm_back": {
+          "dAngle": 35
+        },
+        "arm_front": {
+          "dAngle": -35
+        }
+      }
+    },
+    {
+      "name": "Step 3 (Contact)",
+      "pose": {
+        "pelvis": {
+          "dy": 0.5
+        },
+        "thigh_back": {
+          "dAngle": 15
+        },
+        "shin_back": {
+          "dAngle": 0
+        },
+        "thigh_front": {
+          "dAngle": -20
+        },
+        "shin_front": {
+          "dAngle": -35
+        },
+        "arm_back": {
+          "dAngle": -15
+        },
+        "arm_front": {
+          "dAngle": 15
+        }
+      }
+    },
+    {
+      "name": "Step 4 (Push-Off)",
+      "pose": {
+        "pelvis": {
+          "dy": 0
+        },
+        "thigh_back": {
+          "dAngle": 30
+        },
+        "shin_back": {
+          "dAngle": 15
+        },
+        "thigh_front": {
+          "dAngle": -40
+        },
+        "shin_front": {
+          "dAngle": 10
+        },
+        "arm_back": {
+          "dAngle": -35
+        },
+        "arm_front": {
+          "dAngle": 35
+        }
+      }
+    }
+  ]
+}
+};
+
+
+// Auto-synced by pixeldsl.py CLI
+window.PIXEL_PRESETS["quadruped_wolf_rig_32x32"] = {
+  label: "🐺 Galloping Wolf Rig (32×32) [5f]",
+  prompt: "Generated via CLI: quadruped_wolf_rig_32x32",
+  data: {
+  "type": "rig",
+  "name": "quadruped_wolf_rig_32x32",
+  "label": "🐺 Galloping Wolf Rig (32×32) [5f]",
+  "author": "PixelDSL Studio",
+  "description": "Procedural 4-Legged Beast / Wolf Skeletal Rig. Dynamic spine flex, muzzle, paws, and running gallop animation.",
+  "width": 32,
+  "height": 32,
+  "fps": 8,
+  "palette": {
+    ".": null,
+    "o": "#232028",
+    "w": "#8a8f9c",
+    "W": "#c4c8d4",
+    "d": "#515461",
+    "e": "#d95763",
+    "n": "#1b191f"
+  },
+  "rig": {
+    "outline": "o",
+    "outlineWidth": 1.0,
+    "bones": [
+      {
+        "id": "hips",
+        "x": 10,
+        "y": 15,
+        "length": 0,
+        "angle": 0,
+        "r1": 3.0,
+        "r2": 3.0,
+        "fill": "w",
+        "z": 3
+      },
+      {
+        "id": "spine",
+        "parent": "hips",
+        "offset": [
+          0,
+          0
+        ],
+        "length": 8,
+        "angle": 0,
+        "r1": 3.2,
+        "r2": 3.8,
+        "fill": "w",
+        "z": 3
+      },
+      {
+        "id": "neck",
+        "parent": "spine",
+        "offset": [
+          0,
+          -1
+        ],
+        "length": 4,
+        "angle": -45,
+        "r1": 2.5,
+        "r2": 3.0,
+        "fill": "w",
+        "z": 4
+      },
+      {
+        "id": "head",
+        "parent": "neck",
+        "offset": [
+          0,
+          0
+        ],
+        "length": 5,
+        "angle": 25,
+        "r1": 3.0,
+        "r2": 1.8,
+        "shape": "tapered_capsule",
+        "fill": "W",
+        "features": {
+          "eyes": {
+            "dx": 0.5,
+            "dy": -1.0,
+            "w": 1.5,
+            "h": 1.5,
+            "color": "#d95763"
+          }
+        },
+        "z": 5
+      },
+      {
+        "id": "tail",
+        "parent": "hips",
+        "offset": [
+          -2,
+          -1
+        ],
+        "length": 6,
+        "angle": -140,
+        "r1": 1.8,
+        "r2": 1.0,
+        "fill": "w",
+        "z": 1
+      },
+      {
+        "id": "back_thigh_r",
+        "parent": "hips",
+        "offset": [
+          1,
+          2
+        ],
+        "length": 5,
+        "angle": 110,
+        "r1": 2.0,
+        "r2": 1.4,
+        "fill": "w",
+        "z": 5
+      },
+      {
+        "id": "back_shin_r",
+        "parent": "back_thigh_r",
+        "length": 5,
+        "angle": -40,
+        "r1": 1.4,
+        "r2": 1.6,
+        "fill": "d",
+        "z": 5
+      },
+      {
+        "id": "back_thigh_l",
+        "parent": "hips",
+        "offset": [
+          -1,
+          2
+        ],
+        "length": 5,
+        "angle": 70,
+        "r1": 1.8,
+        "r2": 1.3,
+        "fill": "d",
+        "z": 1
+      },
+      {
+        "id": "back_shin_l",
+        "parent": "back_thigh_l",
+        "length": 5,
+        "angle": -30,
+        "r1": 1.3,
+        "r2": 1.5,
+        "fill": "d",
+        "z": 1
+      },
+      {
+        "id": "front_arm_r",
+        "parent": "spine",
+        "offset": [
+          1,
+          2
+        ],
+        "length": 5.5,
+        "angle": 75,
+        "r1": 1.8,
+        "r2": 1.3,
+        "fill": "w",
+        "z": 5
+      },
+      {
+        "id": "front_paw_r",
+        "parent": "front_arm_r",
+        "length": 4.5,
+        "angle": 15,
+        "r1": 1.3,
+        "r2": 1.5,
+        "fill": "d",
+        "z": 5
+      },
+      {
+        "id": "front_arm_l",
+        "parent": "spine",
+        "offset": [
+          -1,
+          2
+        ],
+        "length": 5.5,
+        "angle": 105,
+        "r1": 1.6,
+        "r2": 1.2,
+        "fill": "d",
+        "z": 1
+      },
+      {
+        "id": "front_paw_l",
+        "parent": "front_arm_l",
+        "length": 4.5,
+        "angle": -20,
+        "r1": 1.2,
+        "r2": 1.4,
+        "fill": "d",
+        "z": 1
+      }
+    ]
+  },
+  "frames": [
+    {
+      "name": "Gallop Stretch",
+      "pose": {
+        "hips": {
+          "dy": -1
+        },
+        "spine": {
+          "dAngle": -5
+        },
+        "tail": {
+          "dAngle": -20
+        },
+        "back_thigh_r": {
+          "dAngle": 35
+        },
+        "back_shin_r": {
+          "dAngle": 15
+        },
+        "front_arm_r": {
+          "dAngle": -35
+        },
+        "front_paw_r": {
+          "dAngle": -20
+        }
+      }
+    },
+    {
+      "name": "Gallop Passing",
+      "pose": {
+        "hips": {
+          "dy": 1
+        },
+        "spine": {
+          "dAngle": 0
+        },
+        "tail": {
+          "dAngle": 0
+        },
+        "back_thigh_r": {
+          "dAngle": -15
+        },
+        "back_shin_r": {
+          "dAngle": -25
+        },
+        "front_arm_r": {
+          "dAngle": 15
+        },
+        "front_paw_r": {
+          "dAngle": 20
+        }
+      }
+    },
+    {
+      "name": "Gallop Gather",
+      "pose": {
+        "hips": {
+          "dy": 0
+        },
+        "spine": {
+          "dAngle": 10
+        },
+        "tail": {
+          "dAngle": 25
+        },
+        "back_thigh_r": {
+          "dAngle": -45
+        },
+        "back_shin_r": {
+          "dAngle": -20
+        },
+        "front_arm_r": {
+          "dAngle": 35
+        },
+        "front_paw_r": {
+          "dAngle": 10
+        }
+      }
+    },
+    {
+      "name": "Gallop Push-off",
+      "pose": {
+        "hips": {
+          "dy": 0
+        },
+        "spine": {
+          "dAngle": 0
+        },
+        "tail": {
+          "dAngle": 10
+        },
+        "back_thigh_r": {
+          "dAngle": 15
+        },
+        "back_shin_r": {
+          "dAngle": 20
+        },
+        "front_arm_r": {
+          "dAngle": -15
+        },
+        "front_paw_r": {
+          "dAngle": -10
+        }
+      }
+    }
+  ]
+}
+};
+
+
+// Auto-synced by pixeldsl.py CLI
+window.PIXEL_PRESETS["magic_portal_orb_32x32"] = {
+  label: "🌀 Magic Portal Orb GLSL Shader (32×32) [8f]",
+  prompt: "Generated via CLI: magic_portal_orb_32x32",
+  data: {
+  "type": "shader",
+  "name": "magic_portal_orb_32x32",
+  "label": "🌀 Magic Portal Orb GLSL Shader (32×32) [8f]",
+  "author": "PixelDSL Studio",
+  "description": "Procedural Swirling Vortex Magic Portal shader. Evaluates continuous math SDFs with Oklab palette quantization and Bayer 4x4 dithering.",
+  "width": 32,
+  "height": 32,
+  "fps": 8,
+  "framesCount": 8,
+  "shaderType": "portal",
+  "dither": "bayer4x4",
+  "ditherStrength": 0.16,
+  "palette": {
+    "1": "#070b19",
+    "2": "#142247",
+    "3": "#264b87",
+    "4": "#3a7bd5",
+    "5": "#60a5fa",
+    "6": "#93c5fd",
+    "7": "#ffffff"
+  },
+  "glsl": "\nvoid mainImage(out vec4 fragColor, in vec2 uv, in float time) {\n    vec2 p = uv * 2.0 - 1.0;\n    float r = length(p);\n    float a = atan(p.y, p.x);\n    \n    // Swirling vortex SDF\n    float spiral = sin(a * 4.0 - time * 6.28318 + r * 6.0);\n    float orb = r - 0.72 + 0.08 * spiral;\n    \n    if (orb > 0.06) {\n        fragColor = vec4(0.0);\n        return;\n    }\n    \n    float core = max(0.0, 1.0 - r / 0.75);\n    float ring = max(0.0, 1.0 - abs(orb) / 0.12);\n    float intensity = clamp(core * 0.7 + ring * 0.9 + 0.25 * spiral, 0.0, 1.0);\n    \n    vec3 col = vec3(sin(intensity * 3.14159) * 0.6, intensity * 0.9, 0.5 + intensity * 0.5);\n    fragColor = vec4(col, 1.0);\n}\n"
+}
+};
+
+
+// Auto-synced by pixeldsl.py CLI
+window.PIXEL_PRESETS["fire_elemental_32x32"] = {
+  label: "🔥 Fire Elemental GLSL Shader (32×32) [8f]",
+  prompt: "Generated via CLI: fire_elemental_32x32",
+  data: {
+  "type": "shader",
+  "name": "fire_elemental_32x32",
+  "label": "🔥 Fire Elemental GLSL Shader (32×32) [8f]",
+  "author": "PixelDSL Studio",
+  "description": "Procedural Rising Flame Elemental shader. Continuous turbulent heat displacement, hot core, and Bayer dithering.",
+  "width": 32,
+  "height": 32,
+  "fps": 8,
+  "framesCount": 8,
+  "shaderType": "fire",
+  "dither": "bayer4x4",
+  "ditherStrength": 0.18,
+  "palette": {
+    "1": "#1a0808",
+    "2": "#471008",
+    "3": "#8f1e00",
+    "4": "#d95000",
+    "5": "#ff8c00",
+    "6": "#ffd034",
+    "7": "#ffffff"
+  },
+  "glsl": "\nvoid mainImage(out vec4 fragColor, in vec2 uv, in float time) {\n    vec2 p = uv * 2.0 - 1.0;\n    float r = length(p);\n    \n    // Rising heat turbulence\n    float flameShape = r - (0.65 - (p.y + 0.5) * 0.4) + sin(p.x * 6.0 + time * 6.28) * 0.12;\n    if (flameShape > 0.05 || p.y < -0.85) {\n        fragColor = vec4(0.0);\n        return;\n    }\n    \n    float intensity = clamp(1.0 - flameShape * 1.5, 0.0, 1.0);\n    vec3 col = vec3(min(1.0, intensity * 1.4), clamp((intensity - 0.3) * 1.5, 0.0, 1.0), clamp((intensity - 0.8) * 3.0, 0.0, 1.0));\n    fragColor = vec4(col, 1.0);\n}\n"
+}
+};
+
 window.SKILL_PROMPT_TEMPLATE = function(userRequest, width, height, mode) {
+  if (mode === "rig") {
+    return `You are a 2D pixel-art skeletal capsule rig generator following the PixelDSL v3.0 Rig Engine specification.
+Convert the user request into a valid JSON rig definition without any surrounding explanation (JSON only).
+
+USER REQUEST: "${userRequest}"
+TARGET CANVAS SIZE: ${width}x${height} pixels.
+
+PIXELRIG ARCHITECTURE & KINEMATICS:
+1. Root Bone: Define a root body/torso bone with "origin": [cx, cy], "length": L, "r1": R1, "r2": R2, "angle": 0, "z": 2.
+2. Hierarchical Bones: Define child bones with "parent": "<parent_bone_id>", "offset": [dx, dy] (relative to parent head or tail), "length": L, "r1": R1, "r2": R2, "angle": DEG, "z": Z.
+3. Tapered 3D Volume: Each bone is rasterized as a smooth continuous capsule or head oval, producing spherical 3D surface normals, directional cel-shading, and 1px internal anatomical creases where different z-tiers overlap.
+4. Animation Poses: Under "poses", define frame deltas without re-specifying the whole body! Each frame only specifies { "<bone_id>": { "dAngle": DEG, "dx": 0, "dy": 0 } }.
+
+OUTPUT FORMAT (strictly valid JSON):
+{
+  "type": "rig",
+  "name": "character_rig_${width}x${height}",
+  "width": ${width},
+  "height": ${height},
+  "fps": 6,
+  "palette": {
+    ".": "transparent",
+    "O": "#14182e",
+    "S": "#f2b18d",
+    "C": "#3a7bd5",
+    "P": "#264b87",
+    "H": "#633c24",
+    "w": "#ffffff"
+  },
+  "postProcess": {
+    "autoOutline": false,
+    "outlineColor": "#14182e",
+    "sdfShading": true
+  },
+  "bones": [
+    { "id": "torso", "origin": [${Math.floor(width / 2)}, ${Math.floor(height * 0.45)}], "length": ${Math.floor(height * 0.28)}, "r1": 4.5, "r2": 4.0, "angle": 90, "fill": "C", "outline": "O", "z": 3, "crease": true },
+    { "id": "head", "parent": "torso", "offset": [0, -${Math.floor(height * 0.22)}], "length": ${Math.floor(height * 0.2)}, "r1": 6.5, "r2": 6.0, "angle": 90, "fill": "S", "outline": "O", "z": 5, "crease": true, "oval": true }
+  ],
+  "poses": [
+    {},
+    { "torso": { "dy": 1 } }
+  ]
+}`;
+  }
+
+  if (mode === "shader") {
+    return `You are a procedural GLSL / math shader pixel-art generator following the PixelDSL v3.0 Shader Engine specification.
+Convert the user request into a valid JSON shader definition without any surrounding explanation (JSON only).
+
+USER REQUEST: "${userRequest}"
+TARGET CANVAS SIZE: ${width}x${height} pixels.
+
+PIXELSHADER ARCHITECTURE:
+1. Continuous Math Field: Evaluates void mainImage(out vec4 fragColor, in vec2 uv, in float time) where uv is normalized [0, 1] (or p = uv * 2.0 - 1.0) and time loops [0.0, 1.0].
+2. Palette Quantization: fragColor RGB is quantized to the closest color in "palette" via perceptual Oklab color space with Bayer 4x4 matrix dithering.
+3. 3D Normals: Tangent-space normal maps are automatically computed via finite difference intensity gradients.
+
+OUTPUT FORMAT (strictly valid JSON):
+{
+  "type": "shader",
+  "name": "effect_shader_${width}x${height}",
+  "width": ${width},
+  "height": ${height},
+  "fps": 8,
+  "framesCount": 8,
+  "shaderType": "portal",
+  "dither": "bayer4x4",
+  "ditherStrength": 0.16,
+  "palette": {
+    "1": "#070b19",
+    "2": "#142247",
+    "3": "#264b87",
+    "4": "#3a7bd5",
+    "5": "#60a5fa",
+    "6": "#93c5fd",
+    "7": "#ffffff"
+  },
+  "glsl": "void mainImage(out vec4 fragColor, in vec2 uv, in float time) {\\n    vec2 p = uv * 2.0 - 1.0;\\n    float r = length(p);\\n    float a = atan(p.y, p.x);\\n    float spiral = sin(a * 4.0 - time * 6.28318 + r * 6.0);\\n    float d = r - 0.72 + 0.08 * spiral;\\n    if (d > 0.05) { fragColor = vec4(0.0); return; }\\n    float intensity = clamp(1.0 - d * 2.0, 0.0, 1.0);\\n    fragColor = vec4(vec3(intensity), 1.0);\\n}"
+}`;
+  }
+
   const isGridPreferred = (mode === "grid") || (mode === "auto" && width <= 32 && height <= 32);
   const modeInstructions = isGridPreferred
     ? `MODE: Symbolic Pixel Matrix ("grid").

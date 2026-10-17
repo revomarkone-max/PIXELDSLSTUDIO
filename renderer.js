@@ -1131,6 +1131,10 @@ class PixelDSLRenderer {
   }
 
   static getFrameCount(spec) {
+    if (!spec || typeof spec !== "object") return 1;
+    if (spec.type === "shader" || spec.type === "glsl" || spec.glsl || spec.shaderType) {
+      if (spec.framesCount) return Math.max(1, parseInt(spec.framesCount, 10) || 1);
+    }
     const extra = Array.isArray(spec && spec.frames) ? spec.frames.length : 0;
     let motionFrames = 0;
     if (spec && spec.motion && typeof spec.motion === "object") {
@@ -1138,6 +1142,7 @@ class PixelDSLRenderer {
     }
     return 1 + Math.max(extra, motionFrames);
   }
+
 
   static applyFrameOverrides(spec, frameIndex = 0) {
     const cloned = JSON.parse(JSON.stringify(spec || {}));
@@ -1382,12 +1387,474 @@ class PixelDSLRenderer {
     });
   }
 
+  // ==========================================================================
+  // SKELETAL CAPSULE RIG ENGINE (PixelRig)
+  // ==========================================================================
+
+  static solveFkRig(bonesDef, pose = {}) {
+    const bonesById = {};
+    if (Array.isArray(bonesDef)) {
+      bonesDef.forEach((b) => {
+        if (b && b.id) bonesById[b.id] = b;
+      });
+    }
+    const resolved = {};
+
+    const getBoneXform = (bid, visited = new Set()) => {
+      if (resolved[bid]) return resolved[bid];
+      if (visited.has(bid) || !bonesById[bid]) {
+        return { start: [0, 0], end: [0, 0], angle: 0 };
+      }
+      visited.add(bid);
+
+      const b = bonesById[bid];
+      const mod = (pose && typeof pose === "object" && pose[bid]) || {};
+      const dAngle = Number(mod.dAngle || 0);
+      const dx = Number(mod.dx || 0);
+      const dy = Number(mod.dy || 0);
+
+      let startX = 0;
+      let startY = 0;
+      let worldAngle = 0;
+
+      const parentId = b.parent;
+      if (parentId && bonesById[parentId]) {
+        const parentXform = getBoneXform(parentId, visited);
+        const offset = Array.isArray(b.offset) ? b.offset : [0, 0];
+        const prad = (parentXform.angle * Math.PI) / 180.0;
+        const pcos = Math.cos(prad);
+        const psin = Math.sin(prad);
+        const rx = Number(offset[0] || 0) * pcos - Number(offset[1] || 0) * psin;
+        const ry = Number(offset[0] || 0) * psin + Number(offset[1] || 0) * pcos;
+        startX = parentXform.end[0] + rx + dx;
+        startY = parentXform.end[1] + ry + dy;
+        worldAngle = parentXform.angle + Number(b.angle || 0) + dAngle;
+      } else {
+        startX = Number(b.x || 0) + dx;
+        startY = Number(b.y || 0) + dy;
+        worldAngle = Number(b.angle || 0) + dAngle;
+      }
+
+      const length = Number(b.length || 0);
+      const wrad = (worldAngle * Math.PI) / 180.0;
+      const endX = startX + length * Math.cos(wrad);
+      const endY = startY + length * Math.sin(wrad);
+
+      resolved[bid] = { start: [startX, startY], end: [endX, endY], angle: worldAngle };
+      return resolved[bid];
+    };
+
+    if (Array.isArray(bonesDef)) {
+      bonesDef.forEach((b) => {
+        if (b && b.id) getBoneXform(b.id);
+      });
+    }
+    return resolved;
+  }
+
+  static renderRig(specInput, frameIndex = 0) {
+    const spec = specInput || {};
+    const width = this.clampSize(spec.width || (spec.size && spec.size[0]), 32);
+    const height = this.clampSize(spec.height || (spec.size && spec.size[1]), 32);
+
+    const rigDef = spec.rig && typeof spec.rig === "object" ? spec.rig : spec;
+    const bonesDef = Array.isArray(rigDef.bones) ? rigDef.bones : [];
+
+    const frames = Array.isArray(spec.frames) ? spec.frames : [];
+    let framePose = {};
+    if (frameIndex > 0 && frameIndex <= frames.length) {
+      const fDef = frames[frameIndex - 1];
+      framePose = fDef.pose || fDef.layers || {};
+    } else if (frameIndex === 0 && frames.length === 1 && (frames[0].pose || frames[0].layers)) {
+      framePose = frames[0].pose || frames[0].layers || {};
+    }
+
+    const fkResults = this.solveFkRig(bonesDef, framePose);
+
+    const paletteRaw = this.resolveFullPalette(spec);
+    const paletteRGBA = { ".": [0, 0, 0, 0], " ": [0, 0, 0, 0] };
+    for (const [key, val] of Object.entries(paletteRaw)) {
+      paletteRGBA[key] = this.parseColor(val);
+    }
+
+    const outlineKey = rigDef.outline || "o";
+    const outlineRGBA = paletteRGBA[outlineKey] || this.parseColor(outlineKey);
+    const outlineW = Number(rigDef.outlineWidth || 1.0);
+
+    const sortedBones = bonesDef
+      .filter((b) => b && b.id && !b.hidden)
+      .sort((a, b) => Number(a.z || 0) - Number(b.z || 0));
+
+    const colorBuf = new Array(width * height).fill(null);
+    const zBuf = new Float32Array(width * height).fill(-9999.0);
+    const boneIdBuf = new Array(width * height).fill(null);
+    const normalBuffer = new Uint8ClampedArray(width * height * 4);
+    for (let i = 0; i < width * height; i++) {
+      normalBuffer[i * 4] = 128;
+      normalBuffer[i * 4 + 1] = 128;
+      normalBuffer[i * 4 + 2] = 255;
+      normalBuffer[i * 4 + 3] = 0;
+    }
+
+    const minDistBuf = new Float32Array(width * height).fill(9999.0);
+    const symbolBuffer = new Array(width * height).fill(".");
+
+    const lightDir = [-0.52, -0.62, 0.58];
+    const lMag = Math.hypot(lightDir[0], lightDir[1], lightDir[2]);
+    const lx = lightDir[0] / lMag;
+    const ly = lightDir[1] / lMag;
+    const lz = lightDir[2] / lMag;
+
+    for (const b of sortedBones) {
+      const bid = b.id;
+      const xf = fkResults[bid] || { start: [0, 0], end: [0, 0], angle: 0 };
+      const ax = xf.start[0];
+      const ay = xf.start[1];
+      const bx = xf.end[0];
+      const by = xf.end[1];
+
+      const r1 = Math.max(0.5, Number(b.r1 || 2.0));
+      const r2 = Math.max(0.5, Number(b.r2 || r1));
+      const z = Number(b.z || 0);
+      const fillKey = b.fill || "b";
+      const fillRGBA = paletteRGBA[fillKey] || this.parseColor(fillKey);
+      const shape = String(b.shape || "capsule").toLowerCase();
+
+      const vax = bx - ax;
+      const vay = by - ay;
+      const vLenSq = vax * vax + vay * vay;
+
+      for (let y = 0; y < height; y++) {
+        for (let x = 0; x < width; x++) {
+          const px = x + 0.5;
+          const py = y + 0.5;
+          let d = 9999.0;
+          let qx = ax;
+          let qy = ay;
+          let effR = r1;
+
+          if (shape === "head_oval" || shape === "oval") {
+            const hasLen = Number(b.length || 0) > 0;
+            const cx = hasLen ? bx : ax;
+            const cy = hasLen ? by : ay;
+            const rx = r2;
+            const ry = r1;
+            const pLocX = px - cx;
+            const pLocY = py - cy;
+            const k0 = Math.hypot(pLocX / rx, pLocY / ry);
+            d = (k0 - 1.0) * Math.min(rx, ry);
+            qx = cx;
+            qy = cy;
+            effR = (rx + ry) * 0.5;
+          } else {
+            if (vLenSq < 1e-6) {
+              qx = ax;
+              qy = ay;
+              effR = r1;
+            } else {
+              const hVal = Math.max(0.0, Math.min(1.0, ((px - ax) * vax + (py - ay) * vay) / vLenSq));
+              qx = ax + hVal * vax;
+              qy = ay + hVal * vay;
+              effR = r1 + hVal * (r2 - r1);
+            }
+            d = Math.hypot(px - qx, py - qy) - effR;
+          }
+
+          const idx = y * width + x;
+          if (d < minDistBuf[idx]) {
+            minDistBuf[idx] = d;
+          }
+
+          if (d <= 0.0) {
+            if (z >= zBuf[idx]) {
+              zBuf[idx] = z;
+              boneIdBuf[idx] = bid;
+
+              const vx = (px - qx) / Math.max(0.1, effR);
+              const vy = (py - qy) / Math.max(0.1, effR);
+              const vzSq = Math.max(0.0, 1.0 - vx * vx - vy * vy);
+              const vz = Math.sqrt(vzSq);
+
+              const dot = vx * lx + vy * ly + vz * lz;
+              let col = fillRGBA;
+              if (dot > 0.45) {
+                col = [Math.min(255, Math.round(fillRGBA[0] * 1.15)), Math.min(255, Math.round(fillRGBA[1] * 1.15)), Math.min(255, Math.round(fillRGBA[2] * 1.15)), 255];
+              } else if (dot < -0.1) {
+                col = [Math.max(0, Math.round(fillRGBA[0] * 0.82)), Math.max(0, Math.round(fillRGBA[1] * 0.82)), Math.max(0, Math.round(fillRGBA[2] * 0.82)), 255];
+              }
+
+              if (b.features && typeof b.features === "object") {
+                const feats = b.features;
+                if (feats.eyes && typeof feats.eyes === "object") {
+                  const ef = feats.eyes;
+                  const edx = Number(ef.dx || 2.0);
+                  const edy = Number(ef.dy || 0.0);
+                  const ew = Number(ef.w || 2.0);
+                  const eh = Number(ef.h || 3.0);
+                  const hasLen = Number(b.length || 0) > 0;
+                  const eyeCenterX = (hasLen ? bx : ax) + edx;
+                  const eyeCenterY = (hasLen ? by : ay) + edy;
+                  if (Math.abs(px - eyeCenterX) <= ew * 0.5 && Math.abs(py - eyeCenterY) <= eh * 0.5) {
+                    const eyeC = ef.color || "#4e221c";
+                    col = paletteRGBA[eyeC] || this.parseColor(eyeC);
+                  }
+                }
+              }
+
+              colorBuf[idx] = col;
+              symbolBuffer[idx] = paletteRaw[fillKey] ? fillKey : "b";
+              normalBuffer[idx * 4] = Math.max(0, Math.min(255, Math.round((vx * 0.5 + 0.5) * 255.0)));
+              normalBuffer[idx * 4 + 1] = Math.max(0, Math.min(255, Math.round((-vy * 0.5 + 0.5) * 255.0)));
+              normalBuffer[idx * 4 + 2] = Math.max(0, Math.min(255, Math.round((vz * 0.5 + 0.5) * 255.0)));
+              normalBuffer[idx * 4 + 3] = 255;
+            }
+          }
+        }
+      }
+    }
+
+    const buffer = new Uint8ClampedArray(width * height * 4);
+    for (let y = 0; y < height; y++) {
+      for (let x = 0; x < width; x++) {
+        const idx = y * width + x;
+        const dVal = minDistBuf[idx];
+        if (colorBuf[idx] !== null) {
+          let isInternalCrease = false;
+          const curZ = zBuf[idx];
+          const neighbors = [[-1, 0], [1, 0], [0, -1], [0, 1]];
+          for (let ni = 0; ni < 4; ni++) {
+            const ny = y + neighbors[ni][0];
+            const nx = x + neighbors[ni][1];
+            if (ny >= 0 && ny < height && nx >= 0 && nx < width) {
+              const nIdx = ny * width + nx;
+              if (zBuf[nIdx] > -9000.0 && curZ - zBuf[nIdx] >= 1.5) {
+                isInternalCrease = true;
+                break;
+              }
+            }
+          }
+          if (isInternalCrease) {
+            const c = colorBuf[idx];
+            buffer[idx * 4] = Math.max(0, Math.round(c[0] * 0.72));
+            buffer[idx * 4 + 1] = Math.max(0, Math.round(c[1] * 0.72));
+            buffer[idx * 4 + 2] = Math.max(0, Math.round(c[2] * 0.72));
+            buffer[idx * 4 + 3] = 255;
+          } else {
+            const c = colorBuf[idx];
+            buffer[idx * 4] = c[0];
+            buffer[idx * 4 + 1] = c[1];
+            buffer[idx * 4 + 2] = c[2];
+            buffer[idx * 4 + 3] = c[3] !== undefined ? c[3] : 255;
+          }
+        } else if (dVal > 0.0 && dVal <= outlineW) {
+          buffer[idx * 4] = outlineRGBA[0];
+          buffer[idx * 4 + 1] = outlineRGBA[1];
+          buffer[idx * 4 + 2] = outlineRGBA[2];
+          buffer[idx * 4 + 3] = 255;
+          symbolBuffer[idx] = paletteRaw[outlineKey] ? outlineKey : "o";
+          normalBuffer[idx * 4] = 128;
+          normalBuffer[idx * 4 + 1] = 128;
+          normalBuffer[idx * 4 + 2] = 255;
+          normalBuffer[idx * 4 + 3] = 255;
+        }
+      }
+    }
+
+    const diagnostics = this.analyzeBuffer(width, height, buffer);
+    return {
+      width,
+      height,
+      buffer,
+      normalBuffer,
+      symbolBuffer,
+      resolvedPalette: paletteRaw,
+      warnings: [],
+      diagnostics
+    };
+  }
+
+  // ==========================================================================
+  // PROCEDURAL GLSL / MATH SHADER ENGINE (PixelShader)
+  // ==========================================================================
+
+  static renderShader(specInput, frameIndex = 0) {
+    const spec = specInput || {};
+    const width = this.clampSize(spec.width || (spec.size && spec.size[0]), 32);
+    const height = this.clampSize(spec.height || (spec.size && spec.size[1]), 32);
+    const paletteRaw = this.resolveFullPalette(spec);
+    const paletteList = Object.entries(paletteRaw)
+      .filter(([k]) => k !== "." && k !== " ")
+      .map(([, v]) => this.parseColor(v).slice(0, 3));
+    if (paletteList.length === 0) {
+      paletteList.push([7, 11, 25], [38, 75, 135], [96, 165, 250], [255, 255, 255]);
+    }
+
+    const framesCount = Math.max(1, parseInt(spec.framesCount, 10) || (Array.isArray(spec.frames) ? spec.frames.length : 1));
+    const t = framesCount > 1 ? frameIndex / framesCount : Number(spec.time || 0);
+
+    const ditherMode = String(spec.dither || "bayer4x4").toLowerCase();
+    const ditherStr = Number(spec.ditherStrength ?? 0.16);
+    const shaderType = String(spec.shaderType || spec.preset || "custom").toLowerCase();
+
+    const palOklab = paletteList.map((c) => this.rgbToOklab(c[0], c[1], c[2]));
+    const palKeys = Object.keys(paletteRaw).filter((k) => k !== "." && k !== " ");
+
+    const buffer = new Uint8ClampedArray(width * height * 4);
+    const normalBuffer = new Uint8ClampedArray(width * height * 4);
+    const symbolBuffer = new Array(width * height).fill(".");
+    const intensityMap = new Float32Array(width * height);
+
+    const bayer4x4Norm = [
+      [-0.5, 0.0, -0.375, 0.125],
+      [0.25, -0.25, 0.375, -0.125],
+      [-0.3125, 0.1875, -0.4375, 0.0625],
+      [0.4375, -0.0625, 0.3125, -0.1875]
+    ];
+
+    const evalSample = (u, v, timeVal) => {
+      const px = u * 2.0 - 1.0;
+      const py = v * 2.0 - 1.0;
+      const rDist = Math.hypot(px, py);
+      const ang = Math.atan2(py, px);
+
+      if (shaderType === "portal" || shaderType === "vortex" || shaderType === "orb") {
+        const spiral = Math.sin(ang * 4.0 - timeVal * 6.28318 + rDist * 6.0);
+        const orb = rDist - 0.72 + 0.08 * spiral;
+        if (orb > 0.06) return [0, 0, 0, 0];
+        const core = Math.max(0.0, 1.0 - rDist / 0.75);
+        const ring = Math.max(0.0, 1.0 - Math.abs(orb) / 0.12);
+        const intensity = Math.max(0.0, Math.min(1.0, core * 0.7 + ring * 0.9 + 0.25 * spiral));
+        const cr = Math.sin(intensity * Math.PI) * 0.6;
+        const cg = intensity * 0.9;
+        const cb = 0.5 + intensity * 0.5;
+        return [cr, cg, cb, 1.0];
+      } else if (shaderType === "fire" || shaderType === "flame") {
+        const noiseVal = this.valueNoise2d((px + 1.0) * 4.0, (py - timeVal * 2.0) * 4.0);
+        const flameShape = rDist - (0.65 - (py + 0.5) * 0.4) + noiseVal * 0.25;
+        if (flameShape > 0.05 || py < -0.85) return [0, 0, 0, 0];
+        const intensity = Math.max(0.0, Math.min(1.0, 1.0 - flameShape * 1.5));
+        const cr = Math.min(1.0, intensity * 1.4);
+        const cg = Math.min(1.0, Math.max(0.0, (intensity - 0.3) * 1.5));
+        const cb = Math.min(1.0, Math.max(0.0, (intensity - 0.8) * 3.0));
+        return [cr, cg, cb, 1.0];
+      } else if (shaderType === "shield" || shaderType === "forcefield") {
+        const hexGrid = Math.sin(px * 16.0) * Math.cos(py * 16.0);
+        const ring = Math.abs(rDist - 0.75);
+        if (ring > 0.15) return [0, 0, 0, 0];
+        const intensity = Math.max(0.0, Math.min(1.0, (1.0 - ring / 0.15) * 0.8 + 0.2 * Math.sin(timeVal * 6.28 + hexGrid * 4.0)));
+        return [0.2 * intensity, 0.8 * intensity, 1.0 * intensity, 1.0];
+      } else {
+        const wave = Math.sin(rDist * 8.0 - timeVal * 6.28) * 0.5 + 0.5;
+        if (rDist > 0.85) return [0, 0, 0, 0];
+        return [wave, wave * 0.8, wave * 1.2, 1.0];
+      }
+    };
+
+    for (let y = 0; y < height; y++) {
+      const v = 1.0 - (y + 0.5) / height;
+      for (let x = 0; x < width; x++) {
+        const u = (x + 0.5) / width;
+        const [r, g, b, alpha] = evalSample(u, v, t);
+        const idx = y * width + x;
+        intensityMap[idx] = ((r + g + b) / 3.0) * alpha;
+
+        if (alpha <= 0.05) {
+          buffer[idx * 4] = 0;
+          buffer[idx * 4 + 1] = 0;
+          buffer[idx * 4 + 2] = 0;
+          buffer[idx * 4 + 3] = 0;
+          continue;
+        }
+
+        let ditherOffset = 0.0;
+        if (ditherMode === "bayer4x4") {
+          ditherOffset = bayer4x4Norm[y % 4][x % 4] * ditherStr;
+        } else if (ditherMode === "bayer2x2") {
+          ditherOffset = this.bayer2x2[y % 2][x % 2] * ditherStr;
+        }
+
+        const rq = Math.max(0.0, Math.min(255.0, (r + ditherOffset) * 255.0));
+        const gq = Math.max(0.0, Math.min(255.0, (g + ditherOffset) * 255.0));
+        const bq = Math.max(0.0, Math.min(255.0, (b + ditherOffset) * 255.0));
+
+        const [pL, pa, pbOk] = this.rgbToOklab(rq, gq, bq);
+        let bestIdx = 0;
+        let bestDist = 1e9;
+        for (let pi = 0; pi < palOklab.length; pi++) {
+          const [tL, ta, tb] = palOklab[pi];
+          const dist = (pL - tL) ** 2 + (pa - ta) ** 2 + (pbOk - tb) ** 2;
+          if (dist < bestDist) {
+            bestDist = dist;
+            bestIdx = pi;
+          }
+        }
+
+        const chosenCol = paletteList[bestIdx];
+        buffer[idx * 4] = chosenCol[0];
+        buffer[idx * 4 + 1] = chosenCol[1];
+        buffer[idx * 4 + 2] = chosenCol[2];
+        buffer[idx * 4 + 3] = 255;
+        symbolBuffer[idx] = palKeys[Math.min(bestIdx, palKeys.length - 1)] || "S";
+      }
+    }
+
+    for (let y = 0; y < height; y++) {
+      for (let x = 0; x < width; x++) {
+        const idx = y * width + x;
+        if (buffer[idx * 4 + 3] === 0) {
+          normalBuffer[idx * 4] = 128;
+          normalBuffer[idx * 4 + 1] = 128;
+          normalBuffer[idx * 4 + 2] = 255;
+          normalBuffer[idx * 4 + 3] = 0;
+          continue;
+        }
+        const leftI = intensityMap[y * width + Math.max(0, x - 1)];
+        const rightI = intensityMap[y * width + Math.min(width - 1, x + 1)];
+        const upI = intensityMap[Math.max(0, y - 1) * width + x];
+        const downI = intensityMap[Math.min(height - 1, y + 1) * width + x];
+        const gx = (rightI - leftI) * 2.0;
+        const gy = (downI - upI) * 2.0;
+        const gl = Math.hypot(gx, gy);
+        const nx = gl > 1e-5 ? (gx / gl) * 0.7 : 0.0;
+        const ny = gl > 1e-5 ? (gy / gl) * 0.7 : 0.0;
+        const nz = Math.sqrt(Math.max(0.1, 1.0 - nx * nx - ny * ny));
+
+        normalBuffer[idx * 4] = Math.max(0, Math.min(255, Math.round((nx * 0.5 + 0.5) * 255.0)));
+        normalBuffer[idx * 4 + 1] = Math.max(0, Math.min(255, Math.round((-ny * 0.5 + 0.5) * 255.0)));
+        normalBuffer[idx * 4 + 2] = Math.max(0, Math.min(255, Math.round((nz * 0.5 + 0.5) * 255.0)));
+        normalBuffer[idx * 4 + 3] = 255;
+      }
+    }
+
+    const diagnostics = this.analyzeBuffer(width, height, buffer);
+    return {
+      width,
+      height,
+      buffer,
+      normalBuffer,
+      symbolBuffer,
+      resolvedPalette: paletteRaw,
+      warnings: [],
+      diagnostics
+    };
+  }
+
   static render(specInput, frameIndex = 0) {
-    const spec = this.applyFrameOverrides(specInput || {}, frameIndex);
+    const specRaw = specInput || {};
+    const specType = String(specRaw.type || "").toLowerCase();
+    if (specType === "rig" || (specRaw.rig && typeof specRaw.rig === "object" && Array.isArray(specRaw.rig.bones))) {
+      return this.renderRig(specRaw, frameIndex);
+    }
+    if (specType === "shader" || specType === "glsl" || specRaw.glsl || (specRaw.shaderType && !(specRaw.rig && specRaw.rig.bones))) {
+      return this.renderShader(specRaw, frameIndex);
+    }
+
+    const spec = this.applyFrameOverrides(specRaw, frameIndex);
     const width = this.clampSize(spec.width || (spec.size && spec.size[0]), 32);
     const height = this.clampSize(spec.height || (spec.size && spec.size[1]), 32);
     const paletteRaw = this.resolveFullPalette(spec);
     const post = spec.postProcess || {};
+
     const globalSdfShading = Boolean(post.sdfShading);
     const useSelOut = Boolean(post.selOut);
 
@@ -1753,8 +2220,31 @@ class PixelDSLRenderer {
             plotPointWithMirror(pt[0], pt[1], 1, rgba, colKey, mirror);
           }
         }
+      } else if (op === "rig" && Array.isArray(layer.bones)) {
+        const subRes = this.renderRig(layer, frameIndex);
+        const subBuf = subRes.buffer;
+        for (let sy = 0; sy < Math.min(height, subRes.height); sy++) {
+          for (let sx = 0; sx < Math.min(width, subRes.width); sx++) {
+            const sIdx = (sy * subRes.width + sx) * 4;
+            if (subBuf[sIdx + 3] > 0) {
+              blendPixel(sx, sy, [subBuf[sIdx], subBuf[sIdx + 1], subBuf[sIdx + 2], subBuf[sIdx + 3]]);
+            }
+          }
+        }
+      } else if (op === "shader" || op === "glsl") {
+        const subRes = this.renderShader(layer, frameIndex);
+        const subBuf = subRes.buffer;
+        for (let sy = 0; sy < Math.min(height, subRes.height); sy++) {
+          for (let sx = 0; sx < Math.min(width, subRes.width); sx++) {
+            const sIdx = (sy * subRes.width + sx) * 4;
+            if (subBuf[sIdx + 3] > 0) {
+              blendPixel(sx, sy, [subBuf[sIdx], subBuf[sIdx + 1], subBuf[sIdx + 2], subBuf[sIdx + 3]]);
+            }
+          }
+        }
       }
       i++;
+
     }
 
     let warnings = [];

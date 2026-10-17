@@ -66,6 +66,45 @@ body {
   border-radius: 5px;
 }
 
+.engine-badge {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 5px;
+  background: rgba(92, 124, 250, 0.16);
+  border: 1px solid var(--accent);
+  color: #fff;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  transition: all 0.2s ease;
+}
+
+.engine-badge.badge-rig {
+  background: rgba(168, 85, 247, 0.22);
+  border-color: #a855f7;
+  color: #d8b4fe;
+}
+
+.engine-badge.badge-shader {
+  background: rgba(245, 158, 11, 0.22);
+  border-color: #f59e0b;
+  color: #fcd34d;
+}
+
+.engine-badge.badge-layers {
+  background: rgba(59, 130, 246, 0.22);
+  border-color: #3b82f6;
+  color: #93c5fd;
+}
+
+.engine-badge.badge-grid {
+  background: rgba(34, 197, 94, 0.22);
+  border-color: #22c55e;
+  color: #86efac;
+}
+
 .topbar-controls {
   display: flex;
   align-items: center;
@@ -839,4 +878,37 @@ details.inspector-group[open] > summary {
   width: 100%;
   justify-content: center;
 }
+
+/* Skeletal Rig & Bone Inspector Styling */
+.bone-item {
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  padding: 6px 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  transition: border-color 0.12s;
+}
+
+.bone-item:hover {
+  border-color: #5c6c99;
+}
+
+.bone-item.selected {
+  border-color: #a855f7;
+  background: rgba(168, 85, 247, 0.1);
+}
+
+.bone-badge {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  padding: 1px 5px;
+  border-radius: 3px;
+  background: rgba(168, 85, 247, 0.18);
+  border: 1px solid rgba(168, 85, 247, 0.4);
+  color: #d8b4fe;
+  font-weight: 600;
+}
+
 
