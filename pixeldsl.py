@@ -1664,6 +1664,109 @@ def render_shader(spec, frame_index=0):
             intensity = max(0.0, min(1.0, (1.0 - ring / 0.15) * 0.8 + 0.2 * math.sin(time_val * 6.28 + hex_grid * 4.0)))
             return 0.2 * intensity, 0.8 * intensity, 1.0 * intensity, 1.0
 
+        elif shader_type in ("magma", "magma_rock", "lava_rock", "lava"):
+            facet = 0.08 * math.sin(ang * 3.0 + 0.8) + 0.05 * math.cos(ang * 5.0 - 1.1) + 0.03 * math.sin(ang * 7.0 + 2.2)
+            base_flatten = 0.06 * max(0.0, py - 0.2)
+            noise_disp = 0.04 * (value_noise2d(px * 5.0 + 15.0, py * 5.0 + 15.0, seed=51) - 0.5)
+            rock_radius = 0.73 + facet - base_flatten + noise_disp
+            rock_edge_dist = r_dist - rock_radius
+            if rock_edge_dist > 0.015:
+                return 0.0, 0.0, 0.0, 0.0
+
+            warp_x = px + 0.22 * (value_noise2d(px * 3.5, py * 3.5, seed=24) - 0.5)
+            warp_y = py + 0.22 * (value_noise2d(px * 3.5 + 40.0, py * 3.5 + 40.0, seed=38) - 0.5)
+
+            f1, f2 = worley_f1_f2(warp_x * 2.2, warp_y * 2.2, scale=1.0, seed=83)
+            crack_dist_1 = f2 - f1
+            f1_sub, f2_sub = worley_f1_f2(warp_x * 4.6, warp_y * 4.6, scale=1.0, seed=127)
+            crack_dist_2 = f2_sub - f1_sub
+
+            is_main_crack = crack_dist_1 < 0.26
+            is_branch_crack = crack_dist_2 < 0.12 and r_dist < (rock_radius - 0.10)
+
+            in_crack = False
+            crack_factor = 0.0
+            if is_main_crack:
+                in_crack = True
+                crack_factor = max(crack_factor, 1.0 - (crack_dist_1 / 0.26))
+            if is_branch_crack:
+                in_crack = True
+                crack_factor = max(crack_factor, (1.0 - (crack_dist_2 / 0.12)) * 0.78)
+
+            if in_crack:
+                t_rad = time_val * 6.2831853
+                wave1 = math.sin((px * 3.5 - py * 2.8) * 1.5 - t_rad)
+                wave2 = math.cos((px * 2.0 + py * 4.0) * 1.2 + t_rad)
+                heat_surge = 0.5 + 0.35 * wave1 + 0.15 * wave2
+
+                bubble_x = px * 5.0 + math.cos(t_rad) * 0.9
+                bubble_y = py * 5.0 + math.sin(t_rad) * 0.9
+                bubble_noise = value_noise2d(bubble_x, bubble_y, seed=219)
+                junction_pool = math.exp(-f1 * 4.0) * 0.45
+
+                thermal = crack_factor * 0.72 + heat_surge * 0.35 + (bubble_noise - 0.5) * 0.30 + junction_pool
+                thermal = max(0.0, min(1.0, thermal))
+
+                if thermal > 0.82:
+                    t_norm = (thermal - 0.82) / 0.18
+                    cr = 1.0
+                    cg = 0.90 + 0.10 * t_norm
+                    cb = 0.60 + 0.40 * t_norm
+                elif thermal > 0.55:
+                    t_norm = (thermal - 0.55) / 0.27
+                    cr = 1.0
+                    cg = 0.55 + 0.35 * t_norm
+                    cb = 0.05 + 0.30 * t_norm
+                elif thermal > 0.28:
+                    t_norm = (thermal - 0.28) / 0.27
+                    cr = 0.90 + 0.10 * t_norm
+                    cg = 0.18 + 0.37 * t_norm
+                    cb = 0.0
+                else:
+                    t_norm = thermal / 0.28
+                    cr = 0.45 + 0.45 * t_norm
+                    cg = 0.04 + 0.14 * t_norm
+                    cb = 0.0
+                return cr, cg, cb, 1.0
+
+            lx = -0.55
+            ly = -0.68
+            facet_noise = value_noise2d(px * 6.5, py * 6.5, seed=143)
+            macro_facet = 0.12 * math.sin(px * 8.0 + py * 4.0) + 0.08 * math.cos(px * 5.0 - py * 7.0)
+            dome_z = math.sqrt(max(0.05, 1.0 - (r_dist / rock_radius) ** 2))
+            stone_light = max(0.0, (-px * lx - py * ly) * 0.5 + 0.5) * dome_z + macro_facet * 0.15 + (facet_noise - 0.5) * 0.08
+            stone_light = max(0.04, min(0.95, stone_light))
+
+            cr = stone_light * 0.15
+            cg = stone_light * 0.18
+            cb = stone_light * 0.28
+
+            dist_to_vein = min(crack_dist_1, crack_dist_2)
+            glow_radius = 0.38
+            if dist_to_vein < glow_radius:
+                glow_intensity = ((1.0 - dist_to_vein / glow_radius) ** 2.2) * 0.42
+                pulse_amb = 0.85 + 0.15 * math.sin(time_val * 6.2831853)
+                glow_intensity *= pulse_amb
+                cr += glow_intensity * 0.90
+                cg += glow_intensity * 0.22
+                cb += glow_intensity * 0.02
+
+            if facet_noise > 0.74 and stone_light > 0.48:
+                glint = (facet_noise - 0.74) / 0.26 * 0.32
+                cr += glint * 0.75
+                cg += glint * 0.85
+                cb += glint * 1.05
+
+            if rock_edge_dist > -0.07:
+                rim = max(0.0, (rock_edge_dist + 0.07) / 0.07)
+                fade = 1.0 - rim * 0.65
+                cr *= fade
+                cg *= fade
+                cb *= fade
+
+            return min(1.0, cr), min(1.0, cg), min(1.0, cb), 1.0
+
+
         else:
             expr = spec.get("expr") or spec.get("formula")
             if expr:

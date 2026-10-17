@@ -1,0 +1,26 @@
+{
+  "type": "shader",
+  "name": "magma_rock_48x48",
+  "label": "🌋 Molten Magma Rock (48×48) [10f]",
+  "author": "PixelDSL Studio",
+  "description": "Black obsidian volcanic stone with molten lava flowing through deep tectonic fissures and glowing veins. Procedural Worley fissure network, churning thermal convection currents, and 3D normal map lighting.",
+  "width": 48,
+  "height": 48,
+  "fps": 10,
+  "framesCount": 10,
+  "shaderType": "magma_rock",
+  "dither": "bayer4x4",
+  "ditherStrength": 0.14,
+  "palette": {
+    "1": "#0a0b10",
+    "2": "#161924",
+    "3": "#262c3e",
+    "4": "#44506e",
+    "5": "#410a06",
+    "6": "#871204",
+    "7": "#cd3400",
+    "8": "#ff8a00",
+    "9": "#ffda24",
+    "A": "#ffffdc"
+  }
+}

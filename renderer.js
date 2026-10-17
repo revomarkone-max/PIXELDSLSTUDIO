@@ -1780,6 +1780,113 @@ class PixelDSLRenderer {
         if (ring > 0.15) return [0, 0, 0, 0];
         const intensity = Math.max(0.0, Math.min(1.0, (1.0 - ring / 0.15) * 0.8 + 0.2 * Math.sin(timeVal * 6.28 + hexGrid * 4.0)));
         return [0.2 * intensity, 0.8 * intensity, 1.0 * intensity, 1.0];
+      } else if (shaderType === "magma" || shaderType === "magma_rock" || shaderType === "lava_rock" || shaderType === "lava") {
+        const facet = 0.08 * Math.sin(ang * 3.0 + 0.8) + 0.05 * Math.cos(ang * 5.0 - 1.1) + 0.03 * Math.sin(ang * 7.0 + 2.2);
+        const baseFlatten = 0.06 * Math.max(0.0, py - 0.2);
+        const noiseDisp = 0.04 * (this.valueNoise2d(px * 5.0 + 15.0, py * 5.0 + 15.0, 51) - 0.5);
+        const rockRadius = 0.73 + facet - baseFlatten + noiseDisp;
+        const rockEdgeDist = rDist - rockRadius;
+        if (rockEdgeDist > 0.015) return [0, 0, 0, 0];
+
+        const warpX = px + 0.22 * (this.valueNoise2d(px * 3.5, py * 3.5, 24) - 0.5);
+        const warpY = py + 0.22 * (this.valueNoise2d(px * 3.5 + 40.0, py * 3.5 + 40.0, 38) - 0.5);
+
+        const [f1, f2] = this.worley2d(warpX * 2.2, warpY * 2.2, 1.0, 83);
+        const crackDist1 = f2 - f1;
+        const [f1Sub, f2Sub] = this.worley2d(warpX * 4.6, warpY * 4.6, 1.0, 127);
+        const crackDist2 = f2Sub - f1Sub;
+
+        const isMainCrack = crackDist1 < 0.26;
+        const isBranchCrack = crackDist2 < 0.12 && rDist < (rockRadius - 0.10);
+
+        let inCrack = false;
+        let crackFactor = 0.0;
+        if (isMainCrack) {
+          inCrack = true;
+          crackFactor = Math.max(crackFactor, 1.0 - (crackDist1 / 0.26));
+        }
+        if (isBranchCrack) {
+          inCrack = true;
+          crackFactor = Math.max(crackFactor, (1.0 - (crackDist2 / 0.12)) * 0.78);
+        }
+
+        if (inCrack) {
+          const tRad = timeVal * 6.2831853;
+          const wave1 = Math.sin((px * 3.5 - py * 2.8) * 1.5 - tRad);
+          const wave2 = Math.cos((px * 2.0 + py * 4.0) * 1.2 + tRad);
+          const heatSurge = 0.5 + 0.35 * wave1 + 0.15 * wave2;
+
+          const bubbleX = px * 5.0 + Math.cos(tRad) * 0.9;
+          const bubbleY = py * 5.0 + Math.sin(tRad) * 0.9;
+          const bubbleNoise = this.valueNoise2d(bubbleX, bubbleY, 219);
+          const junctionPool = Math.exp(-f1 * 4.0) * 0.45;
+
+          let thermal = crackFactor * 0.72 + heatSurge * 0.35 + (bubbleNoise - 0.5) * 0.30 + junctionPool;
+          thermal = Math.max(0.0, Math.min(1.0, thermal));
+
+          let cr = 0.0, cg = 0.0, cb = 0.0;
+          if (thermal > 0.82) {
+            const tNorm = (thermal - 0.82) / 0.18;
+            cr = 1.0;
+            cg = 0.90 + 0.10 * tNorm;
+            cb = 0.60 + 0.40 * tNorm;
+          } else if (thermal > 0.55) {
+            const tNorm = (thermal - 0.55) / 0.27;
+            cr = 1.0;
+            cg = 0.55 + 0.35 * tNorm;
+            cb = 0.05 + 0.30 * tNorm;
+          } else if (thermal > 0.28) {
+            const tNorm = (thermal - 0.28) / 0.27;
+            cr = 0.90 + 0.10 * tNorm;
+            cg = 0.18 + 0.37 * tNorm;
+            cb = 0.0;
+          } else {
+            const tNorm = thermal / 0.28;
+            cr = 0.45 + 0.45 * tNorm;
+            cg = 0.04 + 0.14 * tNorm;
+            cb = 0.0;
+          }
+          return [cr, cg, cb, 1.0];
+        }
+
+        const lx = -0.55, ly = -0.68;
+        const facetNoise = this.valueNoise2d(px * 6.5, py * 6.5, 143);
+        const macroFacet = 0.12 * Math.sin(px * 8.0 + py * 4.0) + 0.08 * Math.cos(px * 5.0 - py * 7.0);
+        const domeZ = Math.sqrt(Math.max(0.05, 1.0 - (rDist / rockRadius) ** 2));
+        let stoneLight = Math.max(0.0, (-px * lx - py * ly) * 0.5 + 0.5) * domeZ + macroFacet * 0.15 + (facetNoise - 0.5) * 0.08;
+        stoneLight = Math.max(0.04, Math.min(0.95, stoneLight));
+
+        let cr = stoneLight * 0.15;
+        let cg = stoneLight * 0.18;
+        let cb = stoneLight * 0.28;
+
+        const distToVein = Math.min(crackDist1, crackDist2);
+        const glowRadius = 0.38;
+        if (distToVein < glowRadius) {
+          let glowIntensity = Math.pow(1.0 - distToVein / glowRadius, 2.2) * 0.42;
+          const pulseAmb = 0.85 + 0.15 * Math.sin(timeVal * 6.2831853);
+          glowIntensity *= pulseAmb;
+          cr += glowIntensity * 0.90;
+          cg += glowIntensity * 0.22;
+          cb += glowIntensity * 0.02;
+        }
+
+        if (facetNoise > 0.74 && stoneLight > 0.48) {
+          const glint = (facetNoise - 0.74) / 0.26 * 0.32;
+          cr += glint * 0.75;
+          cg += glint * 0.85;
+          cb += glint * 1.05;
+        }
+
+        if (rockEdgeDist > -0.07) {
+          const rim = Math.max(0.0, (rockEdgeDist + 0.07) / 0.07);
+          const fade = 1.0 - rim * 0.65;
+          cr *= fade;
+          cg *= fade;
+          cb *= fade;
+        }
+
+        return [Math.min(1.0, cr), Math.min(1.0, cg), Math.min(1.0, cb), 1.0];
       } else {
         const wave = Math.sin(rDist * 8.0 - timeVal * 6.28) * 0.5 + 0.5;
         if (rDist > 0.85) return [0, 0, 0, 0];

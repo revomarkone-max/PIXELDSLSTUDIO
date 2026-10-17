@@ -1,7 +1,8 @@
 // PixelDSL Studio v3.0 — Curated Procedural & Mathematical Asset Presets
 // Zero-dependency mathematical 2.5D SDFs, Skeletal Capsule Rigs, and GLSL Shaders.
 
-window.PIXEL_PRESETS = {};
+if (typeof window === "undefined") { global.window = global; }
+window.PIXEL_PRESETS = window.PIXEL_PRESETS || {};
 
 window.PIXEL_PRESETS["ginger_cat_walk_120x80"] = {
   label: "🐱 Ginger Cat Walk Cycle (120×80) [12f]",
@@ -8864,6 +8865,39 @@ window.PIXEL_PRESETS["chibi_clothed_example_32x36"] = {
       }
     }
   ]
+}
+};
+
+
+// Auto-synced by pixeldsl.py CLI
+window.PIXEL_PRESETS["magma_rock_48x48"] = {
+  label: "🌋 Molten Magma Rock (48×48) [10f]",
+  prompt: "Generated via CLI: magma_rock_48x48",
+  data: {
+  "type": "shader",
+  "name": "magma_rock_48x48",
+  "label": "🌋 Molten Magma Rock (48×48) [10f]",
+  "author": "PixelDSL Studio",
+  "description": "Black obsidian volcanic stone with molten lava flowing through deep tectonic fissures and glowing veins. Procedural Worley fissure network, churning thermal convection currents, and 3D normal map lighting.",
+  "width": 48,
+  "height": 48,
+  "fps": 10,
+  "framesCount": 10,
+  "shaderType": "magma_rock",
+  "dither": "bayer4x4",
+  "ditherStrength": 0.14,
+  "palette": {
+    "1": "#0a0b10",
+    "2": "#161924",
+    "3": "#262c3e",
+    "4": "#44506e",
+    "5": "#410a06",
+    "6": "#871204",
+    "7": "#cd3400",
+    "8": "#ff8a00",
+    "9": "#ffda24",
+    "A": "#ffffdc"
+  }
 }
 };
 
