@@ -1116,7 +1116,7 @@
       card.addEventListener("click", () => {
         stopAnim();
         currentFrame = f;
-        renderLayersList();
+        syncInspectorFromSpec();
         renderAll();
       });
 

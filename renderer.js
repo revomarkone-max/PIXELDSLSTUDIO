@@ -1660,7 +1660,7 @@ class PixelDSLRenderer {
       }
     }
 
-    const diagnostics = this.analyzeBuffer(width, height, buffer);
+    const diagnostics = this.analyze(width, height, buffer);
     return {
       width,
       height,
@@ -1826,7 +1826,7 @@ class PixelDSLRenderer {
       }
     }
 
-    const diagnostics = this.analyzeBuffer(width, height, buffer);
+    const diagnostics = this.analyze(width, height, buffer);
     return {
       width,
       height,
@@ -2480,6 +2480,10 @@ class PixelDSLRenderer {
       offsetFromCenter: [centerX, centerY],
       clippedEdges
     };
+  }
+
+  static analyzeBuffer(width, height, buffer) {
+    return this.analyze(width, height, buffer);
   }
 
   static bakeToGrid(renderResult, palette) {
