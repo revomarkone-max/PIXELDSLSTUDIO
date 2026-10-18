@@ -5350,6 +5350,15 @@ window.ArchetypeCompiler = class ArchetypeCompiler {
 
   static compile(options = {}) {
     const archId = options.archetypeId || "humanoid";
+
+    // Terrain tiles come from the seamless toroidal generator (tilegen.js).
+    if (window.TileGen && window.TileGen.resolve(archId)) {
+      const tw = Math.max(8, Math.min(128, parseInt(options.width || 32, 10)));
+      const th = Math.max(8, Math.min(128, parseInt(options.height || 32, 10)));
+      const tileSpec = window.TileGen.generateTileSpec(archId, parseInt(options.seed || 42, 10), tw, th);
+      tileSpec.label = `${archId} (${tw}×${th}, seamless)`;
+      return tileSpec;
+    }
     const arch = this.getArchetype(archId);
     if (!arch) throw new Error("Archetype not found: " + archId);
 

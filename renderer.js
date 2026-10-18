@@ -2531,6 +2531,24 @@ class PixelDSLRenderer {
       }
     }
 
+    // Tileable surfaces: derive normals from luminance as a height field, sampled
+    // with wrap-around so the normal map is as seamless as the colour map.
+    if (post.tileNormals) {
+      const lum = new Float64Array(width * height);
+      for (let i = 0; i < width * height; i++) {
+        lum[i] = (buffer[i * 4] * 0.299 + buffer[i * 4 + 1] * 0.587 + buffer[i * 4 + 2] * 0.114) / 255.0;
+      }
+      for (let y = 0; y < height; y++) {
+        for (let x = 0; x < width; x++) {
+          const gx = lum[y * width + (x + 1) % width] - lum[y * width + (x - 1 + width) % width];
+          const gy = lum[((y + 1) % height) * width + x] - lum[((y - 1 + height) % height) * width + x];
+          const nx = -gx * 2.0, ny = -gy * 2.0, nz = 1.0;
+          const ln = Math.sqrt(nx * nx + ny * ny + nz * nz);
+          setNormalPixel(x, y, nx / ln, ny / ln, nz / ln);
+        }
+      }
+    }
+
     // Pillar 2: Compute Felzenszwalb EDT normals (and optional 3D bevel shading) for non-SDF active pixels
     const alphaMask = new Uint8Array(width * height);
     let anyActive = false;
@@ -2713,6 +2731,12 @@ class PixelDSLRenderer {
   // ==========================================================================
 
   static generateArchetype(archetype = "sword", seed = 42, width = 32, height = 32) {
+    // Terrain tiles: seamless toroidal generator shared with the Python CLI.
+    const tileGen = (typeof window !== "undefined" && window.TileGen) ||
+      (typeof require === "function" ? require("./tilegen.js") : null);
+    if (tileGen && tileGen.resolve(archetype)) {
+      return tileGen.generateTileSpec(archetype, seed, this.clampSize(width, 32), this.clampSize(height, 32));
+    }
     const rng = new SeededRNG(seed);
     const arch = String(archetype || "sword").toLowerCase().trim();
     const w = this.clampSize(width, 32);

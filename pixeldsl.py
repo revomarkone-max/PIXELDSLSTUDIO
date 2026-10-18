@@ -38,6 +38,9 @@ import sys
 import zlib
 from pathlib import Path
 
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import tilegen  # noqa: E402
+
 BUILTIN_PALETTES = {
     "pico8": {
         ".": "transparent",
@@ -2356,6 +2359,19 @@ def render_sprite(spec_input, frame_index=0):
                     buffer[idx:idx + 4] = bytes(out_rgba)
                     symbol_buffer[y * width + x] = "O"
 
+    # Tileable surfaces: derive normals from luminance as a height field, sampled
+    # with wrap-around so the normal map is as seamless as the colour map.
+    if (spec.get("postProcess") or {}).get("tileNormals"):
+        lum = [(buffer[i * 4] * 0.299 + buffer[i * 4 + 1] * 0.587 + buffer[i * 4 + 2] * 0.114) / 255.0
+               for i in range(width * height)]
+        for y in range(height):
+            for x in range(width):
+                gx = lum[y * width + (x + 1) % width] - lum[y * width + (x - 1) % width]
+                gy = lum[((y + 1) % height) * width + x] - lum[((y - 1) % height) * width + x]
+                nx, ny, nz = -gx * 2.0, -gy * 2.0, 1.0
+                ln = math.sqrt(nx * nx + ny * ny + nz * nz)
+                set_normal_pixel(x, y, nx / ln, ny / ln, nz / ln)
+
     # Pillar 2: Compute Felzenszwalb EDT normals (and optional 3D bevel shading) for non-SDF active pixels
     alpha_mask = [1 if buffer[i * 4 + 3] >= 180 else 0 for i in range(width * height)]
     if any(alpha_mask):
@@ -2472,6 +2488,11 @@ ARCHETYPE_LIST = (
 
 def generate_archetype(archetype="sword", seed=42, width=32, height=32):
     """Generates a complete, game-ready PixelDSL v3.0 sprite specification purely from mathematics."""
+    # Terrain tiles: seamless toroidal generator shared with the web studio.
+    tile_spec = tilegen.generate_tile_spec(archetype, seed, clamp_size(width, 32), clamp_size(height, 32))
+    if tile_spec is not None:
+        return tile_spec
+
     rng = SeededRNG(seed)
     arch = str(archetype or "sword").lower().strip()
     w = clamp_size(width, 32)
