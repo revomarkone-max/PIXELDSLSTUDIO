@@ -50,6 +50,25 @@ python pixeldsl.py --mutate sprites/white_pink_bunny_jump_32x32.json --seed 55
 Output goes to `game_ready/`: `name.png`, `name_normal.png`, `name_preview.png`
 and, for animations, `name_sheet.png`.
 
+## hero3d: shared human base for game heroes
+
+`hero3d/` builds characters on **one shared human base** (skeleton + body made of SDF
+primitives) and renders them as 2.5D pixel art: orthographic camera tilted like a
+top-down MOBA, 8 directions, idle / walk / attack. Outfits ("skins") are lists of
+extra primitives on the same joints, so every new hero inherits the proportions,
+animations and all directions for free. Needs `numpy` (the rest of the repo does not).
+
+```bash
+python -m hero3d.gm_export                       # all skins -> game_ready/heroes/*_sheet.png
+python -m hero3d.gm_export --project "C:/DEEEEV/GameMakerProj/Quality MOBA graybox" mage
+```
+
+![Five heroes on the shared base](docs/heroes_overview.png)
+
+- `hero3d/base.py` - joints, body, animations (edit here to change every hero).
+- `hero3d/skins.py` - clothing builders (`shirt`, `robe`, `hood`, `cape`, `boots`...) and the five heroes.
+- `hero3d/gm_export.py` - GameMaker sprites `spr_h_<hero>_<anim>`, frames `dir * n + f`, dir 0 = facing the camera.
+
 ## Quality gate
 
 Every generator change should pass the tests and be eyeballed in the gallery:

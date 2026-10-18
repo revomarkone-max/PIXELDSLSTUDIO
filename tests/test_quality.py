@@ -214,3 +214,30 @@ class PaperDollTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+try:
+    import numpy  # noqa: F401
+    HAVE_NUMPY = True
+except ImportError:
+    HAVE_NUMPY = False
+
+
+@unittest.skipUnless(HAVE_NUMPY, "hero3d needs numpy")
+class Hero3DTests(unittest.TestCase):
+    def test_every_skin_renders_inside_the_canvas(self):
+        from hero3d import character, skins
+        for name, skin in skins.SKINS.items():
+            ch = character.Character(skin)
+            for anim, u in (("idle", 0.0), ("walk", 0.25), ("attack", 0.35)):
+                for d in (270, 0, 90):
+                    with self.subTest(skin=name, anim=anim, direction=d):
+                        img = ch.render_frame(anim, u, d)
+                        a = img[:, :, 3]
+                        self.assertGreater((a > 0).mean(), 0.04)
+                        self.assertFalse(a[0].any() or a[:, 0].any() or a[:, -1].any(), "touches canvas edge")
+
+    def test_direction_mapping(self):
+        from hero3d import character
+        self.assertAlmostEqual(character.yaw_for_direction(270), 0.0)     # faces the camera
+        self.assertAlmostEqual(character.yaw_for_direction(0), 90.0)      # faces screen right
