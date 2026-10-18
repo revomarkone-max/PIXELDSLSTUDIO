@@ -129,13 +129,14 @@ def gloves(mat, cuff=None, add=0.6, group="gloves"):
 @builder
 def robe(mat, hem_r=11.5, length=35.5, top_r=7.6, group="robe", hem=None):
     """Flat-bottomed skirt from the waist; `length` measured down from the pelvis joint."""
-    P = [ccone("pelvis", (0, 5.0, 0), (0, -length, 0.8), top_r, hem_r, mat, group, rnd=0.8)]
-    # cloth around each leg, so a striding leg never pokes out of the skirt as bare skin
-    for s, sx in SIDES:
-        P.append(seg("hip_" + s, "knee_" + s, 5.0, 4.6, mat, group + "_leg_" + s, a_off=(0, 1.0, 0)))
-        P.append(seg("knee_" + s, "ankle_" + s, 4.6, 4.2, mat, group + "_leg_" + s, span=(0.0, 0.75)))
+    # dynamic skirt: the hem follows the feet and widens with the stride (see engine "skirt")
+    # the skirt replaces the legs: hide the base legs/hips (boots stay visible at the hem)
+    P = [dict(kind="hide", groups=["leg_R", "leg_L", "pelvis"]),
+         dict(kind="skirt", joint="pelvis", top=(0, 5.0, 0), length=length, top_r=top_r, hem_r=hem_r,
+              round=0.8, mat=mat, group=group)]
     if hem:
-        P.append(ccone("pelvis", (0, -length + 1.8, 0.8), (0, -length - 0.2, 0.8), hem_r + 0.3, hem_r + 0.5, hem, group + "_hem", rnd=0.5))
+        P.append(dict(kind="skirt", joint="pelvis", top=(0, 5.0, 0), length=length + 0.2, top_r=top_r, hem_r=hem_r,
+                      band=(0.955, 1.0), round=0.5, mat=hem, group=group + "_hem"))
     return P
 
 

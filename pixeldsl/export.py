@@ -6,7 +6,9 @@ frames are cropped to one shared box (so frame size and origin are identical
 across a model's animations), then written as:
 
   generic   <out>/<name>_<view>_<anim>.png      rows = directions, columns = frames
-            <out>/<name>_<view>.json            frame size, origin (feet), dirs, fps, loop
+            <out>/<name>_<view>.json            frame size, origin (feet), dirs, fps, loop and
+                                                per-frame anchor points (weapon_tip, hand_R, hand_L,
+                                                head + model "anchors"): [x, y, in_front]
             <out>/<name>_<view>_<anim>_n.png    normal maps (--normals)
   gamemaker sprites in a GameMaker project, frames direction-major (dir * n + f)
   godot     <out>/<name>_<view>.tres            SpriteFrames, animations "<anim>_<dir>"
@@ -32,7 +34,7 @@ def _job(args):
     if m is None:
         m = _CACHE[data_json] = Model(json.loads(data_json))
     r = m.render_frame(view, anim, u, d, scale=scale, normals=normals)
-    return r["rgba"], r["normal"], r["origin"]
+    return r["rgba"], r["normal"], r["origin"], r["anchors"]
 
 
 def _src_hash():
@@ -95,7 +97,8 @@ def render_view(model, view, anims, scale=1.0, normals=False, progress=None):
         if cp is not None and cp.exists():
             z = np.load(cp)
             raw[anim] = {"frames": [list(r) for r in z["frames"]],
-                         "normals": [list(r) for r in z["normals"]] if normals else None}
+                         "normals": [list(r) for r in z["normals"]] if normals else None,
+                         "points": json.loads(str(z["points"]))}
             origin = tuple(z["origin"])
         else:
             todo.append((anim, cp))
@@ -116,16 +119,21 @@ def render_view(model, view, anims, scale=1.0, normals=False, progress=None):
             results = [_job(j) for j in jobs]
         for anim, _ in todo:
             raw[anim] = {"frames": [[None] * model.frames(anim) for _ in dirs],
-                         "normals": [[None] * model.frames(anim) for _ in dirs] if normals else None}
+                         "normals": [[None] * model.frames(anim) for _ in dirs] if normals else None,
+                         "points": {}}
         origin = results[0][2]
-        for (anim, di, f), (rgba, nrm, _) in zip(keys, results):
+        for (anim, di, f), (rgba, nrm, _, pts) in zip(keys, results):
             raw[anim]["frames"][di][f] = rgba
             if normals:
                 raw[anim]["normals"][di][f] = nrm
+            for name, p in pts.items():
+                per_dir = raw[anim]["points"].setdefault(name, [[None] * model.frames(anim) for _ in dirs])
+                per_dir[di][f] = list(p)
         for anim, cp in todo:
             if cp is not None:
                 np.savez_compressed(cp, frames=np.array(raw[anim]["frames"]), origin=np.array(origin),
-                                    normals=np.array(raw[anim]["normals"]) if normals else np.zeros(1))
+                                    normals=np.array(raw[anim]["normals"]) if normals else np.zeros(1),
+                                    points=np.array(json.dumps(raw[anim]["points"])))
     raw = {a: raw[a] for a in anims}
     # one crop box for the whole view
     mask = None
@@ -148,6 +156,9 @@ def render_view(model, view, anims, scale=1.0, normals=False, progress=None):
             if a[key] is None:
                 continue
             a[key] = [[img[box[1]:box[3], box[0]:box[2]] for img in row] for row in a[key]]
+        # anchor points -> frame pixel coordinates [x, y, in_front]
+        a["points"] = {n: [[[round(p[0] - box[0], 1), round(p[1] - box[1], 1), p[2]] for p in row] for row in v]
+                       for n, v in a.get("points", {}).items()}
     return raw, dirs, (ox - box[0], oy - box[1]), (box[2] - box[0], box[3] - box[1])
 
 
@@ -173,7 +184,8 @@ def write_generic(model, view, raw, dirs, origin, size, out_dir, scale):
     for anim, a in raw.items():
         fn = "%s_%s_%s.png" % (model.name, view, anim)
         Image.fromarray(sheet(a["frames"]), "RGBA").save(out_dir / fn)
-        entry = {"file": fn, "frames": len(a["frames"][0]), "fps": model.fps(anim), "loop": model.loops(anim)}
+        entry = {"file": fn, "frames": len(a["frames"][0]), "fps": model.fps(anim), "loop": model.loops(anim),
+                 "points": a["points"]}
         if a["normals"] is not None:
             nfn = "%s_%s_%s_n.png" % (model.name, view, anim)
             Image.fromarray(sheet(a["normals"]), "RGBA").save(out_dir / nfn)

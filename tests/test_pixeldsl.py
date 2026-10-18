@@ -88,6 +88,25 @@ class ModelTests(unittest.TestCase):
         joints = {p.get("joint") for p in m.prims if p.get("group", "").startswith("pauldron")}
         self.assertEqual(joints, {"shoulder_R", "shoulder_L"})
 
+    def test_robe_replaces_the_legs(self):
+        m = model.Model.load(ROOT / "models/characters/priest.json")
+        groups = {p.get("group") for p in m.prims}
+        self.assertFalse({"leg_R", "leg_L", "pelvis"} & groups)
+        self.assertIn("ccone", {g["kind"] for g in __import__("pixeldsl.engine", fromlist=["x"]).resolve_primitives(
+            [p for p in m.prims if p["kind"] == "skirt"], m.pose("walk", 0.25, 0))})
+
+    def test_weapons_stay_out_of_the_body(self):
+        for name in ("mage", "priest", "paladin", "shaman", "druid"):
+            m = model.Model.load(ROOT / ("models/characters/%s.json" % name))
+            from pixeldsl import engine
+            for anim in ("idle", "walk", "run", "cast"):
+                for u in (0.0, 0.25, 0.5, 0.75):
+                    with self.subTest(model=name, anim=anim, u=u):
+                        J = m.pose(anim, u, 270)
+                        scene = engine.Scene(engine.resolve_primitives(m.solid_prims, J), m.group_k)
+                        pts, rad, _ = m._weapon_samples(J)
+                        self.assertGreater(float((scene.distance(pts) - rad).min()), -1.0)
+
     def test_unknown_builder_is_a_clear_error(self):
         with self.assertRaisesRegex(ValueError, "unknown builder"):
             model.Model({"name": "x", "parts": [{"hat_of_doom": {}}]})
@@ -118,6 +137,8 @@ class ExportTests(unittest.TestCase):
             with Image.open(self.out / e["file"]) as im:
                 self.assertEqual(im.size, (w * e["frames"], h * len(meta["dirs"])))
         self.assertTrue(0 < meta["origin"]["y"] <= h)
+        tip = meta["anims"]["attack"]["points"]["weapon_tip"]
+        self.assertEqual((len(tip), len(tip[0]), len(tip[0][0])), (2, 6, 3))
 
     def test_godot_spriteframes(self):
         tres = (self.out / "priest_side.tres").read_text()

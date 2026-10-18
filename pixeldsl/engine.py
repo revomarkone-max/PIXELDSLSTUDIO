@@ -178,6 +178,28 @@ def resolve_primitives(prims, joints):
             a, R = world(p["joint"], p["a"])
             b, _ = world(p["joint"], p["b"])
             g = dict(p, A=a, B=b)
+        elif kind == "skirt":
+            # Capped cone hanging from the pelvis whose hem follows the legs: the hem centre
+            # moves toward the feet and the hem widens with the stride, so legs stay inside.
+            ppos, pR = joints[p.get("joint", "pelvis")]
+            local = lambda j: pR.T @ (joints[j][0] - ppos)
+            aR, aL = local(p.get("ankle_R", "ankle_R")), local(p.get("ankle_L", "ankle_L"))
+            kR, kL = local(p.get("knee_R", "knee_R")), local(p.get("knee_L", "knee_L"))
+            length, follow = p["length"], p.get("follow", 0.75)
+            mid = (aR + aL) * 0.5
+            spread = np.hypot(aR[0] - aL[0], aR[2] - aL[2]) * 0.5
+            hem_r = max(p["hem_r"], spread * p.get("widen", 0.7) + p.get("clearance", 2.4))
+            top = np.asarray(p.get("top", (0, 5.0, 0)), dtype=np.float64)
+            y0, y1 = p.get("band", (None, None))
+            hem = np.array([mid[0] * follow, -length, top[2] + (mid[2] - top[2]) * follow + p.get("hem_z", 0.8)])
+            if y0 is not None:   # a band around the hem (trim)
+                a_l = top + (hem - top) * y0
+                b_l = top + (hem - top) * y1
+                r1 = p["top_r"] + (hem_r - p["top_r"]) * y0 + p.get("band_add", 0.4)
+                r2 = p["top_r"] + (hem_r - p["top_r"]) * y1 + p.get("band_add", 0.4)
+            else:
+                a_l, b_l, r1, r2 = top, hem, p["top_r"], hem_r
+            g = dict(p, kind="ccone", A=ppos + pR @ a_l, B=ppos + pR @ b_l, r1=r1, r2=r2)
         elif kind in ("sphere", "ellipsoid", "box", "torus"):
             c, R = world(p["joint"], p.get("at", (0, 0, 0)))
             if "rot" in p:

@@ -25,7 +25,7 @@ def entry_from_render(model, view, raw, dirs, origin, size, sheet_fn):
         "frame": list(size), "origin": list(origin),
         "dirs": [DIR_NAMES.get(d, str(d)) for d in dirs],
         "anims": {a: {"src": _uri(sheet_fn(v["frames"])), "frames": len(v["frames"][0]),
-                      "fps": model.fps(a), "loop": model.loops(a)} for a, v in raw.items()},
+                      "fps": model.fps(a), "loop": model.loops(a), "points": v.get("points", {})} for a, v in raw.items()},
     }
 
 
@@ -68,7 +68,8 @@ aside{display:flex;flex-direction:column;gap:12px}
 <main><div class="stage"><canvas id="cv"></canvas></div>
 <aside>
 <div class="box"><h2>Direction</h2><div class="dirs" id="dirs"></div>
-<div class="row"><label><input type="checkbox" id="turn"> auto-turn</label></div><div class="mute">arrow keys switch direction, space = pause</div></div>
+<div class="row"><label><input type="checkbox" id="turn"> auto-turn</label></div>
+<div class="row"><label><input type="checkbox" id="pts"> anchor points</label></div><div class="mute">arrow keys switch direction, space = pause</div></div>
 <div class="box"><h2>Playback</h2>
 <div class="row">zoom <input type="range" id="zoom" min="1" max="8" value="4"><span id="zv"></span></div>
 <div class="row">speed <input type="range" id="spd" min="10" max="300" value="100"><span id="sv"></span></div>
@@ -122,6 +123,10 @@ function tick(now){
     const ox=(W-cur.frame[0]*z)/2, oy=(H-cur.frame[1]*z)/2;
     g.fillStyle='rgba(0,0,0,.28)'; g.beginPath(); g.ellipse(ox+cur.origin[0]*z, oy+cur.origin[1]*z, 10*z, 3.5*z, 0, 0, 7); g.fill();
     const im=img(a.src); if(im.complete) g.drawImage(im, frame*cur.frame[0], dir*cur.frame[1], cur.frame[0], cur.frame[1], ox, oy, cur.frame[0]*z, cur.frame[1]*z);
+    if($('pts').checked){ const cols={weapon_tip:'#ff5a5a',hand_R:'#ffd34d',hand_L:'#7ad7ff',head:'#9cff8a'};
+      for(const [n,v] of Object.entries(a.points||{})){ const p=v[dir]&&v[dir][frame]; if(!p) continue;
+        g.fillStyle=cols[n]||'#ffffff'; g.globalAlpha=p[2]?1:0.45; g.beginPath(); g.arc(ox+p[0]*z, oy+p[1]*z, Math.max(2,z*0.9), 0, 7); g.fill();
+        g.globalAlpha=1; g.font=(10+z)+'px system-ui'; g.fillText(n, ox+p[0]*z+5, oy+p[1]*z-4); } }
   }
   requestAnimationFrame(tick);
 }

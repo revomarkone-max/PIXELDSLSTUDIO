@@ -45,7 +45,7 @@ BASE_MATERIALS = {
 }
 
 # smooth-blend radius per group (0 = hard union)
-GROUP_K = {"torso": 1.6, "head": 1.0, "arm_R": 0.8, "arm_L": 0.8, "leg_R": 1.0, "leg_L": 1.0}
+GROUP_K = {"torso": 1.6, "pelvis": 1.0, "head": 1.0, "arm_R": 0.8, "arm_L": 0.8, "leg_R": 1.0, "leg_L": 1.0}
 
 
 def _side(s):
@@ -58,7 +58,7 @@ def body_primitives():
     P += [
         {"kind": "ellipsoid", "joint": "chest", "at": (0, 0.5, -0.3), "radii": (8.0, 7.2, 5.0), "mat": "skin", "group": "torso"},
         {"kind": "ellipsoid", "joint": "spine", "at": (0, 0, 0.2), "radii": (6.4, 6.2, 4.4), "mat": "skin", "group": "torso"},
-        {"kind": "ellipsoid", "joint": "pelvis", "at": (0, -0.8, 0), "radii": (7.0, 4.8, 4.8), "mat": "under", "group": "torso"},
+        {"kind": "ellipsoid", "joint": "pelvis", "at": (0, -0.8, 0), "radii": (7.0, 4.8, 4.8), "mat": "under", "group": "pelvis"},
         {"kind": "seg", "a": "neck", "b": "head", "a_off": (0, -1.5, 0), "b_off": (0, -3.0, -0.6), "r1": 2.5, "r2": 2.2, "mat": "skin", "group": "torso"},
     ]
     for s, sx in _side(None):

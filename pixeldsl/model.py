@@ -135,7 +135,10 @@ class Model:
             joints += r["joints"]
             group_k.update(r["group_k"])
         mats.update({k: _material(v) for k, v in data.get("materials", {}).items()})
-        prims += expand_parts(data.get("parts", []))
+        parts = expand_parts(data.get("parts", []))
+        # builders may hide base groups (a robe hides the legs it covers)
+        hidden = {g for p in parts if p["kind"] == "hide" for g in p["groups"]}
+        prims = [p for p in prims if p.get("group") not in hidden] + [p for p in parts if p["kind"] != "hide"]
         group_k.update(data.get("group_k", {}))
         self.skel = engine.Skeleton(joints)
         names = list(mats)
@@ -147,6 +150,19 @@ class Model:
             p["mat_id"] = index[p["mat"]]
         self.prims = prims
         self.group_k = group_k
+        # weapon clearance: weapon groups vs. body + clothes (capes may overlap the weapon)
+        self.weapon_prims = [p for p in prims if p.get("group", "").startswith("weapon")]
+        # the holding arm (its sleeve, glove...) is allowed to touch the weapon
+        arm_R = {"shoulder_R", "elbow_R", "wrist_R", "hand_R", "grip_R"}
+        self.solid_prims = [p for p in prims if not p.get("group", "").startswith(("weapon", "cape", "eyes"))
+                            and not ({p.get(k) for k in ("joint", "a", "b") if isinstance(p.get(k), str)} & arm_R)]
+        self.has_grip = "grip_R" in self.skel.names and bool(self.weapon_prims)
+        self.anchor_defs = {}
+        if self.kind == "character":
+            self.anchor_defs.update({"hand_R": ("hand_R", (0, -1.0, 0.4)), "hand_L": ("hand_L", (0, -1.0, 0.4)),
+                                     "head": ("head", (0, 7.5, 0))})
+        for k, v in (data.get("anchors") or {}).items():
+            self.anchor_defs[k] = (v["joint"], tuple(v.get("at", (0, 0, 0))))
         self.rig_anims = [r["anims"] for r in rigs]
         self.outline = data.get("outline", "#16121d")
         self.default_anims = data.get("anims") or (["idle", "walk", "run", "attack", "cast", "jump", "hurt", "death"]
@@ -170,7 +186,70 @@ class Model:
                     rots[k] = (a[0] + v[0], a[1] + v[1], a[2] + v[2])
         r = rots.get("root", (0, 0, 0))
         rots["root"] = (r[0], r[1] + yaw_for_direction(direction), r[2])
-        return self.skel.pose(rots, root)
+        J = self.skel.pose(rots, root)
+        if self.has_grip:
+            J = self._clear_weapon(rots, root, J)
+        return J
+
+    # ------------------------------------------------------------------ weapon handling
+
+    def _weapon_samples(self, J):
+        """Points (with radii) along the weapon, skipping the part inside the fist."""
+        grip = J["grip_R"][0]
+        pts, rad = [], []
+        for g in engine.resolve_primitives(self.weapon_prims, J):
+            k = g["kind"]
+            if k in ("cone", "ccone", "seg"):
+                for t in np.linspace(0.0, 1.0, 9):
+                    pts.append(g["A"] + (g["B"] - g["A"]) * t)
+                    rad.append(g["r1"] + (g.get("r2", g["r1"]) - g["r1"]) * t)
+            elif k == "box":
+                ax = int(np.argmax(g["half"]))
+                for s in (-1.0, 0.0, 1.0):
+                    pts.append(g["C"] + g["R"][:, ax] * g["half"][ax] * s)
+                    rad.append(float(sorted(g["half"])[1]))
+            else:
+                c, r = engine.prim_bounds(g)
+                pts.append(c); rad.append(r * 0.8)
+        keep = [i for i, p in enumerate(pts) if np.linalg.norm(p - grip) > 5.0]
+        return np.array([pts[i] for i in keep]), np.array([rad[i] for i in keep]), pts
+
+    def _clear_weapon(self, rots, root, J, margin=0.6):
+        """Roll the weapon outward (grip_R local z) by the smallest angle that keeps it out of
+        the body and clothes. One fixed direction, so consecutive frames stay continuous."""
+        scene = engine.Scene(engine.resolve_primitives(self.solid_prims, J), self.group_k)
+
+        def clearance(Jc):
+            pts, rad, _ = self._weapon_samples(Jc)
+            return float((scene.distance(pts) - rad).min()) if len(pts) else 99.0
+        if clearance(J) >= margin:
+            return J
+        best, best_c = J, clearance(J)
+        g0 = rots.get("grip_R", (0, 0, 0))
+        for mag in range(6, 79, 6):
+            r2 = dict(rots)
+            r2["grip_R"] = (g0[0], g0[1], g0[2] + mag)
+            J2 = self.skel.pose(r2, root)
+            c = clearance(J2)
+            if c >= margin:
+                return J2
+            if c > best_c:
+                best, best_c = J2, c
+        return best
+
+    def anchors(self, J):
+        """World positions of named points (hands, head, weapon tip, model-defined anchors)."""
+        out = {}
+        for name, (joint, at) in self.anchor_defs.items():
+            if joint in J:
+                pos, R = J[joint]
+                out[name] = pos + R @ np.asarray(at, dtype=np.float64)
+        if self.weapon_prims and "grip_R" in J:
+            _, _, pts = self._weapon_samples(J)
+            grip = J["grip_R"][0]
+            if pts:
+                out.setdefault("weapon_tip", max(pts, key=lambda p: float(np.linalg.norm(p - grip))))
+        return out
 
     def frames(self, anim):
         return self.anims[anim][1]
@@ -190,4 +269,15 @@ class Model:
         scene = engine.Scene(resolved, self.group_k)
         out = engine.render(scene, resolved, cam, self.materials, outline=self.outline, normals=normals)
         out["origin"] = cam.ox, cam.oy
+        # anchor points in pixels; "front" = not hidden behind the rendered model
+        pts = {}
+        for name, p in self.anchors(J).items():
+            px, py = cam.project(p)
+            depth = float(p @ cam.fwd) + 400.0
+            ix, iy = int(px), int(py)
+            front = True
+            if 0 <= ix < cam.w and 0 <= iy < cam.h and np.isfinite(out["depth"][iy, ix]):
+                front = depth <= out["depth"][iy, ix] + 3.0   # anchors sit inside thin parts
+            pts[name] = (round(px, 2), round(py, 2), bool(front))
+        out["anchors"] = pts
         return out
