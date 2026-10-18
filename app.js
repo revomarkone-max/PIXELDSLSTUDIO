@@ -33,6 +33,44 @@
   let currentFrame = 0;
   let animTimer = null;
 
+  // -------------------------------------------------------------
+  // High-Performance Reusable Scratch Canvas Pool (Zero GC Thrashing)
+  // -------------------------------------------------------------
+  const _scratchPool = new Map();
+  function getScratchBuffer(key, w, h) {
+    let item = _scratchPool.get(key);
+    if (!item) {
+      const canvas = document.createElement("canvas");
+      canvas.width = w;
+      canvas.height = h;
+      const ctx = canvas.getContext("2d", { willReadFrequently: true });
+      const imgData = ctx.createImageData(w, h);
+      item = { canvas, ctx, imgData, w, h };
+      _scratchPool.set(key, item);
+    } else if (item.w !== w || item.h !== h) {
+      item.canvas.width = w;
+      item.canvas.height = h;
+      item.imgData = item.ctx.createImageData(w, h);
+      item.w = w;
+      item.h = h;
+    }
+    return item;
+  }
+
+  function downloadBlob(filename, content, mimeType = "text/plain") {
+    const blob = new Blob([content], { type: mimeType });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(() => {
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    }, 100);
+  }
+
   // DOM Elements
   const panelLeft = document.getElementById("panelLeft");
   const btnToggleCodePanel = document.getElementById("btnToggleCodePanel");
@@ -1513,29 +1551,21 @@
     if (showOnionSkin && totalFrames > 1) {
       const prevFrameIdx = (currentFrame - 1 + totalFrames) % totalFrames;
       const prevRender = PixelDSLRenderer.render(currentSpec, prevFrameIdx);
-      const onionCanvas = document.createElement("canvas");
-      onionCanvas.width = width;
-      onionCanvas.height = height;
-      onionCanvas.getContext("2d").putImageData(
-        new ImageData(new Uint8ClampedArray(prevRender.buffer), width, height),
-        0,
-        0
-      );
+      const onionScratch = getScratchBuffer("main_onion", width, height);
+      onionScratch.imgData.data.set(prevRender.buffer);
+      onionScratch.ctx.putImageData(onionScratch.imgData, 0, 0);
       ctx.save();
       ctx.globalAlpha = 0.28;
-      ctx.drawImage(onionCanvas, 0, 0, width * scale, height * scale);
+      ctx.drawImage(onionScratch.canvas, 0, 0, width * scale, height * scale);
       ctx.restore();
     }
 
-    const offCanvas = document.createElement("canvas");
-    offCanvas.width = width;
-    offCanvas.height = height;
-    const offCtx = offCanvas.getContext("2d");
+    const offScratch = getScratchBuffer("main_offscreen", width, height);
     const activeBuf = (showNormalMap && lastRender.normalBuffer) ? lastRender.normalBuffer : buffer;
-    const imgData = new ImageData(new Uint8ClampedArray(activeBuf), width, height);
-    offCtx.putImageData(imgData, 0, 0);
+    offScratch.imgData.data.set(activeBuf);
+    offScratch.ctx.putImageData(offScratch.imgData, 0, 0);
 
-    ctx.drawImage(offCanvas, 0, 0, width * scale, height * scale);
+    ctx.drawImage(offScratch.canvas, 0, 0, width * scale, height * scale);
 
     if (showGridLines && scale >= 5) {
       ctx.strokeStyle = "rgba(255, 255, 255, 0.09)";
@@ -1639,7 +1669,7 @@
     const p1Ctx = preview1x.getContext("2d");
     p1Ctx.imageSmoothingEnabled = false;
     p1Ctx.clearRect(0, 0, preview1x.width, preview1x.height);
-    p1Ctx.drawImage(offCanvas, 0, 0, preview1x.width, preview1x.height);
+    p1Ctx.drawImage(offScratch.canvas, 0, 0, preview1x.width, preview1x.height);
 
     const tilePreviewSize = 96;
     previewTiled.width = tilePreviewSize;
@@ -1651,7 +1681,7 @@
     const cellH = tilePreviewSize / 3;
     for (let ty = 0; ty < 3; ty++) {
       for (let tx = 0; tx < 3; tx++) {
-        ptCtx.drawImage(offCanvas, tx * cellW, ty * cellH, cellW, cellH);
+        ptCtx.drawImage(offScratch.canvas, tx * cellW, ty * cellH, cellW, cellH);
       }
     }
 
@@ -3354,7 +3384,7 @@
         } else if (targetWs === "forge") {
           compileAndRenderForge();
         } else if (targetWs === "paperdoll") {
-          renderPaperDollDemo();
+          compileAndRenderPaperDoll();
         } else if (targetWs === "compass") {
           renderCompassDemo();
         }
@@ -4168,31 +4198,53 @@
     });
   }
 
-  function flipImageDataH(ctx, imgData, isNormal) {
+  function flipImageDataInPlace(imgData, isNormal) {
     const w = imgData.width, h = imgData.height;
-    const src = imgData.data;
-    const out = ctx.createImageData(w, h);
-    const dst = out.data;
+    const d = imgData.data;
+    const halfW = Math.floor(w / 2);
     for (let y = 0; y < h; y++) {
-      for (let x = 0; x < w; x++) {
-        const srcX = w - 1 - x;
-        const srcI = (y * w + srcX) * 4;
-        const dstI = (y * w + x) * 4;
+      const rowOffset = y * w * 4;
+      for (let x = 0; x < halfW; x++) {
+        const i1 = rowOffset + x * 4;
+        const i2 = rowOffset + (w - 1 - x) * 4;
+
+        const r1 = d[i1], g1 = d[i1 + 1], b1 = d[i1 + 2], a1 = d[i1 + 3];
+        const r2 = d[i2], g2 = d[i2 + 1], b2 = d[i2 + 2], a2 = d[i2 + 3];
+
         if (isNormal) {
-          dst[dstI] = 255 - src[srcI]; // Flip normal X component
-          dst[dstI + 1] = src[srcI + 1];
-          dst[dstI + 2] = src[srcI + 2];
-          dst[dstI + 3] = src[srcI + 3];
+          d[i1]     = 255 - r2;
+          d[i1 + 1] = g2;
+          d[i1 + 2] = b2;
+          d[i1 + 3] = a2;
+
+          d[i2]     = 255 - r1;
+          d[i2 + 1] = g1;
+          d[i2 + 2] = b1;
+          d[i2 + 3] = a1;
         } else {
-          dst[dstI] = src[srcI];
-          dst[dstI + 1] = src[srcI + 1];
-          dst[dstI + 2] = src[srcI + 2];
-          dst[dstI + 3] = src[srcI + 3];
+          d[i1]     = r2;
+          d[i1 + 1] = g2;
+          d[i1 + 2] = b2;
+          d[i1 + 3] = a2;
+
+          d[i2]     = r1;
+          d[i2 + 1] = g1;
+          d[i2 + 2] = b1;
+          d[i2 + 3] = a1;
         }
       }
+      if (isNormal && (w % 2 === 1)) {
+        const midI = rowOffset + halfW * 4;
+        d[midI] = 255 - d[midI];
+      }
     }
-    return out;
+    return imgData;
   }
+
+  function flipImageDataH(ctx, imgData, isNormal) {
+    return flipImageDataInPlace(imgData, isNormal);
+  }
+
 
   function compileAndRenderPaperDoll() {
     if (!window.PaperDollEngine) return;
@@ -4367,23 +4419,19 @@
 
         const rf = PixelDSLRenderer.renderRig(cfg.spec, paperDollFrameIndex + 1);
         const qw = rf.width, qh = rf.height;
-        const off = document.createElement("canvas");
-        off.width = qw;
-        off.height = qh;
-        const offCtx = off.getContext("2d");
-        let imgData = offCtx.createImageData(qw, qh);
+        const scratch = getScratchBuffer("pd_4way_" + cfg.id, qw, qh);
 
         if (showNormals && rf.normalBuffer) {
-          imgData.data.set(rf.normalBuffer);
-          if (cfg.flip) imgData = flipImageDataH(offCtx, imgData, true);
+          scratch.imgData.data.set(rf.normalBuffer);
+          if (cfg.flip) flipImageDataInPlace(scratch.imgData, true);
         } else {
-          imgData.data.set(rf.buffer);
-          if (cfg.flip) imgData = flipImageDataH(offCtx, imgData, false);
+          scratch.imgData.data.set(rf.buffer);
+          if (cfg.flip) flipImageDataInPlace(scratch.imgData, false);
         }
-        offCtx.putImageData(imgData, 0, 0);
+        scratch.ctx.putImageData(scratch.imgData, 0, 0);
 
         qCtx.clearRect(0, 0, qCanvas.width, qCanvas.height);
-        qCtx.drawImage(off, 0, 0, qCanvas.width, qCanvas.height);
+        qCtx.drawImage(scratch.canvas, 0, 0, qCanvas.width, qCanvas.height);
       });
       return;
     }
@@ -4408,22 +4456,17 @@
     const ctx = canvas.getContext("2d");
     ctx.imageSmoothingEnabled = false;
 
-    const off = document.createElement("canvas");
-    off.width = w;
-    off.height = h;
-    const offCtx = off.getContext("2d");
-    let imgData = offCtx.createImageData(w, h);
-
+    const scratch = getScratchBuffer("pd_single", w, h);
     if (showNormals && renderRes.normalBuffer) {
-      imgData.data.set(renderRes.normalBuffer);
-      if (isLeft) imgData = flipImageDataH(offCtx, imgData, true);
+      scratch.imgData.data.set(renderRes.normalBuffer);
+      if (isLeft) flipImageDataInPlace(scratch.imgData, true);
     } else {
-      imgData.data.set(renderRes.buffer);
-      if (isLeft) imgData = flipImageDataH(offCtx, imgData, false);
+      scratch.imgData.data.set(renderRes.buffer);
+      if (isLeft) flipImageDataInPlace(scratch.imgData, false);
     }
-    offCtx.putImageData(imgData, 0, 0);
+    scratch.ctx.putImageData(scratch.imgData, 0, 0);
 
-    ctx.drawImage(off, 0, 0, canvas.width, canvas.height);
+    ctx.drawImage(scratch.canvas, 0, 0, canvas.width, canvas.height);
 
     // Draw skeletal rig bone overlay if requested
     if (showBones && compiledPaperDollSpec.rig && Array.isArray(compiledPaperDollSpec.rig.bones)) {
@@ -4641,11 +4684,32 @@
   // Workspace 4: 4-Way Compass Showcase
   // ==========================================
   let compassHeading = "south";
+  let compassFrameIndex = 0;
+  let compassIsPlaying = true;
+  let compassAnimTimer = null;
+
+  function getCompassSpecs() {
+    if (!window.PaperDollEngine) return null;
+    const PDE = window.PaperDollEngine;
+    const mannequin = paperDollActiveMannequin || "humanoid";
+    const equipped = (paperDollEquippedSlots && Object.keys(paperDollEquippedSlots).length > 0)
+      ? paperDollEquippedSlots
+      : (PDE.LOADOUTS.paladin ? PDE.LOADOUTS.paladin.slots : {});
+    const theme = paperDollActiveTheme || "steel";
+
+    return {
+      down: PDE.assembleSpec(mannequin, equipped, "walk", { theme, outline: "o", outlineWidth: 1, selOut: true, direction: "down", useIK: true }),
+      up: PDE.assembleSpec(mannequin, equipped, "walk", { theme, outline: "o", outlineWidth: 1, selOut: true, direction: "up", useIK: true }),
+      right: PDE.assembleSpec(mannequin, equipped, "walk", { theme, outline: "o", outlineWidth: 1, selOut: true, direction: "right", useIK: true })
+    };
+  }
 
   function initCompass() {
     const compassButtons = document.querySelectorAll(".compass-btn");
     const detailsBox = document.getElementById("compassDetailsBox");
     const pillDirName = document.getElementById("pillDirName");
+    const pillZOrder = document.getElementById("pillZOrder");
+    const btnToggleCompassPlay = document.getElementById("btnToggleCompassPlay");
 
     const descriptions = {
       north: "North (180° Back View): Automatic reverse Z-sort! Backplate, cape, and quiver in foreground (Z=2). Facial features occluded.",
@@ -4655,6 +4719,14 @@
       iso: "Isometric 2.5D (45° Projection): Axonometric foreshortening matrix for tactical turn-based RPGs and ARPG engines."
     };
 
+    const zOrderLabels = {
+      south: "Z-Order: Standard (Front Z=2, Rear Z=0)",
+      north: "Z-Order: Inverted (Cape & Backplate Z=2, Face Occluded)",
+      east: "Z-Order: Profile (Near Arm Z=2, Stride Walk)",
+      west: "Z-Order: Mirrored Profile (Symmetric East)",
+      iso: "Z-Order: 2.5D Axonometric Projection"
+    };
+
     compassButtons.forEach(btn => {
       btn.addEventListener("click", () => {
         compassHeading = btn.dataset.dir;
@@ -4662,49 +4734,105 @@
         if (pillDirName) {
           pillDirName.textContent = btn.textContent.split("\n")[0];
         }
+        if (pillZOrder) {
+          pillZOrder.textContent = zOrderLabels[compassHeading] || "Z-Order: Standard";
+        }
         if (detailsBox) {
           detailsBox.innerHTML = `<strong>${btn.textContent.split("\n")[0]}</strong><p>${descriptions[compassHeading] || ""}</p>`;
         }
         renderCompassDemo();
       });
     });
+
+    if (btnToggleCompassPlay) {
+      btnToggleCompassPlay.addEventListener("click", () => {
+        compassIsPlaying = !compassIsPlaying;
+        btnToggleCompassPlay.textContent = compassIsPlaying ? "⏸️ Pause" : "▶️ Play";
+      });
+    }
+
+    startCompassAnimLoop();
+  }
+
+  function startCompassAnimLoop() {
+    if (compassAnimTimer) clearInterval(compassAnimTimer);
+    compassAnimTimer = setInterval(() => {
+      const ws = document.getElementById("workspaceCompass");
+      if (!ws || !ws.classList.contains("active")) return;
+      if (!compassIsPlaying) return;
+      compassFrameIndex = (compassFrameIndex + 1) % 8;
+      renderCompassDemo();
+    }, 125);
   }
 
   function renderCompassDemo() {
     const canvas = document.getElementById("compassCanvas");
-    if (!canvas || !window.ArchetypeCompiler) return;
+    if (!canvas) return;
     const ctx = canvas.getContext("2d");
     ctx.imageSmoothingEnabled = false;
 
-    const baseArch = window.ArchetypeCompiler.compile({
-      archetypeId: "humanoid",
-      width: 32,
-      height: 36,
-      action: "walk",
-      frames: 4,
-      headScale: 1.0,
-      paletteTheme: "cyberpunk"
-    });
+    let res = null;
+    let flipH = false;
+    let isIso = false;
 
-    const res = PixelDSLRenderer.render(baseArch, 0);
+    const specs = getCompassSpecs();
+    if (specs) {
+      let targetSpec = specs.down;
+      if (compassHeading === "north") {
+        targetSpec = specs.up;
+      } else if (compassHeading === "east") {
+        targetSpec = specs.right;
+      } else if (compassHeading === "west") {
+        targetSpec = specs.right;
+        flipH = true;
+      } else if (compassHeading === "iso") {
+        targetSpec = specs.down;
+        isIso = true;
+      }
+
+      const numFrames = Math.max(1, targetSpec.frames ? targetSpec.frames.length : 1);
+      const fi = (compassFrameIndex % numFrames) + 1;
+      res = PixelDSLRenderer.renderRig(targetSpec, fi);
+    } else if (window.ArchetypeCompiler) {
+      const baseArch = window.ArchetypeCompiler.compile({
+        archetypeId: "humanoid",
+        width: 32,
+        height: 36,
+        action: "walk",
+        frames: 4,
+        headScale: 1.0,
+        paletteTheme: "cyberpunk"
+      });
+      res = PixelDSLRenderer.render(baseArch, compassFrameIndex % 4);
+      if (compassHeading === "west") flipH = true;
+      if (compassHeading === "iso") isIso = true;
+    }
+
+    if (!res) return;
+
     const scale = 5;
-    canvas.width = res.width * scale;
-    canvas.height = res.height * scale;
+    canvas.width = 256;
+    canvas.height = 256;
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    const off = document.createElement("canvas");
-    off.width = res.width;
-    off.height = res.height;
-    const octx = off.getContext("2d");
-    const imgData = octx.createImageData(res.width, res.height);
-    imgData.data.set(res.buffer);
-    octx.putImageData(imgData, 0, 0);
+    const scratch = getScratchBuffer("compass_offscreen", res.width, res.height);
+    scratch.imgData.data.set(res.buffer);
+    if (flipH) flipImageDataInPlace(scratch.imgData, false);
+    scratch.ctx.putImageData(scratch.imgData, 0, 0);
 
     ctx.save();
-    if (compassHeading === "west") {
-      ctx.translate(canvas.width, 0);
-      ctx.scale(-1, 1);
+    const drawW = res.width * scale;
+    const drawH = res.height * scale;
+    const cx = canvas.width / 2;
+    const cy = canvas.height / 2;
+
+    if (isIso) {
+      ctx.translate(cx, cy + 12);
+      ctx.transform(1, 0.22, -0.22, 0.88, 0, 0);
+      ctx.drawImage(scratch.canvas, -drawW / 2, -drawH / 2, drawW, drawH);
+    } else {
+      ctx.drawImage(scratch.canvas, cx - drawW / 2, cy - drawH / 2, drawW, drawH);
     }
-    ctx.drawImage(off, 0, 0, canvas.width, canvas.height);
     ctx.restore();
   }
 
@@ -4722,9 +4850,54 @@ func _ready():
     var mat = CanvasItemMaterial.new()
     mat.light_mode = CanvasItemMaterial.LIGHT_MODE_NORMAL
     self.material = mat
-    self.play("walk")`;
+    self.play("walk_down")`;
         navigator.clipboard.writeText(script);
         showToast("🤖 Copied Godot 4 Setup Script to clipboard!", "copy");
+      });
+    }
+
+    const btnExportGodotTres = document.getElementById("btnExportGodotTres");
+    if (btnExportGodotTres) {
+      btnExportGodotTres.addEventListener("click", () => {
+        const mannequin = paperDollActiveMannequin || "humanoid";
+        const action = paperDollActiveAction || "walk";
+        const sheetName = `paperdoll_${mannequin}_${action}_4way_sheet.png`;
+        const tresName = `paperdoll_${mannequin}_${action}_4way.tres`;
+        const w = 48, h = 48, numFrames = 8, fps = 8.0;
+
+        const directions = [
+          { dir: "down", row: 0, anim: `${action}_down` },
+          { dir: "left", row: 1, anim: `${action}_left` },
+          { dir: "right", row: 2, anim: `${action}_right` },
+          { dir: "up", row: 3, anim: `${action}_up` }
+        ];
+
+        let subResources = "";
+        let animBlocks = [];
+
+        directions.forEach(d => {
+          let frameRefs = [];
+          for (let fi = 0; fi < numFrames; fi++) {
+            const subId = `AtlasTexture_${d.dir}_${fi}`;
+            subResources += `[sub_resource type="AtlasTexture" id="${subId}"]\n`;
+            subResources += `atlas = ExtResource("1_sheet")\n`;
+            subResources += `region = Rect2(${fi * w}, ${d.row * h}, ${w}, ${h})\n\n`;
+
+            frameRefs.push(`{\n"duration": 1.0,\n"texture": SubResource("${subId}")\n}`);
+          }
+          animBlocks.push(`{\n"frames": [${frameRefs.join(", ")}],\n"loop": true,\n"name": &"${d.anim}",\n"speed": ${fps.toFixed(1)}\n}`);
+        });
+
+        const totalSteps = 2 + directions.length * numFrames;
+        const tresContent = `[gd_resource type="SpriteFrames" load_steps=${totalSteps} format=3 uid="uid://pixeldsl_${mannequin}_${action}"]
+
+[ext_resource type="Texture2D" path="res://${sheetName}" id="1_sheet"]
+
+${subResources}[resource]
+animations = [${animBlocks.join(", ")}]
+`;
+        downloadBlob(tresName, tresContent, "text/plain");
+        showToast(`🤖 Exported Godot 4 Resource: ${tresName}!`, "success");
       });
     }
 
@@ -4745,10 +4918,89 @@ public class PixelDSLSprite : MonoBehaviour {
       });
     }
 
+    const btnExportUnityJson = document.getElementById("btnExportUnityJson");
+    if (btnExportUnityJson) {
+      btnExportUnityJson.addEventListener("click", () => {
+        const mannequin = paperDollActiveMannequin || "humanoid";
+        const action = paperDollActiveAction || "walk";
+        const sheetName = `paperdoll_${mannequin}_${action}_4way_sheet.png`;
+        const normName = `paperdoll_${mannequin}_${action}_4way_normal.png`;
+        const jsonName = `paperdoll_${mannequin}_${action}_4way_atlas.json`;
+        const w = 48, h = 48, numFrames = 8;
+        const directions = ["down", "left", "right", "up"];
+
+        const framesObj = {};
+        directions.forEach((dir, rowIdx) => {
+          for (let fi = 0; fi < numFrames; fi++) {
+            const frameKey = `${mannequin}_${action}_${dir}_f${fi + 1}`;
+            framesObj[frameKey] = {
+              frame: { x: fi * w, y: rowIdx * h, w: w, h: h },
+              rotated: false,
+              trimmed: false,
+              spriteSourceSize: { x: 0, y: 0, w: w, h: h },
+              sourceSize: { w: w, h: h },
+              pivot: { x: 0.5, y: 0.5 }
+            };
+          }
+        });
+
+        const unityData = {
+          frames: framesObj,
+          meta: {
+            app: "PixelDSL Studio",
+            version: "3.2",
+            image: sheetName,
+            normalMap: normName,
+            format: "RGBA8888",
+            size: { w: w * numFrames, h: h * 4 },
+            scale: "1",
+            smartupdate: "$TexturePacker:SmartUpdate:pixeldsl_studio$"
+          }
+        };
+
+        downloadBlob(jsonName, JSON.stringify(unityData, null, 2), "application/json");
+        showToast(`🎮 Exported Unity 2D SpriteAtlas: ${jsonName}!`, "success");
+      });
+    }
+
     const btnExportDemoWebp = document.getElementById("btnExportDemoWebp");
     if (btnExportDemoWebp) {
       btnExportDemoWebp.addEventListener("click", () => {
         showToast("⚡ Sample WebP Export sequence ready!", "success");
+      });
+    }
+
+    const btnExportAssetBundle = document.getElementById("btnExportAssetBundle");
+    if (btnExportAssetBundle) {
+      btnExportAssetBundle.addEventListener("click", () => {
+        const mannequin = paperDollActiveMannequin || "humanoid";
+        const action = paperDollActiveAction || "walk";
+        const bundleName = `pixeldsl_${mannequin}_engine_bundle.json`;
+
+        const bundle = {
+          schema: "PixelDSL-Engine-Asset-Bundle-v3.2",
+          generator: "PixelDSL Studio Autonomous Suite",
+          license: "CC0-1.0 Universal (Public Domain)",
+          metadata: {
+            mannequin: mannequin,
+            action: action,
+            theme: paperDollActiveTheme || "steel",
+            ik_ground_contact: paperDollUseIK,
+            dimensions: { frameWidth: 48, frameHeight: 48, framesCount: 8, rows: 4 },
+            directions: ["down", "left", "right", "up"],
+            files: {
+              diffuse_sheet: `paperdoll_${mannequin}_${action}_4way_sheet.png`,
+              normal_map_sheet: `paperdoll_${mannequin}_${action}_4way_normal.png`,
+              godot4_resource: `paperdoll_${mannequin}_${action}_4way.tres`,
+              unity_atlas: `paperdoll_${mannequin}_${action}_4way_atlas.json`
+            }
+          },
+          equipment: paperDollEquippedSlots || {},
+          active_spec: compiledPaperDollSpec || null
+        };
+
+        downloadBlob(bundleName, JSON.stringify(bundle, null, 2), "application/json");
+        showToast(`📦 Exported Engine Asset Bundle: ${bundleName}!`, "success");
       });
     }
   }

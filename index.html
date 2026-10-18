@@ -1011,18 +1011,19 @@
             </div>
           </div>
 
-          <!-- Center: 4-Way Interactive Turnaround Display -->
-          <div class="module-card card-center-preview">
             <div class="card-title">
               <span>🔄 Turnaround Projection</span>
-              <span class="tag-live">Live Vector Preview</span>
+              <div style="display: flex; gap: 6px; align-items: center;">
+                <button id="btnToggleCompassPlay" class="btn btn-sm" style="padding: 2px 8px; font-size: 11px;">⏸️ Pause</button>
+                <span class="tag-live">Live Vector Preview</span>
+              </div>
             </div>
             <div class="compass-canvas-box">
               <canvas id="compassCanvas" width="256" height="256"></canvas>
             </div>
             <div class="compass-mode-pills">
               <span class="mode-pill active" id="pillDirName">South (Front View)</span>
-              <span class="mode-pill">Z-Order: Standard</span>
+              <span class="mode-pill" id="pillZOrder">Z-Order: Standard</span>
             </div>
           </div>
 
@@ -1091,7 +1092,10 @@ func _ready():
     mat.light_mode = CanvasItemMaterial.LIGHT_MODE_NORMAL
     sprite.material = mat</code></pre>
             </div>
-            <button id="btnCopyGodotScript" class="btn btn-sm btn-primary">📋 Copy Godot 4 Setup Script</button>
+            <div style="display: flex; gap: 6px; margin-top: 8px;">
+              <button id="btnCopyGodotScript" class="btn btn-sm" style="flex: 1;">📋 Copy GDScript</button>
+              <button id="btnExportGodotTres" class="btn btn-sm btn-primary" style="flex: 1.3;" title="Export ready-to-drop Godot 4 SpriteFrames .tres resource">📥 Export .tres</button>
+            </div>
           </div>
 
           <!-- Engine Card 2: Unity -->
@@ -1109,11 +1113,14 @@ func _ready():
             </p>
             <div class="code-preview-block">
               <pre><code>// Unity URP 2D Lit Sprite Setup
-SpriteRenderer sr = GetComponent&lt;SpriteRenderer&gt;();
+SpriteRenderer sr = GetComponent<SpriteRenderer>();
 Material litMat = new Material(Shader.Find("Universal Render Pipeline/2D/Sprite-Lit-Default"));
 litMat.SetTexture("_NormalMap", normalTexture);</code></pre>
             </div>
-            <button id="btnCopyUnityScript" class="btn btn-sm">📋 Copy Unity URP Script</button>
+            <div style="display: flex; gap: 6px; margin-top: 8px;">
+              <button id="btnCopyUnityScript" class="btn btn-sm" style="flex: 1;">📋 Copy C# Script</button>
+              <button id="btnExportUnityJson" class="btn btn-sm btn-primary" style="flex: 1.3;" title="Export standard Unity SpriteAtlas JSON slice metadata">📥 Export Atlas JSON</button>
+            </div>
           </div>
 
           <!-- Engine Card 3: Unreal Engine 5 -->
@@ -1145,7 +1152,10 @@ litMat.SetTexture("_NormalMap", normalTexture);</code></pre>
             <p class="engine-desc">
               Zero-artifact animated WebP for ultra-fast web games and Discord/Twitch stickers, plus retro quantized GIF exports.
             </p>
-            <button id="btnExportDemoWebp" class="btn btn-sm">⚡ Export Animated Preview</button>
+            <div style="display: flex; gap: 6px; margin-top: 8px;">
+              <button id="btnExportDemoWebp" class="btn btn-sm" style="flex: 1;">⚡ Export Animated Preview</button>
+              <button id="btnExportAssetBundle" class="btn btn-sm btn-primary" style="flex: 1.3;" title="Export complete JSON Asset Bundle with specs and frames">📦 Export Engine Bundle</button>
+            </div>
           </div>
         </div>
       </div>

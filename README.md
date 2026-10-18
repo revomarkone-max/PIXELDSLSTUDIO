@@ -28,15 +28,34 @@ pixel-art, pixelart, procedural-generation, gamedev, indie-game, godot, godot4, 
 `#pixelart` `#pixelartgenerator` `#gamedev` `#indiedev` `#proceduralgeneration` `#pcg` `#godotengine` `#godot4` `#unity2d` `#spritesheet` `#gamedevelopment` `#skeletalanimation` `#paperdoll` `#modulararmor` `#normalmaps` `#2dlighting` `#roguelikedev` `#rpgmaker` `#pixelartist` `#indiegame`
 
 ### 🎯 Target Use Cases:
-- **Modular RPG Character Customization (Paper Doll & Equipment Matrix)**: Dynamically equip helmets, armor, gauntlets, pants, boots, main-hand weapons, and shields onto animated skeletal mannequins (Humanoid, Chibi, Skeleton, Orc) with forward-kinematic bone attachment and automatic Z-depth layering.
-- **Indie Game Developers & Game Jams** (Ludum Dare, GMTK, Global Game Jam): Generate hundreds of unique weapons, potions, monsters, trees, and autotiles offline in seconds.
+- **Modular RPG Character Customization (Paper Doll & Equipment Matrix)**: Dynamically equip helmets, armor, gauntlets, pants, boots, main-hand weapons, and shields onto animated skeletal mannequins (Humanoid, Chibi, Skeleton, Orc) with forward-kinematic bone attachment, 4-way directional adaptation, and automatic Z-depth layering.
+- **4-Way Top-Down Action RPGs**: Generate complete 4-direction sprite sheets (`down`, `left`, `right`, `up`) with synchronized ground-contact analytical IK.
+- **Game Engine Ready Exports (Godot 4 & Unity 2D)**: One-click export of Godot 4 `SpriteFrames` (`.tres`) and Unity 2D `SpriteAtlas` JSON slicing metadata with 3D normal map support.
 - **Dynamic 2D Lighting Engines (Godot 4, Unity 2D, Defold)**: Instant analytical tangent-space normal maps (`_normal.png`) generated from 3D spherical SDF dome models with Bayer dithering.
+- **Indie Game Developers & Game Jams** (Ludum Dare, GMTK, Global Game Jam): Generate hundreds of unique weapons, potions, monsters, trees, and autotiles offline in seconds.
 - **Autonomous AI Coding Agents**: Standardized JSON DSL and pure Python compiler (`pixeldsl.py` & `paperdoll.py`) designed for AI agents to craft pixel-perfect game assets without hallucinating colors or misaligning sprite sheet frames.
 
 ---
 
-## ✨ Key Features (v3.0)
+## ✨ Key Features (v3.2)
 
+- **Analytical 2-Bone Inverse Kinematics (IK) with Ground Contact (`--ik`)**:
+  - Closed-form Law of Cosines analytical solver for hip, knee, and ankle joints.
+  - **Zero Foot-Sliding**: Clamps the foot to the ground plane ($y_{\text{ankle}} = y_{\text{ground}} = \text{const}$) throughout the stance phase ($u \in [0, 0.5]$), and applies a smoothstep parabolic trajectory during the swing phase ($u \in [0.5, 1.0]$).
+- **4-Way Top-Down Spritesheet Engine (`--4way` / `🎮 4-Way Grid`)**:
+  - Compiles full 4-direction RPG sprite sheets (`down` [front], `left` [mirrored profile], `right` [profile], `up` [back]) in a single command or Web Studio click.
+  - Interactive 2×2 live synchronized animation grid preview in the Paper Doll workspace with both diffuse color and 3D normal map toggles.
+- **Universal Game Engine Exporter (Godot 4 & Unity 2D)**:
+  - **Godot Engine 4.x (`.tres`)**: Exports native Godot `SpriteFrames` resources with auto-generated frame regions, 8 FPS playback, looping flags, and `CanvasItemMaterial` NormalMap bindings for Light2D point lighting.
+  - **Unity 2023 / 6 (`.json`)**: Exports standard TexturePacker/Unity 2D SpriteAtlas metadata with exact pixel coordinates, pivots, and normal map bindings.
+  - **Engine Asset Bundle (`.json`)**: Lossless JSON bundle containing complete skeletal bone hierarchies, Z-depth tiers, and frame sequences.
+- **Art Zone (128×128 Freehand & Bone Rigging Studio)**:
+  - Dedicated creative page featuring a canonical 128px T-pose character rig with proportional head, torso, clavicles, arms, and legs.
+  - Integrated pixel art paint tools (pencil, eraser, eyedropper, bucket, rect, circle), brush sizes (1–4px), color palette, and interactive bone move / rotate / add / delete controls.
+- **4-Way Directional Compass Turnaround**:
+  - Real-time 2.5D perspective turntable demonstrating South (front), North (back view with inverted Z-sorting and cape foregrounding), East/West (profile strides), and 2.5D axonometric Isometric projection ($30^\circ$ shear plane).
+- **Zero-Allocation Canvas Scratch Pool**:
+  - High-performance singleton scratch canvas buffer pool eliminating heap allocations and garbage collection stutter during 60 FPS animation loops.
 - **Modular Paper Doll & Equipment Matrix (`paperdoll.js` & `paperdoll.py`)**:
   - Live procedural bone-attached modular armor, helmets, gauntlets, boots, and weapons that automatically snap and sync with skeletal rig kinematics frame-by-frame (`walk`, `attack`, `idle`, `hurt`, `run`).
   - Swappable mannequins (`humanoid`, `chibi`, `skeleton`, `orc`) and pre-configured archetype loadouts (Paladin, Archmage, Assassin, Death Knight, Sovereign).
@@ -52,10 +71,6 @@ pixel-art, pixelart, procedural-generation, gamedev, indie-game, godot, godot4, 
   - Evaluates analytical 3D dome normals for dynamic 2D lighting in modern game engines (Godot 4, Unity, Defold).
 - **Perceptual `Oklab` / `Oklch` Color Science & Micro-Shaders**:
   - Perceptually uniform lighting ramps, automatic Selective Outlining (`selOut`), and procedural surface shaders (`worley` scales/cracks, `turing` Gray-Scott reaction-diffusion spots, `bayer4x4` dithering).
-- **Kinematic Bone Hierarchy & Analytical 2-Bone IK**:
-  - Parent-child transforms (`parent: "<id>"`, `pivot: [x, y]`), closed-form Law-of-Cosines 2-bone IK, and declarative motion loops (`idle_breathe`, `walk_cycle`, `jump_arc`) with volume-preserving squash-and-stretch ($r_x r_y = \text{const}$) and phase-lagged follow-through.
-- **Raw Image & Sprite Strip Importer (`--import-image`)**:
-  - RFC-2083 5-filter PNG reader, `#FF00FF` chroma-key despill, connected-component strip auto-slicer, and SLIC edge-snapping superpixel downsampler.
 
 ---
 
@@ -76,36 +91,40 @@ pixel-art, pixelart, procedural-generation, gamedev, indie-game, godot, godot4, 
 
 ### 1. Web Studio
 Open [`index.html`](./index.html) directly in your browser.
-- Click **`🎲 Generate / Mutate`** to generate procedural archetypes or evolve 9 variations of any sprite without an LLM.
-- Open the **`🥋 Paper Doll`** workspace to equip helmets, armor, boots, shields, and weapons onto animated mannequins (`humanoid`, `chibi`, `skeleton`, `orc`).
-- Click **`⚡ Open in Canvas Studio`** from either Archetype Forge or Paper Doll to edit pixels or fine-tune poses.
-- Download native **`💾 PNG (1:1)`**, dynamic lighting **`💡 Normal Map`**, or animated **`🎞️ Sprite Sheet`**.
+- Open **`🎨 Art Zone`** for freehand 128px pixel painting and live skeletal rigging.
+- Open **`🥋 Paper Doll`** to equip armor, weapons, and helmets onto mannequins, toggle **`Ground Contact IK`**, or preview the synchronized **`🎮 4-Way Grid`**.
+- Open **`🧭 4-Way Compass`** to inspect turnaround Z-depth ordering and 2.5D isometric projection.
+- Open **`📦 Exporter`** to download ready-to-drop **Godot 4 `.tres`** resources and **Unity 2D `.json`** atlas metadata.
+- Click **`🎲 Generate / Mutate`** to evolve procedural sprites without an LLM.
 
 ### 2. Autonomous CLI Modes (`pixeldsl.py` & `paperdoll.py`)
 ```bash
-# --- A. Modular Paper Doll & Equipment Matrix ---
-# 1. Assemble and animate modular loadouts offline
-python paperdoll.py --mannequin humanoid --loadout paladin --action walk --frames 8 -o paladin_walk.png
+# --- A. 4-Way RPG Spritesheet with Godot 4 & Unity Exporters ---
+python paperdoll.py --mannequin humanoid --loadout paladin --action walk --4way --normal --export-godot --export-unity -o game_ready/paladin_walk_4way.png
+
+# --- B. Ground Contact Analytical IK vs Forward Kinematics ---
+python paperdoll.py --mannequin humanoid --loadout paladin --action walk --ik -o paladin_ik.png
+python paperdoll.py --mannequin humanoid --loadout paladin --action walk --no-ik -o paladin_fk.png
+
+# --- C. Modular Paper Doll Custom Loadouts ---
 python paperdoll.py --mannequin skeleton --equip head:horned_helm,torso:bone_carapace,weapon:battle_axe --action attack -o skeleton_attack.png
 python paperdoll.py --list-slots
 python paperdoll.py --list-loadouts
+python paperdoll.py --list-mannequins
 
-# --- B. Procedural Archetype Generators (Zero LLM Calls) ---
+# --- D. Procedural Archetype Generators (Zero LLM Calls) ---
 python pixeldsl.py --generate sword --seed 42 --size 32x32
 python pixeldsl.py --generate slime --seed 777 --size 32x32
 python pixeldsl.py --generate crystal_monolith --seed 108 --size 48x48
 
-# --- C. Evolutionary Sprite Mutator ---
+# --- E. Evolutionary Sprite Mutator ---
 python pixeldsl.py --mutate sprites/white_pink_bunny_jump_32x32.json --seed 55
 
-# --- D. Concept Art & Turnaround Strip Importer ---
+# --- F. Concept Art & Turnaround Strip Importer ---
 python pixeldsl.py --import-image heroes/druid_orb/body_strip_raw.png --size 48x48
 
-# --- E. Compile any PixelDSL v3.0 JSON Spec ---
+# --- G. Compile any PixelDSL v3.0 JSON Spec ---
 python pixeldsl.py sprites/white_pink_bunny_jump_32x32.json
-
-# --- F. Pipe JSON Directly from STDIN ---
-cat sprites/turtle_topdown_32x32_grid.json | python pixeldsl.py -
 ```
 
 ### 3. AI Agent Skill (`SKILL.md`)

@@ -1171,7 +1171,90 @@ def render_4way_sheet(mannequin_id="humanoid", equipped_slots=None, action_id="w
 
 
 # ==============================================================================
-# 8. MAIN CLI DISPATCH
+# 8. GAME ENGINE ASSET EXPORTERS (GODOT 4 & UNITY 2D)
+# ==============================================================================
+def generate_godot4_tres(sheet_path: str, mannequin: str, action: str, frame_w: int, frame_h: int, num_frames: int, is_4way: bool, fps: float = 8.0) -> str:
+    sheet_filename = os.path.basename(sheet_path)
+    if is_4way:
+        directions = [
+            ("down", 0, f"{action}_down"),
+            ("left", 1, f"{action}_left"),
+            ("right", 2, f"{action}_right"),
+            ("up", 3, f"{action}_up"),
+        ]
+    else:
+        directions = [("main", 0, action)]
+
+    sub_resources = []
+    anim_blocks = []
+
+    for d_name, row_idx, anim_name in directions:
+        frame_refs = []
+        for fi in range(num_frames):
+            sub_id = f"AtlasTexture_{d_name}_{fi}"
+            sub_resources.append(
+                f'[sub_resource type="AtlasTexture" id="{sub_id}"]\n'
+                f'atlas = ExtResource("1_sheet")\n'
+                f'region = Rect2({fi * frame_w}, {row_idx * frame_h}, {frame_w}, {frame_h})\n'
+            )
+            frame_refs.append(f'{{\n"duration": 1.0,\n"texture": SubResource("{sub_id}")\n}}')
+
+        anim_blocks.append(
+            f'{{\n"frames": [{", ".join(frame_refs)}],\n"loop": true,\n"name": &"{anim_name}",\n"speed": {fps:.1f}\n}}'
+        )
+
+    total_steps = 2 + len(directions) * num_frames
+    return f"""[gd_resource type="SpriteFrames" load_steps={total_steps} format=3 uid="uid://pixeldsl_{mannequin}_{action}"]
+
+[ext_resource type="Texture2D" path="res://{sheet_filename}" id="1_sheet"]
+
+{"\n".join(sub_resources)}
+[resource]
+animations = [{", ".join(anim_blocks)}]
+"""
+
+
+def generate_unity_json(sheet_path: str, mannequin: str, action: str, frame_w: int, frame_h: int, num_frames: int, is_4way: bool) -> dict:
+    sheet_filename = os.path.basename(sheet_path)
+    norm_filename = sheet_filename.rsplit(".", 1)[0] + "_normal.png"
+    if is_4way:
+        directions = [("down", 0), ("left", 1), ("right", 2), ("up", 3)]
+        sheet_h = frame_h * 4
+    else:
+        directions = [("main", 0)]
+        sheet_h = frame_h
+    sheet_w = frame_w * num_frames
+
+    frames_dict = {}
+    for d_name, row_idx in directions:
+        for fi in range(num_frames):
+            frame_key = f"{mannequin}_{action}_{d_name}_f{fi + 1}"
+            frames_dict[frame_key] = {
+                "frame": {"x": fi * frame_w, "y": row_idx * frame_h, "w": frame_w, "h": frame_h},
+                "rotated": False,
+                "trimmed": False,
+                "spriteSourceSize": {"x": 0, "y": 0, "w": frame_w, "h": frame_h},
+                "sourceSize": {"w": frame_w, "h": frame_h},
+                "pivot": {"x": 0.5, "y": 0.5}
+            }
+
+    return {
+        "frames": frames_dict,
+        "meta": {
+            "app": "PixelDSL Studio",
+            "version": "3.2",
+            "image": sheet_filename,
+            "normalMap": norm_filename,
+            "format": "RGBA8888",
+            "size": {"w": sheet_w, "h": sheet_h},
+            "scale": "1",
+            "smartupdate": "$TexturePacker:SmartUpdate:pixeldsl_studio$"
+        }
+    }
+
+
+# ==============================================================================
+# 9. MAIN CLI DISPATCH
 # ==============================================================================
 def main():
     parser = argparse.ArgumentParser(
@@ -1190,6 +1273,8 @@ def main():
     parser.add_argument("-o", "--out", type=str, help="Output PNG path (defaults to game_ready/<name>.png)")
     parser.add_argument("--normal", action="store_true", help="Also generate 3D normal map PNG")
     parser.add_argument("--sheet", action="store_true", help="Also generate horizontal sprite sheet PNG")
+    parser.add_argument("--export-godot", action="store_true", help="Export Godot 4 SpriteFrames .tres resource")
+    parser.add_argument("--export-unity", action="store_true", help="Export Unity 2D SpriteAtlas JSON metadata")
     parser.add_argument("--spec", action="store_true", help="Output JSON spec to stdout")
     parser.add_argument("--list-slots", action="store_true", help="List all equipment slots")
     parser.add_argument("--list-items", action="store_true", help="List all items in the catalog")
@@ -1270,6 +1355,20 @@ def main():
             norm_name = out_name.rsplit(".", 1)[0] + "_normal.png"
             pixeldsl.write_png(norm_name, sheet_w, sheet_h, res_4way["normal_buffer"])
             print(f"    Saved 4-Way Normal Map:   {norm_name}")
+
+        if args.export_godot:
+            tres_name = out_name.rsplit(".", 1)[0] + ".tres"
+            tres_content = generate_godot4_tres(out_name, mannequin, args.action, res_4way["frame_width"], res_4way["frame_height"], res_4way["frames_count"], is_4way=True)
+            with open(tres_name, "w", encoding="utf-8") as f:
+                f.write(tres_content)
+            print(f"    Saved Godot 4 Resource:  {tres_name}")
+
+        if args.export_unity:
+            unity_name = out_name.rsplit(".", 1)[0] + "_atlas.json"
+            unity_data = generate_unity_json(out_name, mannequin, args.action, res_4way["frame_width"], res_4way["frame_height"], res_4way["frames_count"], is_4way=True)
+            with open(unity_name, "w", encoding="utf-8") as f:
+                json.dump(unity_data, f, indent=2)
+            print(f"    Saved Unity SpriteAtlas: {unity_name}")
         return
 
     # Single-direction build
@@ -1339,6 +1438,20 @@ def main():
 
         pixeldsl.write_png(sheet_name, sheet_w, sheet_h, sheet_buf)
         print(f"    Saved Sprite Sheet:      {sheet_name} ({sheet_w}x{sheet_h})")
+
+        if args.export_godot:
+            tres_name = out_name.rsplit(".", 1)[0] + ".tres"
+            tres_content = generate_godot4_tres(sheet_name, mannequin, args.action, res_f1["width"], res_f1["height"], num_frames, is_4way=False)
+            with open(tres_name, "w", encoding="utf-8") as f:
+                f.write(tres_content)
+            print(f"    Saved Godot 4 Resource:  {tres_name}")
+
+        if args.export_unity:
+            unity_name = out_name.rsplit(".", 1)[0] + "_atlas.json"
+            unity_data = generate_unity_json(sheet_name, mannequin, args.action, res_f1["width"], res_f1["height"], num_frames, is_4way=False)
+            with open(unity_name, "w", encoding="utf-8") as f:
+                json.dump(unity_data, f, indent=2)
+            print(f"    Saved Unity SpriteAtlas: {unity_name}")
 
     try:
         ansi_str = pixeldsl.render_ansi_preview(res_f1["width"], res_f1["height"], f1_buf)

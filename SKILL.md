@@ -29,6 +29,9 @@ python pixeldsl.py --import-image heroes/paladin_orb/body_strip_raw.png --size 4
 
 # Mode 4: Compile a PixelDSL v3.0 JSON file or stdin stream
 python pixeldsl.py sprites/my_sprite.json
+
+# Mode 5: Modular Paper Doll 4-Way RPG Spritesheet & Game Engine Exporters (Godot 4 & Unity 2D)
+python paperdoll.py --mannequin humanoid --loadout paladin --action walk --4way --normal --export-godot --export-unity -o game_ready/paladin_walk_4way.png
 ```
 
 ### What `pixeldsl.py` Outputs Automatically:
