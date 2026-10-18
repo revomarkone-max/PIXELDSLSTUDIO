@@ -1,0 +1,17 @@
+{
+  "name": "potion",
+  "type": "prop",
+  "views": ["front"],
+  "anims": ["idle", "bob"],
+  "materials": {
+    "glass":  {"ramp": ["#5a1e3a", "#a02e5e", "#e0508a", "#ffb0d0", "#ffffff"], "gloss": true},
+    "cork":   ["#4a3020", "#6e4a30", "#94683e", "#b48a56"],
+    "string": ["#6a5a40", "#9a8660", "#c6b088", "#e6d4ae"]
+  },
+  "parts": [
+    {"sphere": {"joint": "root", "at": [0, 7, 0], "r": 7, "mat": "glass", "group": "flask"}},
+    {"cone":   {"joint": "root", "a": [0, 12, 0], "b": [0, 18, 0], "r1": 2.6, "r2": 2.0, "mat": "glass", "group": "flask"}},
+    {"cone":   {"joint": "root", "a": [0, 17.5, 0], "b": [0, 21, 0], "r1": 2.3, "r2": 2.1, "mat": "cork", "group": "cork"}},
+    {"torus":  {"joint": "root", "at": [0, 15.5, 0], "big": 2.3, "small": 0.6, "mat": "string", "group": "string"}}
+  ]
+}

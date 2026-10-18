@@ -1,0 +1,15 @@
+{
+  "name": "chest",
+  "type": "prop",
+  "materials": {
+    "wood":  ["#3a2214", "#5c361f", "#82502e", "#a26a3e"],
+    "iron":  {"ramp": ["#2a2e38", "#4a5060", "#727a8c", "#a6aebe", "#e6ecf4"], "gloss": true},
+    "gold":  {"ramp": ["#7a4e14", "#b8821e", "#e8b83a", "#ffe07a", "#fff6c8"], "gloss": true}
+  },
+  "parts": [
+    {"box": {"joint": "root", "at": [0, 5.5, 0], "half": [10.0, 5.5, 7.0], "mat": "wood", "group": "body", "rnd": 0.8}},
+    {"box": {"joint": "root", "at": [0, 13.0, 0], "half": [10.2, 2.6, 7.2], "mat": "wood", "group": "lid", "rnd": 2.0}},
+    {"box": {"joint": "root", "at": [-6.5, 8.0, 0], "half": [1.0, 7.8, 7.5], "mat": "iron", "group": "band", "rnd": 0.4}, "mirror": true},
+    {"box": {"joint": "root", "at": [0, 10.8, 7.2], "half": [1.6, 2.0, 0.7], "mat": "gold", "group": "lock", "rnd": 0.4}}
+  ]
+}

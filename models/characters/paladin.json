@@ -1,0 +1,38 @@
+{
+  "name": "paladin",
+  "type": "character",
+  "hide": ["hair"],
+  "rigs": ["cape", "grip"],
+  "materials": {
+    "steel":   {"ramp": ["#3a4250", "#66728a", "#9eaac0", "#d6deea", "#ffffff"], "gloss": true},
+    "steel_d": ["#262c38", "#424c5e", "#66728a", "#8e9ab0"],
+    "gold":    {"ramp": ["#7a4e14", "#b8821e", "#e8b83a", "#ffe07a", "#fff6c8"], "gloss": true},
+    "tabard":  ["#1a2c5c", "#284890", "#3a64c0", "#5a88e0"],
+    "cape":    ["#4e1420", "#7a1e2e", "#a83040", "#cc4a58"],
+    "leather": ["#2e1e16", "#4a3022", "#664430", "#80583e"]
+  },
+  "parts": [
+    {"shirt": {"mat": "steel_d", "sleeves": "long", "add": 0.9}},
+    {"pants": {"mat": "steel_d", "add": 0.8}},
+    {"ellipsoid": {"joint": "chest", "at": [0, 0.8, 0.4], "radii": [9.4, 8.4, 6.2], "mat": "steel", "group": "plate"}},
+    {"ellipsoid": {"joint": "spine", "at": [0, 0.4, 0.4], "radii": [7.6, 6.4, 5.4], "mat": "steel", "group": "plate"}},
+    {"box": {"joint": "pelvis", "at": [0, -4.0, 5.6], "half": [3.4, 6.6, 0.6], "mat": "tabard", "group": "tabard", "rnd": 0.5}},
+    {"box": {"joint": "pelvis", "at": [0, -4.2, -5.4], "half": [3.4, 6.4, 0.6], "mat": "tabard", "group": "tabard_b", "rnd": 0.5}},
+    {"box": {"joint": "chest", "at": [0, 1.0, 6.4], "half": [2.6, 0.6, 0.5], "mat": "gold", "group": "cross"}},
+    {"box": {"joint": "chest", "at": [0, 0.4, 6.4], "half": [0.6, 2.8, 0.5], "mat": "gold", "group": "cross"}},
+    {"ellipsoid": {"joint": "shoulder_R", "at": [-0.6, 1.2, 0], "radii": [5.2, 3.8, 5.0], "mat": "steel", "group": "pauldron_R"}, "mirror": true},
+    {"ellipsoid": {"joint": "shoulder_R", "at": [-0.6, 0.0, 0], "radii": [5.4, 1.0, 5.2], "mat": "gold", "group": "pauldron_t_R"}, "mirror": true},
+    {"belt": {"mat": "leather", "buckle": "gold"}},
+    {"gloves": {"mat": "steel", "cuff": "gold", "add": 0.9}},
+    {"boots": {"mat": "steel", "cuff": "gold", "top": 0.3, "add": 1.0}},
+    {"cape": {"mat": "cape", "width": 8.8}},
+    {"ellipsoid": {"joint": "head", "at": [0, 0.8, -0.2], "radii": [7.0, 7.8, 7.2], "mat": "steel", "group": "helm"}},
+    {"ellipsoid": {"joint": "head", "at": [0, -2.8, 1.4], "radii": [5.8, 4.8, 6.0], "mat": "steel", "group": "helm"}},
+    {"box": {"joint": "head", "at": [0, 0.2, 6.4], "half": [4.2, 0.55, 1.6], "mat": "steel_d", "group": "visor", "rnd": 0.3}},
+    {"box": {"joint": "head", "at": [0, 7.6, -0.4], "half": [0.7, 1.4, 5.6], "mat": "gold", "group": "crest", "rnd": 0.6}},
+
+    {"cone": {"joint": "grip_R", "a": [0, -7.0, 0.4], "b": [0, 24.0, 0.4], "r1": 1.0, "r2": 1.1, "mat": "leather", "group": "weapon"}},
+    {"box":  {"joint": "grip_R", "at": [0, 26.5, 0.4], "half": [6.2, 3.6, 3.6], "mat": "steel", "group": "weapon_h", "rnd": 1.0}},
+    {"box":  {"joint": "grip_R", "at": [0, 26.5, 0.4], "half": [6.5, 0.9, 3.9], "mat": "gold", "group": "weapon_b", "rnd": 0.4}}
+  ]
+}

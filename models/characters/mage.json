@@ -1,0 +1,39 @@
+{
+  "name": "mage",
+  "type": "character",
+  "hide": ["hair"],
+  "rigs": ["cape", "grip"],
+  "materials": {
+    "robe":   ["#141a3a", "#212c5e", "#2f3f86", "#4258b0"],
+    "robe_d": ["#0e1230", "#171f46", "#222c62", "#2f3d80"],
+    "silver": {"ramp": ["#4c5670", "#8a94ac", "#c4ccdc", "#f0f4fa", "#ffffff"], "gloss": true},
+    "wood":   ["#2e1c14", "#4c2f20", "#6e4630", "#8c5e40"],
+    "frost":  {"ramp": ["#2a6c9c", "#4aa8d8", "#8ad8f4", "#d4f6ff", "#ffffff"], "gloss": true},
+    "hair":   ["#6c6c78", "#9a9aa8", "#c6c6d0", "#e6e6ee"]
+  },
+  "parts": [
+    {"shirt": {"mat": "robe", "sleeves": null}},
+    {"flared_sleeves": {"mat": "robe", "flare": 1.8}},
+    {"robe": {"mat": "robe", "hem_r": 12.0, "hem": "silver"}},
+    {"belt": {"mat": "silver"}},
+    {"gloves": {"mat": "robe_d"}},
+    {"boots": {"mat": "robe_d", "top": 0.6}},
+    {"cape": {"mat": "robe_d", "lining": "robe", "width": 8.0}},
+
+    {"cone":   {"joint": "chest", "a": [0, 6.0, -1.0], "b": [0, 10.5, -1.6], "r1": 6.8, "r2": 8.0, "mat": "robe_d", "group": "collar"}},
+    {"sphere": {"joint": "chest", "at": [0, 9.0, 4.0], "r": 5.4, "mat": "robe_d", "group": "collar", "cut": true}},
+    {"sphere": {"joint": "neck", "at": [0, 7.0, 3.6], "r": 6.6, "mat": "robe_d", "group": "collar", "cut": true}},
+
+    {"ellipsoid": {"joint": "head", "at": [0, -4.4, 3.0], "radii": [4.0, 4.6, 3.4], "mat": "hair", "group": "beard"}},
+    {"cone":      {"joint": "head", "a": [0, -7.0, 3.2], "b": [0, -11.5, 2.4], "r1": 2.6, "r2": 0.8, "mat": "hair", "group": "beard"}},
+    {"ellipsoid": {"joint": "head", "at": [0, 5.0, -0.6], "radii": [9.8, 1.1, 9.8], "mat": "robe", "group": "hat", "rot": [-16, 0, 0]}},
+    {"cone":      {"joint": "head", "a": [0, 5.0, -0.4], "b": [0, 14.0, -2.0], "r1": 6.4, "r2": 3.0, "mat": "robe", "group": "hat"}},
+    {"cone":      {"joint": "head", "a": [0, 14.0, -2.0], "b": [0, 18.5, -7.0], "r1": 3.0, "r2": 0.7, "mat": "robe", "group": "hat"}},
+    {"cone":      {"joint": "head", "a": [0, 6.0, -0.4], "b": [0, 7.6, -0.6], "r1": 6.6, "r2": 6.1, "mat": "silver", "group": "hat_band"}},
+
+    {"cone": {"joint": "grip_R", "a": [0, -11.0, 0.4], "b": [0, 19.0, 0.4], "r1": 0.95, "r2": 1.05, "mat": "wood", "group": "weapon"}},
+    {"cone": {"joint": "grip_R", "a": [0, 27.5, 0.4], "b": [0, 30.0, 0.4], "r1": 1.6, "r2": 2.2, "mat": "silver", "group": "weapon_h"}},
+    {"cone": {"joint": "grip_R", "a": [0, 19.0, 0.4], "b": [0, 27.5, 0.4], "r1": 1.05, "r2": 1.1, "mat": "wood", "group": "weapon"}},
+    {"cone": {"joint": "grip_R", "a": [0, 30.5, 0.4], "b": [0, 37.5, 0.4], "r1": 2.4, "r2": 0.6, "mat": "frost", "group": "weapon_g"}}
+  ]
+}

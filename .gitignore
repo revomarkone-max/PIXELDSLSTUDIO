@@ -1,11 +1,5 @@
-# Ignore unrelated root images and OS/IDE artifacts
-*.jpg
-*.jpeg
-game_ready/spr_*.png
 __pycache__/
 .venv/
 .DS_Store
 Thumbs.db
-scratch/
-AGENT_CONTEXT_SUMMARY.md
-gallery/
+out/

@@ -1,114 +1,113 @@
-# PixelDSL Studio
+# PixelDSL
 
 [![tests](https://github.com/revomarkone-max/PIXELDSLSTUDIO/actions/workflows/tests.yml/badge.svg)](https://github.com/revomarkone-max/PIXELDSLSTUDIO/actions/workflows/tests.yml)
 [![Code: MIT](https://img.shields.io/badge/code-MIT-blue.svg)](./LICENSE)
 [![Assets: CC0](https://img.shields.io/badge/generated_assets-CC0-brightgreen.svg)](https://creativecommons.org/publicdomain/zero/1.0/)
 
-Deterministic, offline pixel-art generator for small game assets (8×8 – 128×128):
-procedural items, creatures, VFX, **seamless terrain tiles**, a modular
-**paper-doll** character system with 4-direction walk sheets, normal maps, and
-Godot 4 / Unity export. No AI models, no network, no pip dependencies.
+Reproducible pixel-art game assets from small JSON models. A model is built from
+3D primitives (spheres, cones, boxes...) on a skeleton; PixelDSL ray-marches it with
+an orthographic game camera and turns it into crisp, outlined, toon-shaded sprites:
 
-Two front-ends share the same specs:
+- **views**: top-down 2.5D (8 directions), side view (platformers), isometric, front (icons/portraits)
+- **one shared human base** with idle, walk, run, attack, cast, jump, hurt, death - every
+  character is the base plus clothing/props, so all of them animate and turn the same way
+- **props**: chests, barrels, crystals, trees, items (static, `bob`, `spin`)
+- **seamless tiles**: grass, dirt, sand, stone, water (animated), side-view ground
+- **export**: PNG sheets + JSON metadata, normal maps, GameMaker sprites, Godot `SpriteFrames`
+- **prototyping**: HTML player (`preview`), live rebuild on save (`watch`), `gallery` of everything
 
-- **Web Studio** — open `index.html` in a browser (Three.js is vendored).
-- **CLI** — `pixeldsl.py` and `paperdoll.py`, pure Python 3.9+ standard library.
+Deterministic: the same JSON always produces the same pixels, so assets live in git
+as text and can be regenerated at any size (`--scale 0.5` for half-size sprites).
 
-![Seamless tiles (3x3 repeat) and the paladin 4-way walk](docs/showcase.png)
+![Heroes in the top-down and side views](docs/showcase.png)
 
-## What works well today
+## Install
 
-| Area | Status |
-| --- | --- |
-| Seamless tiles: grass, dirt, sand, stone, water (8-frame loop) | ✅ tested for seams, bit-identical in Py and JS |
-| Items & simple props: swords, staffs, bows, potions, gems, flowers | ✅ readable at 32 px |
-| Paper doll: humanoid + loadouts, 4-way walk, Godot `.tres`, Unity atlas | ✅ `paladin` and `wanderer` read well; other loadouts still need art passes |
-| Creatures from SDF primitives (dragon, snake, golem…) | ⚠️ often not recognisable — use as a base, not final art |
-| 3D rigs rendered to 32 px | ⚠️ experimental |
+```bash
+pip install -r requirements.txt      # numpy, pillow
+python -m pixeldsl list              # models, views, animations, builders, tiles
+```
 
 ## Quick start
 
 ```bash
-# Seamless tiles (any size; seed changes the layout)
-python pixeldsl.py --generate stone --seed 88 --size 32x32
-python pixeldsl.py --generate water --seed 99 --size 48x48     # animated
+# look at something right now
+python -m pixeldsl render models/characters/mage.json --view side --anim run --frame 0.3 -o out/mage.png
+python -m pixeldsl preview models/characters/mage.json models/props/chest.json -o out/preview.html
 
-# Procedural sprites
-python pixeldsl.py --generate sword --seed 42 --size 32x32
-python pixeldsl.py --generate slime --seed 777 --size 32x32
+# iterate on a model: edit the JSON, the page reloads itself
+python -m pixeldsl watch models/characters/mage.json --views side --anims idle,walk
 
-# Paper doll: 4-direction walk sheet + normal map + engine metadata
-python paperdoll.py --mannequin humanoid --loadout paladin --action walk --4way \
-    --normal --export-godot --export-unity -o game_ready/paladin_walk_4way.png
-python paperdoll.py --list-loadouts
-
-# Compile any PixelDSL JSON spec / mutate one
-python pixeldsl.py sprites/white_pink_bunny_jump_32x32.json
-python pixeldsl.py --mutate sprites/white_pink_bunny_jump_32x32.json --seed 55
+# ship it
+python -m pixeldsl export models/characters/*.json --views topdown,side --out out/
+python -m pixeldsl export models/characters/mage.json --views topdown --anims idle,walk,attack \
+    --gamemaker "C:/DEEEEV/GameMakerProj/Quality MOBA graybox" --gm-name "spr_h_{name}_{anim}"
+python -m pixeldsl export models/props/*.json --godot-res res://art/props --out godot_project/art/props
+python -m pixeldsl tiles grass stone water ground --size 32 --out out/tiles
+python -m pixeldsl gallery -o out/gallery.html
 ```
 
-Output goes to `game_ready/`: `name.png`, `name_normal.png`, `name_preview.png`
-and, for animations, `name_sheet.png`.
+## Models
 
-## hero3d: shared human base for game heroes
-
-`hero3d/` builds characters on **one shared human base** (skeleton + body made of SDF
-primitives) and renders them as 2.5D pixel art: orthographic camera tilted like a
-top-down MOBA, 8 directions, idle / walk / attack. Outfits ("skins") are lists of
-extra primitives on the same joints, so every new hero inherits the proportions,
-animations and all directions for free. Needs `numpy` (the rest of the repo does not).
-
-```bash
-python -m hero3d.gm_export                       # all skins -> game_ready/heroes/*_sheet.png
-python -m hero3d.gm_export --project "C:/DEEEEV/GameMakerProj/Quality MOBA graybox" mage
+```json
+{
+  "name": "mage",
+  "type": "character",
+  "hide": ["hair"],
+  "rigs": ["cape", "grip"],
+  "materials": {
+    "robe":   ["#141a3a", "#212c5e", "#2f3f86", "#4258b0"],
+    "silver": {"ramp": ["#4c5670", "#8a94ac", "#c4ccdc", "#f0f4fa", "#ffffff"], "gloss": true}
+  },
+  "parts": [
+    {"robe":  {"mat": "robe", "hem_r": 12, "hem": "silver"}},
+    {"cape":  {"mat": "robe", "width": 8}},
+    {"cone":  {"joint": "head", "a": [0, 5, 0], "b": [0, 14, -2], "r1": 6.4, "r2": 3, "mat": "robe", "group": "hat"}},
+    {"ellipsoid": {"joint": "shoulder_R", "at": [-0.6, 1.2, 0], "radii": [5, 4, 5], "mat": "silver", "group": "pad_R"}, "mirror": true}
+  ]
+}
 ```
 
-![Five heroes on the shared base](docs/heroes_overview.png)
+- **materials**: 4 colours dark -> light (a 5th = specular highlight with `"gloss": true`).
+- **parts**: a builder call (`shirt`, `flared_sleeves`, `pants`, `boots`, `gloves`, `robe`, `belt`,
+  `hood`, `cape`) or a raw primitive (`sphere`, `ellipsoid`, `cone`, `ccone`, `box`, `torus`, `seg`)
+  attached to a joint. `"mirror": true` adds the left/right copy. Primitives in one `group`
+  blend smoothly; `"cut": true` subtracts from its group.
+- **rigs**: `cape` (cape chain that sways), `grip` (`grip_R` weapon joint that follows attacks/casts).
+- **joints** (human): root, pelvis, spine, chest, neck, head, shoulder/elbow/wrist/hand/hip/knee/ankle/toe `_R`/`_L`
+  (character right = -x; the model faces +z). Props have a single `root` joint at the ground.
+- optional `views`, `anims`, `dirs` (per view) override what gets exported.
 
-- `hero3d/base.py` - joints, body, animations (edit here to change every hero).
-- `hero3d/skins.py` - clothing builders (`shirt`, `robe`, `hood`, `cape`, `boots`...) and the five heroes.
-- `hero3d/gm_export.py` - GameMaker sprites `spr_h_<hero>_<anim>`, frames `dir * n + f`, dir 0 = facing the camera.
+## Output layout
 
-## Quality gate
+`<name>_<view>_<anim>.png`: rows = directions, columns = frames. `<name>_<view>.json`
+holds frame size, origin (feet), direction order and fps/loop per animation. All
+animations of a view share one frame size and origin.
 
-Every generator change should pass the tests and be eyeballed in the gallery:
-
-```bash
-python -m unittest discover tests -v   # seams, silhouettes, Py/JS parity
-python tools/gallery.py                # -> gallery/index.html
-```
-
-The tests check that tiles have no seam (both visually and by exact noise
-periodicity), that every archetype produces a sane silhouette at 16/32/48 px,
-that 4-way sheets have no empty cells, that the Godot `.tres` is valid, and
-that `tilegen.py`/`tilegen.js` and the paper-doll assembler give identical
-results in Python and JavaScript. CI runs them on every push.
-
-## Project layout
-
-| File | Role |
+| view | directions (row order) |
 | --- | --- |
-| `pixeldsl.py` / `renderer.js` | Spec compiler & rasteriser (SDF layers, grids, rigs, shaders) |
-| `tilegen.py` / `tilegen.js` | Seamless tile generator (same algorithm, bit-exact) |
-| `paperdoll.py` / `paperdoll.js` | Mannequins, equipment, poses, 4-way sheets, exporters |
-| `archetypes.js`, `archetypes/` | Parametric archetype registry used by the Web Studio forge |
-| `three_renderer.js` | Three.js 3D rigs baked to pixels (experimental) |
-| `index.html`, `app.js`, `style.css` | Web Studio UI |
-| `tests/`, `tools/gallery.py` | Quality gate |
+| topdown | down, down_right, right, up_right, up, up_left, left, down_left |
+| side | right, left |
+| iso | down_right, up_right, up_left, down_left |
+| front | down |
 
-## Web Studio shortcuts
+GameMaker sprites store the same frames direction-major (`dir * frames + f`), origin at the
+feet, no texture filtering. Godot gets one `SpriteFrames` per view with animations named
+`<anim>_<direction>`.
 
-| Key | Action |
+## Layout
+
+| path | what |
 | --- | --- |
-| `D` / `E` / `S` / `G` | Pencil / eraser / eyedropper / bucket |
-| `Ctrl+Z` / `Alt+Y` | Undo / redo |
-
-## AI agents
-
-`SKILL.md` (and `.agents/skills/pixel-sprite-generator/SKILL.md`) describe the
-JSON spec and CLI so coding agents can produce assets through the compiler
-instead of guessing pixels.
+| `pixeldsl/engine.py` | SDF primitives, smooth groups, orthographic camera, ray-marcher, toon shading, outlines |
+| `pixeldsl/human.py` | shared human skeleton, body and animations |
+| `pixeldsl/builders.py` | clothing builders and rigs |
+| `pixeldsl/model.py` | JSON model loader, views, directions |
+| `pixeldsl/export.py` | sheets, metadata, normal maps, GameMaker, Godot |
+| `pixeldsl/tiles.py` | seamless tiles |
+| `pixeldsl/preview.py`, `cli.py` | HTML player and command line |
+| `models/` | characters and props |
 
 ## License
 
-Code: [MIT](./LICENSE). Generated sprites and bundled presets: [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/) — use them anywhere, no attribution required.
+Code: [MIT](./LICENSE). Generated sprites: [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/).
