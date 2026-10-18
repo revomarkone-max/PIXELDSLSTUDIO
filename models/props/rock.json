@@ -1,0 +1,15 @@
+{
+  "name": "rock",
+  "type": "prop",
+  "materials": {
+    "stone": ["#2c2e36", "#4a4e5a", "#6c7280", "#9298a6"],
+    "moss":  ["#1e3a1a", "#2e5a26", "#4a8236", "#78ac4a"]
+  },
+  "group_k": {"rock": 3.0},
+  "parts": [
+    {"ellipsoid": {"joint": "root", "at": [0, 6, 0], "radii": [12, 8, 10], "mat": "stone", "group": "rock", "rot": [0, 20, 8]}},
+    {"ellipsoid": {"joint": "root", "at": [8, 4, 4], "radii": [7, 5, 6], "mat": "stone", "group": "rock"}},
+    {"ellipsoid": {"joint": "root", "at": [-7, 3, -4], "radii": [6, 4, 6], "mat": "stone", "group": "rock"}},
+    {"ellipsoid": {"joint": "root", "at": [-1, 12.5, 0], "radii": [8, 2.2, 7], "mat": "moss", "group": "moss", "rot": [0, 20, 8]}}
+  ]
+}

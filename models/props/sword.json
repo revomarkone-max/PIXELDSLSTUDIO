@@ -1,0 +1,20 @@
+{
+  "name": "sword",
+  "type": "prop",
+  "views": ["front"],
+  "anims": ["idle", "spin"],
+  "materials": {
+    "steel":   {"ramp": ["#3a4250", "#66728a", "#9eaac0", "#d6deea", "#ffffff"], "gloss": true},
+    "gold":    {"ramp": ["#7a4e14", "#b8821e", "#e8b83a", "#ffe07a", "#fff6c8"], "gloss": true},
+    "leather": ["#2e1e16", "#4a3022", "#664430", "#80583e"],
+    "gem":     {"ramp": ["#6a1020", "#a81e34", "#e04454", "#ff9aa2", "#ffffff"], "gloss": true}
+  },
+  "parts": [
+    {"box":    {"joint": "root", "at": [0, 26, 0], "half": [2.2, 16, 0.7], "mat": "steel", "group": "blade", "rnd": 0.5}},
+    {"cone":   {"joint": "root", "a": [0, 41, 0], "b": [0, 46, 0], "r1": 1.8, "r2": 0.2, "mat": "steel", "group": "blade"}},
+    {"box":    {"joint": "root", "at": [0, 9.5, 0], "half": [7.0, 1.2, 1.4], "mat": "gold", "group": "guard", "rnd": 0.6}},
+    {"cone":   {"joint": "root", "a": [0, 2.5, 0], "b": [0, 8.5, 0], "r1": 1.4, "r2": 1.4, "mat": "leather", "group": "grip"}},
+    {"sphere": {"joint": "root", "at": [0, 1.6, 0], "r": 2.0, "mat": "gold", "group": "pommel"}},
+    {"sphere": {"joint": "root", "at": [0, 9.5, 1.4], "r": 1.1, "mat": "gem", "group": "gem"}}
+  ]
+}

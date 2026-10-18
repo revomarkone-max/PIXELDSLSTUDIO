@@ -1,0 +1,16 @@
+{
+  "name": "crystal",
+  "type": "prop",
+  "anims": ["idle", "bob"],
+  "materials": {
+    "rock":    ["#2a2a34", "#44444f", "#62626e", "#80808c"],
+    "crystal": {"ramp": ["#2a5a9c", "#4a8ad8", "#8ac4f4", "#d4f0ff", "#ffffff"], "gloss": true}
+  },
+  "parts": [
+    {"ellipsoid": {"joint": "root", "at": [0, 1.5, 0], "radii": [11.0, 4.0, 9.0], "mat": "rock", "group": "base"}},
+    {"cone": {"joint": "root", "a": [0, 2, 0], "b": [0, 30, 0], "r1": 4.6, "r2": 0.4, "mat": "crystal", "group": "c1"}},
+    {"cone": {"joint": "root", "a": [-4, 2, 2], "b": [-9, 19, 3], "r1": 3.2, "r2": 0.3, "mat": "crystal", "group": "c2"}},
+    {"cone": {"joint": "root", "a": [4, 2, -1], "b": [8, 16, -3], "r1": 2.8, "r2": 0.3, "mat": "crystal", "group": "c3"}},
+    {"cone": {"joint": "root", "a": [1, 2, 4], "b": [3, 12, 8], "r1": 2.2, "r2": 0.3, "mat": "crystal", "group": "c4"}}
+  ]
+}

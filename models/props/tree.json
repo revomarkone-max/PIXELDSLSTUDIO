@@ -1,0 +1,18 @@
+{
+  "name": "tree",
+  "type": "prop",
+  "materials": {
+    "bark":   ["#2a1c14", "#463020", "#62462e", "#7c5c40"],
+    "leaves": ["#1a3418", "#2a5424", "#3e7a30", "#62a242"]
+  },
+  "group_k": {"crown": 4.0, "trunk": 2.0},
+  "parts": [
+    {"cone": {"joint": "root", "a": [0, 0, 0], "b": [0, 30, 0], "r1": 4.2, "r2": 2.6, "mat": "bark", "group": "trunk"}},
+    {"cone": {"joint": "root", "a": [0, 20, 0], "b": [8, 30, 2], "r1": 2.0, "r2": 1.2, "mat": "bark", "group": "trunk"}},
+    {"cone": {"joint": "root", "a": [-1, 2, 0], "b": [-7, 0, 2], "r1": 2.6, "r2": 1.0, "mat": "bark", "group": "trunk"}},
+    {"sphere": {"joint": "root", "at": [0, 40, 0], "r": 14, "mat": "leaves", "group": "crown"}},
+    {"sphere": {"joint": "root", "at": [-10, 34, 3], "r": 9, "mat": "leaves", "group": "crown"}},
+    {"sphere": {"joint": "root", "at": [10, 35, -2], "r": 9.5, "mat": "leaves", "group": "crown"}},
+    {"sphere": {"joint": "root", "at": [3, 50, -2], "r": 8.5, "mat": "leaves", "group": "crown"}}
+  ]
+}

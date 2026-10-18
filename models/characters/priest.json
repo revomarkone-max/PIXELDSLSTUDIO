@@ -1,0 +1,31 @@
+{
+  "name": "priest",
+  "type": "character",
+  "hide": ["hair"],
+  "rigs": ["grip"],
+  "materials": {
+    "robe":    ["#8a7a64", "#c4b498", "#e8dcc4", "#fbf4e6"],
+    "robe_d":  ["#6a5c4a", "#9a8a72", "#c2b296", "#dccdb0"],
+    "gold":    {"ramp": ["#7a4e14", "#b8821e", "#e8b83a", "#ffe07a", "#fff6c8"], "gloss": true},
+    "halo":    {"ramp": ["#ffd860", "#ffe47c", "#fff0a8", "#fffbe0"], "flat": true, "flat_tone": 2},
+    "hood_in": ["#2a2018", "#3e3024", "#54422f", "#6a543c"],
+    "sun":     {"ramp": ["#e88a14", "#ffb428", "#ffd85a", "#fff3b0", "#ffffff"], "gloss": true}
+  },
+  "parts": [
+    {"shirt": {"mat": "robe", "sleeves": null}},
+    {"flared_sleeves": {"mat": "robe", "flare": 1.4}},
+    {"robe": {"mat": "robe", "hem_r": 11.0, "hem": "gold"}},
+    {"belt": {"mat": "gold", "buckle": "gold"}},
+    {"box": {"joint": "chest", "at": [0, -10.0, 5.6], "half": [1.6, 14.0, 0.6], "mat": "gold", "group": "stole"}},
+    {"hood": {"mat": "robe_d", "inner": "hood_in", "depth": 0.6}},
+    {"torus": {"joint": "head", "at": [0, -0.4, 5.9], "big": 5.6, "small": 0.7, "mat": "gold", "group": "hood_rim", "rot": [80, 0, 0]}},
+    {"gloves": {"mat": "robe", "cuff": "gold"}},
+    {"boots": {"mat": "robe_d", "top": 0.7}},
+    {"torus": {"joint": "head", "at": [0, 12.5, -2.0], "big": 6.0, "small": 0.75, "mat": "halo", "group": "halo", "rot": [-18, 0, 0]}},
+
+    {"cone":   {"joint": "grip_R", "a": [0, -8.0, 0.4], "b": [0, 20.0, 0.4], "r1": 0.95, "r2": 1.05, "mat": "gold", "group": "weapon"}},
+    {"torus":  {"joint": "grip_R", "at": [0, 31.0, 0.4], "big": 3.6, "small": 0.8, "mat": "gold", "group": "weapon_r", "rot": [90, 0, 0]}},
+    {"cone":   {"joint": "grip_R", "a": [0, 20.0, 0.4], "b": [0, 27.4, 0.4], "r1": 1.05, "r2": 1.0, "mat": "gold", "group": "weapon"}},
+    {"sphere": {"joint": "grip_R", "at": [0, 31.0, 0.4], "r": 2.6, "mat": "sun", "group": "weapon_s"}}
+  ]
+}
