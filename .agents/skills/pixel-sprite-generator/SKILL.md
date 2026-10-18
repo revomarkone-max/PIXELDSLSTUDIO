@@ -17,9 +17,16 @@ This skill provides an autonomous mathematical 2D pixel-art engine (**PixelDSL v
 
 ```bash
 # Mode 1: 100% LLM-Free Procedural Archetype Generator (seeded PCG + Oklch palettes + motion)
-# Archetypes: sword, axe, shield, potion, gem, slime, beetle, turtle, bunny, crystal_monolith, spaceship, autotile_blob47
-python pixeldsl.py --generate sword --seed 42 --size 32x32
-python pixeldsl.py --generate crystal_monolith --seed 108 --size 48x48
+# Seamless Terrain Tiles: grass_tile, dirt_tile, sand_tile, stone_tile, water_tile, autotile_blob47
+# Creatures: dragon, spider, snake, golem, slime, beetle, turtle, bunny
+# Nature & Environment: flower, mushroom, boulder
+# Weapons & Gear: sword, axe, bow, staff, shield, potion, gem
+# Spells & VFX: lightning, fireball, crystal_monolith, spaceship
+python pixeldsl.py --generate grass_tile --seed 42 --size 32x32
+python pixeldsl.py --generate dirt_tile --seed 101 --size 32x32
+python pixeldsl.py --generate sand_tile --seed 77 --size 32x32
+python pixeldsl.py --generate dragon --seed 42 --size 48x48
+python pixeldsl.py --generate flower --seed 42 --size 32x32
 
 # Mode 2: Evolutionary Genome Mutator (perturb shape radii, positions, Oklch hues, and smoothBlend)
 python pixeldsl.py --mutate sprites/sdf_slime_king_48x48.json --seed 77

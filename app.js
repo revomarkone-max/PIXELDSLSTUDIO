@@ -3446,6 +3446,9 @@
     const selForgeZoom = document.getElementById("selForgeZoom");
     const rowHeadScale = document.getElementById("rowHeadScale");
 
+    const selForgeSubtype = document.getElementById("selForgeSubtype");
+    const rowForgeSubtype = document.getElementById("rowForgeSubtype");
+
     function renderCategoryPills() {
       if (!forgeCategoryPills) return;
       forgeCategoryPills.innerHTML = "";
@@ -3463,6 +3466,7 @@
           }
           renderArchetypeGrid();
           updateActionOptions();
+          updateSubtypeOptions();
           compileAndRenderForge(true);
         });
         forgeCategoryPills.appendChild(btn);
@@ -3478,9 +3482,12 @@
 
       const icons = {
         humanoid: "🧍", quadruped_feline: "🐱", quadruped_canine: "🐺", avian_bird: "🦅",
-        tree_deciduous: "🌳", building_structure: "🏰",
-        weapon_sword: "⚔️", potion_bottle: "🧪",
-        projectile_orb: "💥", autotile_terrain: "🗺️"
+        mythic_dragon: "🐉", crawler_spider: "🕷️", serpent_snake: "🐍", golem_stone: "🗿",
+        tree_deciduous: "🌳", plant_flower: "🌼", mushroom_fungus: "🍄", rock_boulder: "🪨",
+        building_structure: "🏰",
+        weapon_sword: "⚔️", weapon_bow: "🏹", weapon_staff: "🪄", armor_shield: "🛡️", potion_bottle: "🧪",
+        projectile_orb: "💥", spell_lightning: "⚡", spell_fireball: "🔥",
+        autotile_terrain: "🗺️", tile_grass: "🌱", tile_dirt: "🟫", tile_sand: "🏖️", tile_stone: "🧱", tile_water: "🌊"
       };
 
       for (const arch of currentCatData.archetypes) {
@@ -3489,7 +3496,7 @@
         card.innerHTML = `
           <div class="arch-card-header">
             <span class="arch-card-icon">${icons[arch.id] || "📦"}</span>
-            <span>${arch.name.split(" ")[0]}</span>
+            <span>${arch.name.replace(/^(Tile|Weapon|Spell|Armor)\s+/, "").split(" (")[0]}</span>
           </div>
           <div class="arch-card-desc">${arch.description ? arch.description.substring(0, 34) + "..." : arch.type}</div>
         `;
@@ -3497,6 +3504,7 @@
           forgeActiveArchId = arch.id;
           renderArchetypeGrid();
           updateActionOptions();
+          updateSubtypeOptions();
           if (rowHeadScale) {
             rowHeadScale.style.display = (arch.id === "humanoid" || arch.id.includes("quadruped")) ? "flex" : "none";
           }
@@ -3504,6 +3512,30 @@
         });
         forgeArchetypeGrid.appendChild(card);
       }
+    }
+
+    function updateSubtypeOptions() {
+      if (!selForgeSubtype || !rowForgeSubtype) return;
+      selForgeSubtype.innerHTML = "";
+      const arch = window.ArchetypeCompiler.getArchetype(forgeActiveArchId);
+      if (!arch || !arch.subtypes || Object.keys(arch.subtypes).length === 0) {
+        rowForgeSubtype.style.display = "none";
+        return;
+      }
+      rowForgeSubtype.style.display = "flex";
+      for (const [subKey, subDesc] of Object.entries(arch.subtypes)) {
+        const opt = document.createElement("option");
+        opt.value = subKey;
+        opt.textContent = subKey.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase());
+        opt.title = typeof subDesc === "string" ? subDesc : "";
+        selForgeSubtype.appendChild(opt);
+      }
+    }
+
+    if (selForgeSubtype) {
+      selForgeSubtype.addEventListener("change", () => {
+        compileAndRenderForge(true);
+      });
     }
 
     function updateActionOptions() {
@@ -3695,6 +3727,7 @@
     renderCategoryPills();
     renderArchetypeGrid();
     updateActionOptions();
+    updateSubtypeOptions();
     compileAndRenderForge(true);
     startForgeAnimLoop();
   }

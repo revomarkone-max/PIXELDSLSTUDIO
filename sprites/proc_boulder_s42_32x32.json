@@ -1,0 +1,154 @@
+{
+  "name": "proc_boulder_s42_32x32",
+  "prompt": "Procedural boulder (seed=42, 32x32) — 100% LLM-Free PixelDSL v3.0",
+  "width": 32,
+  "height": 32,
+  "symmetry": "none",
+  "rle": false,
+  "ramps": {
+    "M": {
+      "base": "#00bef1",
+      "light": "L",
+      "dark": "D",
+      "outline": "O"
+    },
+    "A": {
+      "base": "#ff6537",
+      "light": "W",
+      "dark": "B",
+      "outline": "O"
+    },
+    "S": {
+      "base": "#c6b59b",
+      "light": "w",
+      "dark": "d",
+      "outline": "O"
+    },
+    "H": {
+      "base": "#8c4a11",
+      "light": "h",
+      "dark": "b",
+      "outline": "O"
+    }
+  },
+  "palette": {
+    ".": "transparent",
+    "O": "#14182e",
+    "e": "#0e101c",
+    "w": "#ffffff",
+    "a": "#14182e44"
+  },
+  "postProcess": {
+    "autoOutline": false,
+    "outlineColor": "#14182e",
+    "autoShading": false,
+    "shadingStrength": 0.16,
+    "sdfShading": true,
+    "selOut": true
+  },
+  "layers": [
+    {
+      "id": "shadow",
+      "op": "ellipse",
+      "cx": 15.5,
+      "cy": 28.5,
+      "rx": 11.0,
+      "ry": 2.2,
+      "fill": "a"
+    },
+    {
+      "id": "rock_body",
+      "op": "polygon",
+      "points": [
+        [
+          5.0,
+          27.0
+        ],
+        [
+          4.0,
+          14.5
+        ],
+        [
+          12.5,
+          6.0
+        ],
+        [
+          21.5,
+          5.0
+        ],
+        [
+          28.0,
+          17.5
+        ],
+        [
+          26.0,
+          27.0
+        ]
+      ],
+      "fill": "M",
+      "outline": "O",
+      "sdf": true,
+      "dither": "worley",
+      "shaderScale": 5.0,
+      "seed": 42
+    },
+    {
+      "id": "chisel_facet",
+      "op": "polygon",
+      "points": [
+        [
+          12.5,
+          6.0
+        ],
+        [
+          18.5,
+          15.5
+        ],
+        [
+          15.5,
+          27.0
+        ],
+        [
+          5.0,
+          27.0
+        ],
+        [
+          4.0,
+          14.5
+        ]
+      ],
+      "fill": "S",
+      "sdf": true
+    },
+    {
+      "id": "moss_cap",
+      "op": "ellipse",
+      "cx": 16.5,
+      "cy": 7.0,
+      "rx": 8.5,
+      "ry": 3.2,
+      "fill": "H",
+      "outline": "O",
+      "sdf": true,
+      "domainWarp": {
+        "amp": 1.2,
+        "freq": 0.3,
+        "seed": 42
+      }
+    },
+    {
+      "id": "ore_gem",
+      "op": "star",
+      "cx": 21.5,
+      "cy": 18.5,
+      "r": 2.8,
+      "n": 4,
+      "innerRatio": 0.5,
+      "fill": "A",
+      "outline": "O",
+      "sdf": true
+    }
+  ],
+  "frames": [],
+  "grid": []
+}

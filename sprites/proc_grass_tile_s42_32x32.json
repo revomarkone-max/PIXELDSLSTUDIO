@@ -1,0 +1,130 @@
+{
+  "name": "proc_grass_tile_s42_32x32",
+  "prompt": "Procedural grass_tile (seed=42, 32x32) — 100% LLM-Free PixelDSL v3.0",
+  "width": 32,
+  "height": 32,
+  "symmetry": "none",
+  "rle": false,
+  "ramps": {
+    "M": {
+      "base": "#4d8400",
+      "light": "L",
+      "dark": "D",
+      "outline": "O"
+    },
+    "A": {
+      "base": "#5ec02e",
+      "light": "W",
+      "dark": "B",
+      "outline": "O"
+    },
+    "S": {
+      "base": "#c6b59b",
+      "light": "w",
+      "dark": "d",
+      "outline": "O"
+    },
+    "H": {
+      "base": "#8c4a11",
+      "light": "h",
+      "dark": "b",
+      "outline": "O"
+    }
+  },
+  "palette": {
+    ".": "transparent",
+    "O": "#14182e",
+    "e": "#0e101c",
+    "w": "#ffffff",
+    "a": "#14182e44",
+    "y": "#fde047",
+    "f": "#f8fafc"
+  },
+  "postProcess": {
+    "autoOutline": false,
+    "outlineColor": "#14182e",
+    "autoShading": false,
+    "shadingStrength": 0.16,
+    "sdfShading": true,
+    "selOut": true
+  },
+  "layers": [
+    {
+      "id": "turf_base",
+      "op": "rect",
+      "x": 0,
+      "y": 0,
+      "w": 32,
+      "h": 32,
+      "fill": "M",
+      "sdf": true,
+      "dither": "worley",
+      "shaderScale": 5.5,
+      "seed": 42
+    },
+    {
+      "id": "tuft_1",
+      "op": "vesica",
+      "cx": 8.5,
+      "cy": 9.5,
+      "rx": 2.0,
+      "ry": 4.5,
+      "angle": -15,
+      "fill": "A",
+      "sdf": true
+    },
+    {
+      "id": "tuft_2",
+      "op": "vesica",
+      "cx": 23.5,
+      "cy": 8.5,
+      "rx": 1.8,
+      "ry": 4.2,
+      "angle": 12,
+      "fill": "A",
+      "sdf": true
+    },
+    {
+      "id": "tuft_3",
+      "op": "vesica",
+      "cx": 13.5,
+      "cy": 21.5,
+      "rx": 2.2,
+      "ry": 4.8,
+      "angle": -8,
+      "fill": "A",
+      "sdf": true
+    },
+    {
+      "id": "tuft_4",
+      "op": "vesica",
+      "cx": 24.5,
+      "cy": 23.5,
+      "rx": 1.9,
+      "ry": 4.0,
+      "angle": 18,
+      "fill": "A",
+      "sdf": true
+    },
+    {
+      "id": "flower_1",
+      "op": "ellipse",
+      "cx": 10.5,
+      "cy": 17.5,
+      "rx": 1.2,
+      "ry": 1.2,
+      "fill": "y"
+    },
+    {
+      "id": "flower_2",
+      "op": "ellipse",
+      "cx": 19.5,
+      "cy": 18.5,
+      "rx": 1.2,
+      "ry": 1.2,
+      "fill": "f"
+    }
+  ],
+  "frames": [],
+  "grid": []
+}

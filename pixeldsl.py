@@ -2653,6 +2653,216 @@ def generate_archetype(archetype="sword", seed=42, width=32, height=32):
             {"id": "cockpit", "op": "vesica", "cx": cx, "cy": r1(cy - 1.5 * sc), "rx": r1(2.6 * sc), "ry": r1(5.0 * sc), "fill": "A", "outline": "O", "sdf": True}
         ]
         spec["motion"] = {"type": "idle_breathe", "frames": 4, "amplitude": r2(0.8 * sc), "squash": 0.03}
+    elif arch in ("grass_tile", "tile_grass", "grass"):
+        hue_g = rng.range(125, 142)
+        c_turf = rgba_to_hex(*oklch_to_rgb(0.55, 0.18, hue_g))
+        c_blade = rgba_to_hex(*oklch_to_rgb(0.72, 0.20, hue_g + 8))
+        spec["ramps"]["M"] = {"base": c_turf, "light": "L", "dark": "D", "outline": "O"}
+        spec["ramps"]["A"] = {"base": c_blade, "light": "W", "dark": "B", "outline": "O"}
+        spec["palette"]["y"] = "#fde047"
+        spec["palette"]["f"] = "#f8fafc"
+        spec["layers"] = [
+            {"id": "turf_base", "op": "rect", "x": 0, "y": 0, "w": w, "h": h, "fill": "M", "sdf": True, "dither": "worley", "shaderScale": 5.5, "seed": seed},
+            {"id": "tuft_1", "op": "vesica", "cx": r1(cx - 7 * sc), "cy": r1(cy - 6 * sc), "rx": r1(2.0 * sc), "ry": r1(4.5 * sc), "angle": -15, "fill": "A", "sdf": True},
+            {"id": "tuft_2", "op": "vesica", "cx": r1(cx + 8 * sc), "cy": r1(cy - 7 * sc), "rx": r1(1.8 * sc), "ry": r1(4.2 * sc), "angle": 12, "fill": "A", "sdf": True},
+            {"id": "tuft_3", "op": "vesica", "cx": r1(cx - 2 * sc), "cy": r1(cy + 6 * sc), "rx": r1(2.2 * sc), "ry": r1(4.8 * sc), "angle": -8, "fill": "A", "sdf": True},
+            {"id": "tuft_4", "op": "vesica", "cx": r1(cx + 9 * sc), "cy": r1(cy + 8 * sc), "rx": r1(1.9 * sc), "ry": r1(4.0 * sc), "angle": 18, "fill": "A", "sdf": True},
+            {"id": "flower_1", "op": "ellipse", "cx": r1(cx - 5 * sc), "cy": r1(cy + 2 * sc), "rx": r1(1.2 * sc), "ry": r1(1.2 * sc), "fill": "y"},
+            {"id": "flower_2", "op": "ellipse", "cx": r1(cx + 4 * sc), "cy": r1(cy + 3 * sc), "rx": r1(1.2 * sc), "ry": r1(1.2 * sc), "fill": "f"}
+        ]
+
+    elif arch in ("dirt_tile", "tile_dirt", "dirt", "earth"):
+        c_soil = rgba_to_hex(*oklch_to_rgb(0.42, 0.12, 52.0))
+        c_clay = rgba_to_hex(*oklch_to_rgb(0.52, 0.14, 48.0))
+        spec["ramps"]["M"] = {"base": c_soil, "light": "L", "dark": "D", "outline": "O"}
+        spec["ramps"]["A"] = {"base": c_clay, "light": "W", "dark": "B", "outline": "O"}
+        spec["palette"]["p"] = "#94a3b8"
+        spec["palette"]["d"] = "#382014"
+        spec["layers"] = [
+            {"id": "soil_base", "op": "rect", "x": 0, "y": 0, "w": w, "h": h, "fill": "M", "sdf": True, "dither": "worley", "shaderScale": 4.5, "seed": seed},
+            {"id": "crack_1", "op": "bezier_sdf", "points": [[r1(5 * sc), r1(7 * sc)], [r1(cx - 2 * sc), r1(cy - 3 * sc)], [r1(cx + 4 * sc), r1(cy + 6 * sc)]], "r1": r1(1.2 * sc), "r2": r1(0.7 * sc), "fill": "d"},
+            {"id": "pebble_1", "op": "ellipse", "cx": r1(cx - 7 * sc), "cy": r1(cy + 6 * sc), "rx": r1(2.0 * sc), "ry": r1(1.4 * sc), "fill": "p", "outline": "O", "sdf": True},
+            {"id": "pebble_2", "op": "ellipse", "cx": r1(cx + 8 * sc), "cy": r1(cy - 6 * sc), "rx": r1(1.6 * sc), "ry": r1(1.2 * sc), "fill": "p", "outline": "O", "sdf": True},
+            {"id": "clay_patch", "op": "ellipse", "cx": r1(cx + 2 * sc), "cy": r1(cy - 6 * sc), "rx": r1(4.5 * sc), "ry": r1(3.2 * sc), "fill": "A", "sdf": True}
+        ]
+
+    elif arch in ("sand_tile", "tile_sand", "sand"):
+        c_sand = rgba_to_hex(*oklch_to_rgb(0.74, 0.16, 75.0))
+        c_crest = rgba_to_hex(*oklch_to_rgb(0.85, 0.14, 82.0))
+        spec["ramps"]["M"] = {"base": c_sand, "light": "L", "dark": "D", "outline": "O"}
+        spec["ramps"]["A"] = {"base": c_crest, "light": "W", "dark": "B", "outline": "O"}
+        spec["layers"] = [
+            {"id": "sand_base", "op": "rect", "x": 0, "y": 0, "w": w, "h": h, "fill": "M", "sdf": True, "dither": "worley", "shaderScale": 6.5, "seed": seed},
+            {"id": "dune_1", "op": "bezier_sdf", "points": [[r1(2 * sc), r1(8 * sc)], [r1(cx), r1(6 * sc)], [r1(w - 3 * sc), r1(9 * sc)]], "r1": r1(1.6 * sc), "r2": r1(1.1 * sc), "fill": "A"},
+            {"id": "dune_2", "op": "bezier_sdf", "points": [[r1(2 * sc), r1(cy + 2 * sc)], [r1(cx), r1(cy + 4 * sc)], [r1(w - 3 * sc), r1(cy + 1 * sc)]], "r1": r1(1.6 * sc), "r2": r1(1.1 * sc), "fill": "A"},
+            {"id": "dune_3", "op": "bezier_sdf", "points": [[r1(2 * sc), r1(h - 7 * sc)], [r1(cx), r1(h - 9 * sc)], [r1(w - 3 * sc), r1(h - 6 * sc)]], "r1": r1(1.6 * sc), "r2": r1(1.1 * sc), "fill": "A"},
+            {"id": "glints", "op": "pixels", "color": "w", "points": [[js_round(7 * sc), js_round(6 * sc)], [js_round(cx + 6 * sc), js_round(cy)], [js_round(11 * sc), js_round(h - 8 * sc)]]}
+        ]
+
+    elif arch in ("stone_tile", "tile_stone", "stone", "flagstone"):
+        c_slab = rgba_to_hex(*oklch_to_rgb(0.60, 0.04, 240.0))
+        spec["ramps"]["M"] = {"base": c_slab, "light": "L", "dark": "D", "outline": "O"}
+        spec["palette"]["m"] = "#1e293b"
+        spec["palette"]["v"] = "#15803d"
+        half_w = r1((w - 4 * sc) * 0.5)
+        half_h = r1((h - 4 * sc) * 0.5)
+        spec["layers"] = [
+            {"id": "mortar", "op": "rect", "x": 0, "y": 0, "w": w, "h": h, "fill": "m"},
+            {"id": "slab_nw", "op": "rect", "x": r1(1.5 * sc), "y": r1(1.5 * sc), "w": half_w, "h": half_h, "rx": r1(1.2 * sc), "fill": "M", "outline": "O", "sdf": True, "dither": "worley", "shaderScale": 4.5, "seed": seed},
+            {"id": "slab_ne", "op": "rect", "x": r1(cx + 1.0 * sc), "y": r1(1.5 * sc), "w": half_w, "h": half_h, "rx": r1(1.2 * sc), "fill": "M", "outline": "O", "sdf": True, "dither": "worley", "shaderScale": 4.5, "seed": seed + 1},
+            {"id": "slab_sw", "op": "rect", "x": r1(1.5 * sc), "y": r1(cy + 1.0 * sc), "w": half_w, "h": half_h, "rx": r1(1.2 * sc), "fill": "M", "outline": "O", "sdf": True, "dither": "worley", "shaderScale": 4.5, "seed": seed + 2},
+            {"id": "slab_se", "op": "rect", "x": r1(cx + 1.0 * sc), "y": r1(cy + 1.0 * sc), "w": half_w, "h": half_h, "rx": r1(1.2 * sc), "fill": "M", "outline": "O", "sdf": True, "dither": "worley", "shaderScale": 4.5, "seed": seed + 3},
+            {"id": "moss", "op": "ellipse", "cx": cx, "cy": cy, "rx": r1(2.5 * sc), "ry": r1(2.5 * sc), "fill": "v"}
+        ]
+
+    elif arch in ("water_tile", "tile_water", "water"):
+        c_deep = rgba_to_hex(*oklch_to_rgb(0.48, 0.16, 235.0))
+        c_cyan = rgba_to_hex(*oklch_to_rgb(0.72, 0.18, 215.0))
+        spec["ramps"]["M"] = {"base": c_deep, "light": "L", "dark": "D", "outline": "O"}
+        spec["ramps"]["A"] = {"base": c_cyan, "light": "W", "dark": "B", "outline": "O"}
+        spec["palette"]["f"] = "#e0f2fe"
+        spec["layers"] = [
+            {"id": "water_base", "op": "rect", "x": 0, "y": 0, "w": w, "h": h, "fill": "M", "sdf": True, "dither": "voronoi", "shaderScale": 4.5, "seed": seed},
+            {"id": "caustic_1", "op": "ellipse", "cx": r1(cx - 5 * sc), "cy": r1(cy - 4 * sc), "rx": r1(6.5 * sc), "ry": r1(4.5 * sc), "fill": "A", "sdf": True},
+            {"id": "caustic_2", "op": "ellipse", "cx": r1(cx + 7 * sc), "cy": r1(cy + 5 * sc), "rx": r1(7.0 * sc), "ry": r1(5.0 * sc), "fill": "A", "sdf": True},
+            {"id": "foam_crest", "op": "bezier_sdf", "points": [[r1(4 * sc), r1(cy + 5 * sc)], [r1(cx), r1(cy + 2 * sc)], [r1(w - 5 * sc), r1(cy + 6 * sc)]], "r1": r1(1.5 * sc), "r2": r1(0.8 * sc), "fill": "f"}
+        ]
+        spec["motion"] = {"type": "wave", "frames": 4, "amplitude": 0.8}
+
+    elif arch in ("dragon", "mythic_dragon"):
+        spec["layers"] = [
+            {"id": "shadow", "op": "ellipse", "cx": cx, "cy": r1(h - 3 * sc), "rx": r1(11 * sc), "ry": r1(2.2 * sc), "fill": "a"},
+            {"id": "wing_far", "op": "moon", "cx": r1(cx - 7 * sc), "cy": r1(cy - 6 * sc), "r": r1(10 * sc), "r2": r1(7.5 * sc), "d": r1(3.5 * sc), "angle": -115, "fill": "A", "outline": "O", "sdf": True, "z": 0},
+            {"id": "tail", "op": "bezier_sdf", "points": [[r1(cx - 7 * sc), r1(cy + 2 * sc)], [r1(cx - 12 * sc), r1(cy + 4 * sc)], [r1(cx - 13 * sc), r1(cy - 2 * sc)]], "r1": r1(2.8 * sc), "r2": r1(1.0 * sc), "fill": "M", "outline": "O", "sdf": True, "z": 1},
+            {"id": "body", "op": "ellipse", "cx": cx, "cy": r1(cy + 1 * sc), "rx": r1(6.8 * sc), "ry": r1(5.5 * sc), "fill": "M", "outline": "O", "sdf": True, "z": 1},
+            {"id": "neck", "op": "uneven_capsule", "x1": r1(cx + 3 * sc), "y1": r1(cy - 1 * sc), "x2": r1(cx + 8 * sc), "y2": r1(cy - 7 * sc), "r1": r1(3.5 * sc), "r2": r1(2.8 * sc), "fill": "M", "outline": "O", "sdf": True, "z": 1},
+            {"id": "head", "op": "uneven_capsule", "x1": r1(cx + 8 * sc), "y1": r1(cy - 7 * sc), "x2": r1(cx + 12 * sc), "y2": r1(cy - 6 * sc), "r1": r1(3.0 * sc), "r2": r1(1.6 * sc), "fill": "M", "outline": "O", "sdf": True, "z": 1},
+            {"id": "horns", "op": "moon", "cx": r1(cx + 8 * sc), "cy": r1(cy - 10 * sc), "r": r1(3.5 * sc), "r2": r1(2.8 * sc), "d": r1(1.2 * sc), "angle": -60, "fill": "S", "outline": "O", "sdf": True, "z": 1},
+            {"id": "wing_near", "op": "moon", "cx": r1(cx + 2 * sc), "cy": r1(cy - 7 * sc), "r": r1(11 * sc), "r2": r1(8.5 * sc), "d": r1(3.8 * sc), "angle": -115, "fill": "M", "outline": "O", "sdf": True, "crease": True, "z": 2},
+            {"id": "eye", "op": "pixels", "color": "w", "points": [[js_round(cx + 9 * sc), js_round(cy - 7 * sc)]]}
+        ]
+        spec["motion"] = {"type": "idle_breathe", "frames": 4, "amplitude": 1.0, "squash": 0.05}
+
+    elif arch in ("spider", "crawler_spider"):
+        spec["layers"] = [
+            {"id": "shadow", "op": "ellipse", "cx": cx, "cy": r1(h - 3 * sc), "rx": r1(10 * sc), "ry": r1(2.2 * sc), "fill": "a"},
+            {"id": "legs_l", "op": "bezier_sdf", "points": [[r1(cx - 3 * sc), r1(cy)], [r1(cx - 11 * sc), r1(cy - 6 * sc)], [r1(cx - 13 * sc), r1(cy + 6 * sc)]], "r1": r1(1.5 * sc), "r2": r1(0.8 * sc), "fill": "H", "outline": "O", "mirror": "x", "sdf": True},
+            {"id": "legs_mid", "op": "bezier_sdf", "points": [[r1(cx - 3 * sc), r1(cy + 2 * sc)], [r1(cx - 12 * sc), r1(cy + 2 * sc)], [r1(cx - 14 * sc), r1(cy + 10 * sc)]], "r1": r1(1.5 * sc), "r2": r1(0.8 * sc), "fill": "H", "outline": "O", "mirror": "x", "sdf": True},
+            {"id": "abdomen", "op": "ellipse", "cx": cx, "cy": r1(cy - 3 * sc), "rx": r1(7.5 * sc), "ry": r1(6.8 * sc), "fill": "M", "outline": "O", "sdf": True, "dither": "worley", "shaderScale": 4.5, "seed": seed},
+            {"id": "thorax", "op": "ellipse", "cx": cx, "cy": r1(cy + 4 * sc), "rx": r1(4.8 * sc), "ry": r1(3.8 * sc), "fill": "A", "outline": "O", "sdf": True},
+            {"id": "fangs", "op": "vesica", "cx": r1(cx - 1.8 * sc), "cy": r1(cy + 8 * sc), "rx": r1(1.2 * sc), "ry": r1(2.2 * sc), "fill": "S", "outline": "O", "mirror": "x", "sdf": True},
+            {"id": "eyes", "op": "pixels", "color": "w", "mirror": "x", "points": [[js_round(cx - 2 * sc), js_round(cy + 4 * sc)], [js_round(cx - 1 * sc), js_round(cy + 3 * sc)]]}
+        ]
+        spec["motion"] = {"type": "walk_cycle", "frames": 4, "amplitude": 1.0, "squash": 0.05}
+
+    elif arch in ("snake", "serpent_snake", "serpent"):
+        spec["layers"] = [
+            {"id": "shadow", "op": "ellipse", "cx": cx, "cy": r1(h - 3 * sc), "rx": r1(10 * sc), "ry": r1(2.0 * sc), "fill": "a"},
+            {"id": "coil_1", "op": "ellipse", "cx": r1(cx - 5 * sc), "cy": r1(cy + 4 * sc), "rx": r1(5.5 * sc), "ry": r1(4.2 * sc), "fill": "M", "outline": "O", "sdf": True, "smoothBlend": 2.0},
+            {"id": "coil_2", "op": "ellipse", "cx": r1(cx + 4 * sc), "cy": r1(cy + 5 * sc), "rx": r1(5.5 * sc), "ry": r1(4.2 * sc), "fill": "M", "outline": "O", "sdf": True, "smoothBlend": 2.0},
+            {"id": "neck_body", "op": "uneven_capsule", "x1": r1(cx - 3 * sc), "y1": r1(cy + 2 * sc), "x2": r1(cx - 2 * sc), "y2": r1(cy - 4 * sc), "r1": r1(3.2 * sc), "r2": r1(2.5 * sc), "fill": "M", "outline": "O", "sdf": True, "smoothBlend": 2.0},
+            {"id": "hood", "op": "vesica", "cx": r1(cx + 1 * sc), "cy": r1(cy - 6 * sc), "rx": r1(5.5 * sc), "ry": r1(3.2 * sc), "angle": 0, "fill": "A", "outline": "O", "sdf": True},
+            {"id": "head", "op": "ellipse", "cx": r1(cx + 1 * sc), "cy": r1(cy - 6 * sc), "rx": r1(3.2 * sc), "ry": r1(2.8 * sc), "fill": "M", "outline": "O", "sdf": True},
+            {"id": "tongue", "op": "polygon", "points": [[r1(cx + 4 * sc), r1(cy - 6 * sc)], [r1(cx + 7 * sc), r1(cy - 7 * sc)], [r1(cx + 9 * sc), r1(cy - 8 * sc)], [r1(cx + 7 * sc), r1(cy - 6 * sc)], [r1(cx + 9 * sc), r1(cy - 5 * sc)]], "fill": "S"}
+        ]
+        spec["motion"] = {"type": "idle_breathe", "frames": 4, "amplitude": 0.8, "squash": 0.05}
+
+    elif arch in ("golem", "golem_stone"):
+        spec["layers"] = [
+            {"id": "shadow", "op": "ellipse", "cx": cx, "cy": r1(h - 3 * sc), "rx": r1(11 * sc), "ry": r1(2.2 * sc), "fill": "a"},
+            {"id": "leg_l", "op": "uneven_capsule", "x1": r1(cx - 5 * sc), "y1": r1(cy + 4 * sc), "x2": r1(cx - 5 * sc), "y2": r1(h - 4 * sc), "r1": r1(3.2 * sc), "r2": r1(3.8 * sc), "fill": "H", "outline": "O", "sdf": True},
+            {"id": "leg_r", "op": "uneven_capsule", "x1": r1(cx + 5 * sc), "y1": r1(cy + 4 * sc), "x2": r1(cx + 5 * sc), "y2": r1(h - 4 * sc), "r1": r1(3.2 * sc), "r2": r1(3.8 * sc), "fill": "H", "outline": "O", "sdf": True},
+            {"id": "torso", "op": "rect", "x": r1(cx - 8 * sc), "y": r1(cy - 5 * sc), "w": r1(16 * sc), "h": r1(11 * sc), "rx": r1(2.5 * sc), "fill": "M", "outline": "O", "sdf": True, "dither": "worley", "shaderScale": 4.5, "seed": seed},
+            {"id": "head", "op": "rect", "x": r1(cx - 4.5 * sc), "y": r1(cy - 11 * sc), "w": r1(9 * sc), "h": r1(6 * sc), "rx": r1(1.5 * sc), "fill": "H", "outline": "O", "sdf": True},
+            {"id": "shoulder_l", "op": "ellipse", "cx": r1(cx - 9.5 * sc), "cy": r1(cy - 3 * sc), "rx": r1(3.5 * sc), "ry": r1(3.5 * sc), "fill": "H", "outline": "O", "sdf": True},
+            {"id": "shoulder_r", "op": "ellipse", "cx": r1(cx + 9.5 * sc), "cy": r1(cy - 3 * sc), "rx": r1(3.5 * sc), "ry": r1(3.5 * sc), "fill": "H", "outline": "O", "sdf": True},
+            {"id": "fist_l", "op": "rect", "x": r1(cx - 12.5 * sc), "y": r1(cy + 2 * sc), "w": r1(5 * sc), "h": r1(6 * sc), "rx": r1(1.5 * sc), "fill": "M", "outline": "O", "sdf": True},
+            {"id": "fist_r", "op": "rect", "x": r1(cx + 7.5 * sc), "y": r1(cy + 2 * sc), "w": r1(5 * sc), "h": r1(6 * sc), "rx": r1(1.5 * sc), "fill": "M", "outline": "O", "sdf": True},
+            {"id": "core_rune", "op": "star", "cx": cx, "cy": cy, "r": r1(3.2 * sc), "n": 4, "innerRatio": 0.45, "fill": "A", "outline": "O", "sdf": True},
+            {"id": "eye_slit", "op": "pixels", "color": "A", "points": [[js_round(cx - 2 * sc), js_round(cy - 8 * sc)], [js_round(cx + 2 * sc), js_round(cy - 8 * sc)]]}
+        ]
+        spec["motion"] = {"type": "walk_cycle", "frames": 4, "amplitude": 1.0, "squash": 0.04}
+
+    elif arch in ("flower", "plant_flower"):
+        spec["palette"]["y"] = "#fde047"
+        spec["layers"] = [
+            {"id": "shadow", "op": "ellipse", "cx": cx, "cy": r1(h - 3 * sc), "rx": r1(6.5 * sc), "ry": r1(1.5 * sc), "fill": "a"},
+            {"id": "stem", "op": "uneven_capsule", "x1": cx, "y1": r1(h - 4 * sc), "x2": cx, "y2": r1(cy - 2 * sc), "r1": r1(1.6 * sc), "r2": r1(1.2 * sc), "fill": "H", "outline": "O", "sdf": True},
+            {"id": "leaf_l", "op": "vesica", "cx": r1(cx - 4.5 * sc), "cy": r1(cy + 5 * sc), "rx": r1(2.2 * sc), "ry": r1(4.5 * sc), "angle": -50, "fill": "H", "outline": "O", "sdf": True},
+            {"id": "leaf_r", "op": "vesica", "cx": r1(cx + 4.5 * sc), "cy": r1(cy + 3 * sc), "rx": r1(2.2 * sc), "ry": r1(4.5 * sc), "angle": 50, "fill": "H", "outline": "O", "sdf": True},
+            {"id": "petals", "op": "star", "cx": cx, "cy": r1(cy - 3 * sc), "r": r1(9.0 * sc), "n": 8, "innerRatio": 0.65, "fill": "M", "outline": "O", "sdf": True},
+            {"id": "core", "op": "ellipse", "cx": cx, "cy": r1(cy - 3 * sc), "rx": r1(3.6 * sc), "ry": r1(3.6 * sc), "fill": "y", "outline": "O", "sdf": True}
+        ]
+        spec["motion"] = {"type": "idle_breathe", "frames": 4, "amplitude": 0.8, "squash": 0.04}
+
+    elif arch in ("mushroom", "mushroom_fungus"):
+        spec["layers"] = [
+            {"id": "shadow", "op": "ellipse", "cx": cx, "cy": r1(h - 3.5 * sc), "rx": r1(8.5 * sc), "ry": r1(1.8 * sc), "fill": "a"},
+            {"id": "stem", "op": "uneven_capsule", "x1": cx, "y1": r1(h - 4 * sc), "x2": cx, "y2": r1(cy - 1 * sc), "r1": r1(3.5 * sc), "r2": r1(2.5 * sc), "fill": "S", "outline": "O", "sdf": True},
+            {"id": "veil", "op": "ellipse", "cx": cx, "cy": r1(cy + 3 * sc), "rx": r1(3.8 * sc), "ry": r1(1.2 * sc), "fill": "w", "outline": "O", "sdf": True},
+            {"id": "gills", "op": "ellipse", "cx": cx, "cy": r1(cy - 1 * sc), "rx": r1(9.5 * sc), "ry": r1(3.5 * sc), "fill": "A", "outline": "O", "sdf": True},
+            {"id": "cap", "op": "moon", "cx": cx, "cy": r1(cy - 4 * sc), "r": r1(11.5 * sc), "r2": r1(10.5 * sc), "d": r1(4.8 * sc), "angle": 0, "fill": "M", "outline": "O", "sdf": True},
+            {"id": "spot_1", "op": "ellipse", "cx": r1(cx - 3.5 * sc), "cy": r1(cy - 7 * sc), "rx": r1(1.5 * sc), "ry": r1(1.2 * sc), "fill": "w"},
+            {"id": "spot_2", "op": "ellipse", "cx": r1(cx + 4.0 * sc), "cy": r1(cy - 6 * sc), "rx": r1(1.4 * sc), "ry": r1(1.1 * sc), "fill": "w"},
+            {"id": "sprout", "op": "ellipse", "cx": r1(cx - 7 * sc), "cy": r1(h - 6 * sc), "rx": r1(2.6 * sc), "ry": r1(2.2 * sc), "fill": "M", "outline": "O", "sdf": True}
+        ]
+        spec["motion"] = {"type": "idle_breathe", "frames": 4, "amplitude": 0.7, "squash": 0.05}
+
+    elif arch in ("boulder", "rock_boulder"):
+        spec["layers"] = [
+            {"id": "shadow", "op": "ellipse", "cx": cx, "cy": r1(h - 3.5 * sc), "rx": r1(11 * sc), "ry": r1(2.2 * sc), "fill": "a"},
+            {"id": "rock_body", "op": "polygon", "points": [[r1(5 * sc), r1(h - 5 * sc)], [r1(4 * sc), r1(cy - 1 * sc)], [r1(cx - 3 * sc), r1(6 * sc)], [r1(cx + 6 * sc), r1(5 * sc)], [r1(w - 4 * sc), r1(cy + 2 * sc)], [r1(w - 6 * sc), r1(h - 5 * sc)]], "fill": "M", "outline": "O", "sdf": True, "dither": "worley", "shaderScale": 5.0, "seed": seed},
+            {"id": "chisel_facet", "op": "polygon", "points": [[r1(cx - 3 * sc), r1(6 * sc)], [r1(cx + 3 * sc), r1(cy)], [r1(cx), r1(h - 5 * sc)], [r1(5 * sc), r1(h - 5 * sc)], [r1(4 * sc), r1(cy - 1 * sc)]], "fill": "S", "sdf": True},
+            {"id": "moss_cap", "op": "ellipse", "cx": r1(cx + 1 * sc), "cy": r1(7 * sc), "rx": r1(8.5 * sc), "ry": r1(3.2 * sc), "fill": "H", "outline": "O", "sdf": True, "domainWarp": {"amp": r2(1.2 * sc), "freq": 0.3, "seed": seed}},
+            {"id": "ore_gem", "op": "star", "cx": r1(cx + 6 * sc), "cy": r1(cy + 3 * sc), "r": r1(2.8 * sc), "n": 4, "innerRatio": 0.5, "fill": "A", "outline": "O", "sdf": True}
+        ]
+
+    elif arch in ("bow", "weapon_bow"):
+        spec["layers"] = [
+            {"id": "shadow", "op": "ellipse", "cx": cx, "cy": r1(h - 3 * sc), "rx": r1(6 * sc), "ry": r1(1.5 * sc), "fill": "a"},
+            {"id": "stave", "op": "moon", "cx": r1(cx - 4 * sc), "cy": cy, "r": r1(13 * sc), "r2": r1(12 * sc), "d": r1(3.5 * sc), "angle": 0, "fill": "H", "outline": "O", "sdf": True},
+            {"id": "handle", "op": "uneven_capsule", "x1": r1(cx - 7 * sc), "y1": r1(cy - 3 * sc), "x2": r1(cx - 7 * sc), "y2": r1(cy + 3 * sc), "r1": r1(1.8 * sc), "r2": r1(1.8 * sc), "fill": "A", "outline": "O", "sdf": True},
+            {"id": "bowstring", "op": "line", "x1": r1(cx - 4 * sc), "y1": r1(4 * sc), "x2": r1(cx - 4 * sc), "y2": r1(h - 5 * sc), "thickness": 1, "color": "w"},
+            {"id": "arrow_shaft", "op": "line", "x1": r1(cx - 10 * sc), "y1": cy, "x2": r1(w - 5 * sc), "y2": cy, "thickness": 1, "color": "H"},
+            {"id": "arrow_head", "op": "polygon", "points": [[r1(w - 7 * sc), r1(cy - 2 * sc)], [r1(w - 4 * sc), cy], [r1(w - 7 * sc), r1(cy + 2 * sc)]], "fill": "S", "outline": "O"}
+        ]
+
+    elif arch in ("staff", "weapon_staff"):
+        spec["layers"] = [
+            {"id": "shadow", "op": "ellipse", "cx": cx, "cy": r1(h - 3 * sc), "rx": r1(5 * sc), "ry": r1(1.5 * sc), "fill": "a"},
+            {"id": "shaft", "op": "uneven_capsule", "x1": cx, "y1": r1(h - 4 * sc), "x2": cx, "y2": r1(9 * sc), "r1": r1(1.8 * sc), "r2": r1(1.5 * sc), "fill": "H", "outline": "O", "sdf": True},
+            {"id": "bracket_l", "op": "vesica", "cx": r1(cx - 3.2 * sc), "cy": r1(7.5 * sc), "rx": r1(1.5 * sc), "ry": r1(3.5 * sc), "angle": -25, "fill": "A", "outline": "O", "sdf": True},
+            {"id": "bracket_r", "op": "vesica", "cx": r1(cx + 3.2 * sc), "cy": r1(7.5 * sc), "rx": r1(1.5 * sc), "ry": r1(3.5 * sc), "angle": 25, "fill": "A", "outline": "O", "sdf": True},
+            {"id": "crystal_orb", "op": "ellipse", "cx": cx, "cy": r1(5.5 * sc), "rx": r1(3.2 * sc), "ry": r1(3.2 * sc), "fill": "M", "outline": "O", "sdf": True},
+            {"id": "orb_spark", "op": "star", "cx": cx, "cy": r1(5.5 * sc), "r": r1(1.6 * sc), "n": 4, "innerRatio": 0.4, "fill": "w"}
+        ]
+        spec["motion"] = {"type": "idle_breathe", "frames": 4, "amplitude": 0.8, "squash": 0.04}
+
+    elif arch in ("lightning", "spell_lightning"):
+        spec["palette"]["b"] = "#a5f3fc"
+        spec["layers"] = [
+            {"id": "glow", "op": "ellipse", "cx": cx, "cy": r1(h - 4 * sc), "rx": r1(9 * sc), "ry": r1(2.5 * sc), "fill": "a"},
+            {"id": "bolt", "op": "polygon", "points": [
+                [cx, r1(3 * sc)], [r1(cx - 3 * sc), r1(10 * sc)], [r1(cx + 2 * sc), r1(13 * sc)],
+                [r1(cx - 4 * sc), r1(20 * sc)], [r1(cx + 1 * sc), r1(23 * sc)], [cx, r1(h - 4 * sc)],
+                [r1(cx + 3 * sc), r1(22 * sc)], [r1(cx - 1 * sc), r1(19 * sc)], [r1(cx + 4 * sc), r1(12 * sc)],
+                [r1(cx - 1 * sc), r1(9 * sc)]
+            ], "fill": "w", "sdf": True},
+            {"id": "fork", "op": "polygon", "points": [[r1(cx - 3 * sc), r1(10 * sc)], [r1(cx - 8 * sc), r1(16 * sc)], [r1(cx - 6 * sc), r1(17 * sc)], [r1(cx - 1 * sc), r1(12 * sc)]], "fill": "b"},
+            {"id": "impact", "op": "star", "cx": cx, "cy": r1(h - 4 * sc), "r": r1(4.2 * sc), "n": 6, "innerRatio": 0.4, "fill": "w"}
+        ]
+        spec["motion"] = {"type": "idle_breathe", "frames": 4, "amplitude": 0.6, "squash": 0.08}
+
+    elif arch in ("fireball", "spell_fireball"):
+        spec["layers"] = [
+            {"id": "smoke", "op": "ellipse", "cx": r1(cx - 7 * sc), "cy": cy, "rx": r1(6.5 * sc), "ry": r1(5.5 * sc), "fill": "a"},
+            {"id": "outer_flame", "op": "vesica", "cx": r1(cx - 1 * sc), "cy": cy, "rx": r1(11 * sc), "ry": r1(7.5 * sc), "angle": 0, "fill": "M", "outline": "O", "sdf": True},
+            {"id": "mid_flame", "op": "vesica", "cx": r1(cx + 2 * sc), "cy": cy, "rx": r1(8 * sc), "ry": r1(5.5 * sc), "angle": 0, "fill": "A", "outline": "O", "sdf": True},
+            {"id": "core", "op": "ellipse", "cx": r1(cx + 4 * sc), "cy": cy, "rx": r1(4.2 * sc), "ry": r1(3.5 * sc), "fill": "w", "sdf": True},
+            {"id": "spark", "op": "pixels", "color": "w", "points": [[js_round(cx - 8 * sc), js_round(cy - 4 * sc)], [js_round(cx - 10 * sc), js_round(cy + 3 * sc)]]}
+        ]
+        spec["motion"] = {"type": "idle_breathe", "frames": 4, "amplitude": 0.8, "squash": 0.08}
+
 
     else:  # autotile_blob47 / procedural stone-moss terrain block
         pad_b = max(1.5, r1(2.5 * sc))

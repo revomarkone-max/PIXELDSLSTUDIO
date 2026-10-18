@@ -1,0 +1,113 @@
+{
+  "name": "proc_water_tile_s99_32x32",
+  "prompt": "Procedural water_tile (seed=99, 32x32) — 100% LLM-Free PixelDSL v3.0",
+  "width": 32,
+  "height": 32,
+  "symmetry": "none",
+  "rle": false,
+  "ramps": {
+    "M": {
+      "base": "#0067a9",
+      "light": "L",
+      "dark": "D",
+      "outline": "O"
+    },
+    "A": {
+      "base": "#00beea",
+      "light": "W",
+      "dark": "B",
+      "outline": "O"
+    },
+    "S": {
+      "base": "#c1b0ca",
+      "light": "w",
+      "dark": "d",
+      "outline": "O"
+    },
+    "H": {
+      "base": "#8c4a11",
+      "light": "h",
+      "dark": "b",
+      "outline": "O"
+    }
+  },
+  "palette": {
+    ".": "transparent",
+    "O": "#14182e",
+    "e": "#0e101c",
+    "w": "#ffffff",
+    "a": "#14182e44",
+    "f": "#e0f2fe"
+  },
+  "postProcess": {
+    "autoOutline": false,
+    "outlineColor": "#14182e",
+    "autoShading": false,
+    "shadingStrength": 0.16,
+    "sdfShading": true,
+    "selOut": true
+  },
+  "layers": [
+    {
+      "id": "water_base",
+      "op": "rect",
+      "x": 0,
+      "y": 0,
+      "w": 32,
+      "h": 32,
+      "fill": "M",
+      "sdf": true,
+      "dither": "voronoi",
+      "shaderScale": 4.5,
+      "seed": 99
+    },
+    {
+      "id": "caustic_1",
+      "op": "ellipse",
+      "cx": 10.5,
+      "cy": 11.5,
+      "rx": 6.5,
+      "ry": 4.5,
+      "fill": "A",
+      "sdf": true
+    },
+    {
+      "id": "caustic_2",
+      "op": "ellipse",
+      "cx": 22.5,
+      "cy": 20.5,
+      "rx": 7.0,
+      "ry": 5.0,
+      "fill": "A",
+      "sdf": true
+    },
+    {
+      "id": "foam_crest",
+      "op": "bezier_sdf",
+      "points": [
+        [
+          4.0,
+          20.5
+        ],
+        [
+          15.5,
+          17.5
+        ],
+        [
+          27.0,
+          21.5
+        ]
+      ],
+      "r1": 1.5,
+      "r2": 0.8,
+      "fill": "f"
+    }
+  ],
+  "frames": [],
+  "grid": [],
+  "motion": {
+    "type": "wave",
+    "frames": 4,
+    "amplitude": 0.8
+  }
+}

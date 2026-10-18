@@ -2336,6 +2336,2444 @@ window.ARCHETYPE_REGISTRY = {
       }
     ]
   }
+,
+  "mythic_dragon": {
+    "id": "mythic_dragon",
+    "name": "Mythic Dragon (Wyvern / Drake)",
+    "category": "creatures",
+    "description": "Articulated draconic beast with horned crest, serpentine neck, massive bat wings, clawed talons, and whip tail.",
+    "default_view": "side",
+    "subtypes": {
+      "western_dragon": "Four-legged horned dragon with massive bat wings",
+      "wyvern": "Two-legged draconic flyer with wing-claws and barbed venom tail",
+      "serpentine_drake": "Slender wingless drake with spined crest"
+    },
+    "z_depth_tiers": {
+      "0_back": {
+        "name": "Far Wing & Back Claws",
+        "z": 0,
+        "tone": "shadow",
+        "bones": [
+          "wing_arm_far",
+          "wing_finger_far",
+          "hind_thigh_far",
+          "hind_shin_far"
+        ]
+      },
+      "1_core": {
+        "name": "Torso, Neck, Head & Tail",
+        "z": 1,
+        "tone": "base",
+        "bones": [
+          "pelvis",
+          "chest",
+          "neck",
+          "head",
+          "jaw",
+          "tail_base",
+          "tail_mid",
+          "tail_tip"
+        ]
+      },
+      "2_front": {
+        "name": "Near Wing & Fore Claws",
+        "z": 2,
+        "tone": "highlight",
+        "crease": true,
+        "bones": [
+          "wing_arm_near",
+          "wing_finger_near",
+          "hind_thigh_near",
+          "hind_shin_near"
+        ]
+      }
+    },
+    "bones": [
+      {
+        "id": "pelvis",
+        "u": 0.42,
+        "v": 0.52,
+        "length_u": 0.12,
+        "angle": 10,
+        "r1_u": 0.08,
+        "r2_u": 0.08,
+        "z": 1,
+        "fill": "scales"
+      },
+      {
+        "id": "chest",
+        "parent": "pelvis",
+        "offset_u": [
+          0.0,
+          0.0
+        ],
+        "length_u": 0.14,
+        "angle": -30,
+        "r1_u": 0.095,
+        "r2_u": 0.085,
+        "z": 1,
+        "fill": "scales"
+      },
+      {
+        "id": "neck",
+        "parent": "chest",
+        "offset_u": [
+          0.0,
+          0.0
+        ],
+        "length_u": 0.13,
+        "angle": -55,
+        "r1_u": 0.065,
+        "r2_u": 0.05,
+        "z": 1,
+        "fill": "scales"
+      },
+      {
+        "id": "head",
+        "parent": "neck",
+        "offset_u": [
+          0.0,
+          0.0
+        ],
+        "length_u": 0.12,
+        "angle": 45,
+        "r1_u": 0.065,
+        "r2_u": 0.035,
+        "z": 1,
+        "fill": "scales",
+        "features": {
+          "eyes": {
+            "dx_u": 0.03,
+            "dy_u": -0.015,
+            "w_u": 0.02,
+            "h_u": 0.03,
+            "color": "#fbbf24"
+          },
+          "horns": {
+            "dx_u": -0.02,
+            "dy_u": -0.05,
+            "w_u": 0.02,
+            "h_u": 0.055,
+            "color": "#f1f5f9"
+          }
+        }
+      },
+      {
+        "id": "jaw",
+        "parent": "head",
+        "offset_u": [
+          0.04,
+          0.02
+        ],
+        "length_u": 0.08,
+        "angle": 25,
+        "r1_u": 0.032,
+        "r2_u": 0.015,
+        "z": 1,
+        "fill": "scales_dark"
+      },
+      {
+        "id": "tail_base",
+        "parent": "pelvis",
+        "offset_u": [
+          -0.06,
+          0.02
+        ],
+        "length_u": 0.14,
+        "angle": 160,
+        "r1_u": 0.065,
+        "r2_u": 0.048,
+        "z": 1,
+        "fill": "scales"
+      },
+      {
+        "id": "tail_mid",
+        "parent": "tail_base",
+        "offset_u": [
+          0.0,
+          0.0
+        ],
+        "length_u": 0.14,
+        "angle": -15,
+        "r1_u": 0.048,
+        "r2_u": 0.032,
+        "z": 1,
+        "fill": "scales"
+      },
+      {
+        "id": "tail_tip",
+        "parent": "tail_mid",
+        "offset_u": [
+          0.0,
+          0.0
+        ],
+        "length_u": 0.12,
+        "angle": -20,
+        "r1_u": 0.032,
+        "r2_u": 0.014,
+        "z": 1,
+        "fill": "scales_accent"
+      },
+      {
+        "id": "wing_arm_far",
+        "parent": "chest",
+        "offset_u": [
+          -0.02,
+          -0.04
+        ],
+        "length_u": 0.17,
+        "angle": -125,
+        "r1_u": 0.055,
+        "r2_u": 0.042,
+        "z": 0,
+        "fill": "membrane_dark"
+      },
+      {
+        "id": "wing_finger_far",
+        "parent": "wing_arm_far",
+        "offset_u": [
+          0.0,
+          0.0
+        ],
+        "length_u": 0.22,
+        "angle": 55,
+        "r1_u": 0.042,
+        "r2_u": 0.02,
+        "z": 0,
+        "fill": "membrane_dark"
+      },
+      {
+        "id": "wing_arm_near",
+        "parent": "chest",
+        "offset_u": [
+          0.02,
+          -0.04
+        ],
+        "length_u": 0.18,
+        "angle": -125,
+        "r1_u": 0.06,
+        "r2_u": 0.046,
+        "z": 2,
+        "fill": "membrane",
+        "crease": true
+      },
+      {
+        "id": "wing_finger_near",
+        "parent": "wing_arm_near",
+        "offset_u": [
+          0.0,
+          0.0
+        ],
+        "length_u": 0.24,
+        "angle": 55,
+        "r1_u": 0.046,
+        "r2_u": 0.022,
+        "z": 2,
+        "fill": "membrane",
+        "crease": true
+      },
+      {
+        "id": "hind_thigh_far",
+        "parent": "pelvis",
+        "offset_u": [
+          -0.02,
+          0.04
+        ],
+        "length_u": 0.12,
+        "angle": 75,
+        "r1_u": 0.055,
+        "r2_u": 0.04,
+        "z": 0,
+        "fill": "scales_dark"
+      },
+      {
+        "id": "hind_shin_far",
+        "parent": "hind_thigh_far",
+        "offset_u": [
+          0.0,
+          0.0
+        ],
+        "length_u": 0.12,
+        "angle": -45,
+        "r1_u": 0.04,
+        "r2_u": 0.025,
+        "z": 0,
+        "fill": "scales_dark"
+      },
+      {
+        "id": "hind_thigh_near",
+        "parent": "pelvis",
+        "offset_u": [
+          0.02,
+          0.04
+        ],
+        "length_u": 0.13,
+        "angle": 75,
+        "r1_u": 0.06,
+        "r2_u": 0.045,
+        "z": 2,
+        "fill": "scales"
+      },
+      {
+        "id": "hind_shin_near",
+        "parent": "hind_thigh_near",
+        "offset_u": [
+          0.0,
+          0.0
+        ],
+        "length_u": 0.13,
+        "angle": -45,
+        "r1_u": 0.045,
+        "r2_u": 0.03,
+        "z": 2,
+        "fill": "scales"
+      }
+    ],
+    "locomotion": {
+      "flight": {
+        "default_frames": 6,
+        "cadence_type": "flight_flap",
+        "wing_flap_amplitude_deg": 52.0,
+        "wing_fold_amplitude_deg": 30.0,
+        "torso_bob_amplitude": 0.04,
+        "tail_sway_amplitude_deg": 14.0
+      },
+      "fire_breath": {
+        "default_frames": 4,
+        "neck_arch_deg": -18.0,
+        "jaw_open_deg": 32.0,
+        "wing_spread_deg": 20.0
+      }
+    }
+  },
+  "crawler_spider": {
+    "id": "crawler_spider",
+    "name": "Crawler Spider (Arachnid / Insectoid)",
+    "category": "creatures",
+    "description": "8-legged arthropod predator with articulating multi-jointed limbs, fanged chelicerae, and bulbous opisthosoma.",
+    "default_view": "top",
+    "subtypes": {
+      "tarantula": "Heavy burrowing spider with thick hairy exoskeleton",
+      "widow_spider": "Sleek hourglass spider with venom fangs",
+      "cave_crawler": "Pale albino arachnid with elongated spindly legs"
+    },
+    "z_depth_tiers": {
+      "0_back": {
+        "name": "Under-Legs (Far)",
+        "z": 0,
+        "tone": "shadow",
+        "bones": [
+          "leg_f1_thigh",
+          "leg_f1_shin",
+          "leg_f2_thigh",
+          "leg_f2_shin",
+          "leg_f3_thigh",
+          "leg_f3_shin",
+          "leg_f4_thigh",
+          "leg_f4_shin"
+        ]
+      },
+      "1_core": {
+        "name": "Abdomen, Cephalothorax & Fangs",
+        "z": 1,
+        "tone": "base",
+        "bones": [
+          "abdomen",
+          "cephalothorax",
+          "chelicerae_l",
+          "chelicerae_r"
+        ]
+      },
+      "2_front": {
+        "name": "Upper-Legs (Near)",
+        "z": 2,
+        "tone": "highlight",
+        "crease": true,
+        "bones": [
+          "leg_n1_thigh",
+          "leg_n1_shin",
+          "leg_n2_thigh",
+          "leg_n2_shin",
+          "leg_n3_thigh",
+          "leg_n3_shin",
+          "leg_n4_thigh",
+          "leg_n4_shin"
+        ]
+      }
+    },
+    "bones": [
+      {
+        "id": "abdomen",
+        "u": 0.38,
+        "v": 0.5,
+        "length_u": 0.18,
+        "angle": 180,
+        "r1_u": 0.11,
+        "r2_u": 0.13,
+        "z": 1,
+        "fill": "chitin_body",
+        "shape": "head_oval"
+      },
+      {
+        "id": "cephalothorax",
+        "u": 0.54,
+        "v": 0.5,
+        "length_u": 0.12,
+        "angle": 0,
+        "r1_u": 0.08,
+        "r2_u": 0.065,
+        "z": 1,
+        "fill": "chitin_head",
+        "features": {
+          "eyes": {
+            "dx_u": 0.04,
+            "dy_u": -0.015,
+            "w_u": 0.035,
+            "h_u": 0.02,
+            "color": "#ef4444"
+          }
+        }
+      },
+      {
+        "id": "chelicerae_l",
+        "parent": "cephalothorax",
+        "offset_u": [
+          0.03,
+          -0.02
+        ],
+        "length_u": 0.06,
+        "angle": -35,
+        "r1_u": 0.025,
+        "r2_u": 0.01,
+        "z": 1,
+        "fill": "chitin_fangs"
+      },
+      {
+        "id": "chelicerae_r",
+        "parent": "cephalothorax",
+        "offset_u": [
+          0.03,
+          0.02
+        ],
+        "length_u": 0.06,
+        "angle": 35,
+        "r1_u": 0.025,
+        "r2_u": 0.01,
+        "z": 1,
+        "fill": "chitin_fangs"
+      },
+      {
+        "id": "leg_f1_thigh",
+        "parent": "cephalothorax",
+        "offset_u": [
+          0.02,
+          -0.04
+        ],
+        "length_u": 0.16,
+        "angle": -135,
+        "r1_u": 0.03,
+        "r2_u": 0.02,
+        "z": 0,
+        "fill": "chitin_dark"
+      },
+      {
+        "id": "leg_f1_shin",
+        "parent": "leg_f1_thigh",
+        "offset_u": [
+          0.0,
+          0.0
+        ],
+        "length_u": 0.16,
+        "angle": 90,
+        "r1_u": 0.02,
+        "r2_u": 0.01,
+        "z": 0,
+        "fill": "chitin_dark"
+      },
+      {
+        "id": "leg_f2_thigh",
+        "parent": "cephalothorax",
+        "offset_u": [
+          0.0,
+          -0.04
+        ],
+        "length_u": 0.15,
+        "angle": -100,
+        "r1_u": 0.03,
+        "r2_u": 0.02,
+        "z": 0,
+        "fill": "chitin_dark"
+      },
+      {
+        "id": "leg_f2_shin",
+        "parent": "leg_f2_thigh",
+        "offset_u": [
+          0.0,
+          0.0
+        ],
+        "length_u": 0.15,
+        "angle": 80,
+        "r1_u": 0.02,
+        "r2_u": 0.01,
+        "z": 0,
+        "fill": "chitin_dark"
+      },
+      {
+        "id": "leg_f3_thigh",
+        "parent": "cephalothorax",
+        "offset_u": [
+          -0.02,
+          -0.04
+        ],
+        "length_u": 0.16,
+        "angle": -70,
+        "r1_u": 0.03,
+        "r2_u": 0.02,
+        "z": 0,
+        "fill": "chitin_dark"
+      },
+      {
+        "id": "leg_f3_shin",
+        "parent": "leg_f3_thigh",
+        "offset_u": [
+          0.0,
+          0.0
+        ],
+        "length_u": 0.16,
+        "angle": 75,
+        "r1_u": 0.02,
+        "r2_u": 0.01,
+        "z": 0,
+        "fill": "chitin_dark"
+      },
+      {
+        "id": "leg_f4_thigh",
+        "parent": "cephalothorax",
+        "offset_u": [
+          -0.04,
+          -0.04
+        ],
+        "length_u": 0.18,
+        "angle": -35,
+        "r1_u": 0.03,
+        "r2_u": 0.02,
+        "z": 0,
+        "fill": "chitin_dark"
+      },
+      {
+        "id": "leg_f4_shin",
+        "parent": "leg_f4_thigh",
+        "offset_u": [
+          0.0,
+          0.0
+        ],
+        "length_u": 0.18,
+        "angle": 65,
+        "r1_u": 0.02,
+        "r2_u": 0.01,
+        "z": 0,
+        "fill": "chitin_dark"
+      },
+      {
+        "id": "leg_n1_thigh",
+        "parent": "cephalothorax",
+        "offset_u": [
+          0.02,
+          0.04
+        ],
+        "length_u": 0.16,
+        "angle": 135,
+        "r1_u": 0.035,
+        "r2_u": 0.022,
+        "z": 2,
+        "fill": "chitin",
+        "crease": true
+      },
+      {
+        "id": "leg_n1_shin",
+        "parent": "leg_n1_thigh",
+        "offset_u": [
+          0.0,
+          0.0
+        ],
+        "length_u": 0.16,
+        "angle": -90,
+        "r1_u": 0.022,
+        "r2_u": 0.012,
+        "z": 2,
+        "fill": "chitin",
+        "crease": true
+      },
+      {
+        "id": "leg_n2_thigh",
+        "parent": "cephalothorax",
+        "offset_u": [
+          0.0,
+          0.04
+        ],
+        "length_u": 0.15,
+        "angle": 100,
+        "r1_u": 0.035,
+        "r2_u": 0.022,
+        "z": 2,
+        "fill": "chitin",
+        "crease": true
+      },
+      {
+        "id": "leg_n2_shin",
+        "parent": "leg_n2_thigh",
+        "offset_u": [
+          0.0,
+          0.0
+        ],
+        "length_u": 0.15,
+        "angle": -80,
+        "r1_u": 0.022,
+        "r2_u": 0.012,
+        "z": 2,
+        "fill": "chitin",
+        "crease": true
+      },
+      {
+        "id": "leg_n3_thigh",
+        "parent": "cephalothorax",
+        "offset_u": [
+          -0.02,
+          0.04
+        ],
+        "length_u": 0.16,
+        "angle": 70,
+        "r1_u": 0.035,
+        "r2_u": 0.022,
+        "z": 2,
+        "fill": "chitin",
+        "crease": true
+      },
+      {
+        "id": "leg_n3_shin",
+        "parent": "leg_n3_thigh",
+        "offset_u": [
+          0.0,
+          0.0
+        ],
+        "length_u": 0.16,
+        "angle": -75,
+        "r1_u": 0.022,
+        "r2_u": 0.012,
+        "z": 2,
+        "fill": "chitin",
+        "crease": true
+      },
+      {
+        "id": "leg_n4_thigh",
+        "parent": "cephalothorax",
+        "offset_u": [
+          -0.04,
+          0.04
+        ],
+        "length_u": 0.18,
+        "angle": 35,
+        "r1_u": 0.035,
+        "r2_u": 0.022,
+        "z": 2,
+        "fill": "chitin",
+        "crease": true
+      },
+      {
+        "id": "leg_n4_shin",
+        "parent": "leg_n4_thigh",
+        "offset_u": [
+          0.0,
+          0.0
+        ],
+        "length_u": 0.18,
+        "angle": -65,
+        "r1_u": 0.022,
+        "r2_u": 0.012,
+        "z": 2,
+        "fill": "chitin",
+        "crease": true
+      }
+    ],
+    "locomotion": {
+      "crawl": {
+        "default_frames": 6,
+        "cadence_type": "tetrapod_crawl",
+        "leg_swing_amplitude_deg": 26.0,
+        "shin_flex_amplitude_deg": 22.0
+      }
+    }
+  },
+  "serpent_snake": {
+    "id": "serpent_snake",
+    "name": "Serpent Snake (Viper / Cobra)",
+    "category": "creatures",
+    "description": "Continuous vertebral spine chain with flared cobra hood, hypnotic slither wave, and forked tongue.",
+    "default_view": "top",
+    "subtypes": {
+      "viper": "Triangular-headed pit viper with diamond back patterns",
+      "cobra": "Broad flared cobra hood with rear eye markings",
+      "constrictor": "Heavy-bodied python with thick muscular coils"
+    },
+    "z_depth_tiers": {
+      "0_back": {
+        "name": "Underbelly Tail",
+        "z": 0,
+        "tone": "shadow",
+        "bones": [
+          "seg5_tail1",
+          "seg6_tail2"
+        ]
+      },
+      "1_core": {
+        "name": "Mid-Body & Hood",
+        "z": 1,
+        "tone": "base",
+        "bones": [
+          "seg2_hood",
+          "seg3_body1",
+          "seg4_body2"
+        ]
+      },
+      "2_front": {
+        "name": "Striking Head",
+        "z": 2,
+        "tone": "highlight",
+        "crease": true,
+        "bones": [
+          "seg1_head"
+        ]
+      }
+    },
+    "bones": [
+      {
+        "id": "seg1_head",
+        "u": 0.22,
+        "v": 0.5,
+        "length_u": 0.13,
+        "angle": 0,
+        "r1_u": 0.065,
+        "r2_u": 0.045,
+        "z": 2,
+        "fill": "snake_head",
+        "features": {
+          "eyes": {
+            "dx_u": 0.03,
+            "dy_u": -0.015,
+            "w_u": 0.02,
+            "h_u": 0.02,
+            "color": "#facc15"
+          },
+          "tongue": {
+            "dx_u": 0.07,
+            "dy_u": 0.0,
+            "w_u": 0.04,
+            "h_u": 0.015,
+            "color": "#ef4444"
+          }
+        }
+      },
+      {
+        "id": "seg2_hood",
+        "parent": "seg1_head",
+        "offset_u": [
+          -0.02,
+          0.0
+        ],
+        "length_u": 0.13,
+        "angle": 180,
+        "r1_u": 0.08,
+        "r2_u": 0.07,
+        "z": 1,
+        "fill": "snake_hood"
+      },
+      {
+        "id": "seg3_body1",
+        "parent": "seg2_hood",
+        "offset_u": [
+          0.0,
+          0.0
+        ],
+        "length_u": 0.14,
+        "angle": 0,
+        "r1_u": 0.065,
+        "r2_u": 0.06,
+        "z": 1,
+        "fill": "snake_scales"
+      },
+      {
+        "id": "seg4_body2",
+        "parent": "seg3_body1",
+        "offset_u": [
+          0.0,
+          0.0
+        ],
+        "length_u": 0.14,
+        "angle": 0,
+        "r1_u": 0.06,
+        "r2_u": 0.05,
+        "z": 1,
+        "fill": "snake_scales"
+      },
+      {
+        "id": "seg5_tail1",
+        "parent": "seg4_body2",
+        "offset_u": [
+          0.0,
+          0.0
+        ],
+        "length_u": 0.14,
+        "angle": 0,
+        "r1_u": 0.05,
+        "r2_u": 0.035,
+        "z": 0,
+        "fill": "snake_scales"
+      },
+      {
+        "id": "seg6_tail2",
+        "parent": "seg5_tail1",
+        "offset_u": [
+          0.0,
+          0.0
+        ],
+        "length_u": 0.15,
+        "angle": 0,
+        "r1_u": 0.035,
+        "r2_u": 0.015,
+        "z": 0,
+        "fill": "snake_rattle"
+      }
+    ],
+    "locomotion": {
+      "slither": {
+        "default_frames": 8,
+        "cadence_type": "serpentine_wave",
+        "wave_amplitude_deg": 25.0,
+        "wave_phase_step": 0.85
+      }
+    }
+  },
+  "golem_stone": {
+    "id": "golem_stone",
+    "name": "Golem Stone (Colossus / Elemental)",
+    "category": "creatures",
+    "description": "Massive monolithic earth automaton with fractured boulder limbs, glowing arcane rune core, and thunderous stomp.",
+    "default_view": "front",
+    "subtypes": {
+      "granite_colossus": "Dense grey stone giant with jagged chiseled edges",
+      "magma_golem": "Dark basalt golem with flowing orange volcanic fissure core",
+      "moss_automaton": "Ancient overgrown forest golem with lichen and vines"
+    },
+    "z_depth_tiers": {
+      "0_back": {
+        "name": "Back Fist & Leg",
+        "z": 0,
+        "tone": "shadow",
+        "bones": [
+          "shoulder_far",
+          "fist_far",
+          "leg_far_thigh",
+          "leg_far_foot"
+        ]
+      },
+      "1_core": {
+        "name": "Torso, Pelvis & Core",
+        "z": 1,
+        "tone": "base",
+        "bones": [
+          "pelvis",
+          "torso",
+          "head"
+        ]
+      },
+      "2_front": {
+        "name": "Front Fist & Stomp Leg",
+        "z": 2,
+        "tone": "highlight",
+        "crease": true,
+        "bones": [
+          "shoulder_near",
+          "fist_near",
+          "leg_near_thigh",
+          "leg_near_foot"
+        ]
+      }
+    },
+    "bones": [
+      {
+        "id": "pelvis",
+        "u": 0.5,
+        "v": 0.56,
+        "length_u": 0.09,
+        "angle": 90,
+        "r1_u": 0.09,
+        "r2_u": 0.085,
+        "z": 1,
+        "fill": "stone_body"
+      },
+      {
+        "id": "torso",
+        "parent": "pelvis",
+        "offset_u": [
+          0.0,
+          0.0
+        ],
+        "length_u": 0.16,
+        "angle": -180,
+        "r1_u": 0.125,
+        "r2_u": 0.13,
+        "z": 1,
+        "fill": "stone_body",
+        "features": {
+          "core": {
+            "dx_u": 0.0,
+            "dy_u": 0.0,
+            "w_u": 0.05,
+            "h_u": 0.05,
+            "color": "#06b6d4"
+          }
+        }
+      },
+      {
+        "id": "head",
+        "parent": "torso",
+        "offset_u": [
+          0.0,
+          0.0
+        ],
+        "length_u": 0.08,
+        "angle": 0,
+        "r1_u": 0.07,
+        "r2_u": 0.065,
+        "z": 1,
+        "fill": "stone_body",
+        "features": {
+          "eyes": {
+            "dx_u": 0.0,
+            "dy_u": -0.01,
+            "w_u": 0.055,
+            "h_u": 0.015,
+            "color": "#06b6d4"
+          }
+        }
+      },
+      {
+        "id": "shoulder_far",
+        "parent": "torso",
+        "offset_u": [
+          -0.08,
+          0.0
+        ],
+        "length_u": 0.14,
+        "angle": 115,
+        "r1_u": 0.07,
+        "r2_u": 0.06,
+        "z": 0,
+        "fill": "stone_dark"
+      },
+      {
+        "id": "fist_far",
+        "parent": "shoulder_far",
+        "offset_u": [
+          0.0,
+          0.0
+        ],
+        "length_u": 0.13,
+        "angle": 25,
+        "r1_u": 0.075,
+        "r2_u": 0.08,
+        "z": 0,
+        "fill": "stone_dark"
+      },
+      {
+        "id": "shoulder_near",
+        "parent": "torso",
+        "offset_u": [
+          0.08,
+          0.0
+        ],
+        "length_u": 0.14,
+        "angle": 65,
+        "r1_u": 0.075,
+        "r2_u": 0.065,
+        "z": 2,
+        "fill": "stone_body",
+        "crease": true
+      },
+      {
+        "id": "fist_near",
+        "parent": "shoulder_near",
+        "offset_u": [
+          0.0,
+          0.0
+        ],
+        "length_u": 0.13,
+        "angle": 25,
+        "r1_u": 0.08,
+        "r2_u": 0.085,
+        "z": 2,
+        "fill": "stone_body",
+        "crease": true
+      },
+      {
+        "id": "leg_far_thigh",
+        "parent": "pelvis",
+        "offset_u": [
+          -0.05,
+          0.0
+        ],
+        "length_u": 0.13,
+        "angle": 80,
+        "r1_u": 0.07,
+        "r2_u": 0.06,
+        "z": 0,
+        "fill": "stone_dark"
+      },
+      {
+        "id": "leg_far_foot",
+        "parent": "leg_far_thigh",
+        "offset_u": [
+          0.0,
+          0.0
+        ],
+        "length_u": 0.1,
+        "angle": 10,
+        "r1_u": 0.06,
+        "r2_u": 0.08,
+        "z": 0,
+        "fill": "stone_dark"
+      },
+      {
+        "id": "leg_near_thigh",
+        "parent": "pelvis",
+        "offset_u": [
+          0.05,
+          0.0
+        ],
+        "length_u": 0.13,
+        "angle": 100,
+        "r1_u": 0.075,
+        "r2_u": 0.065,
+        "z": 2,
+        "fill": "stone_body"
+      },
+      {
+        "id": "leg_near_foot",
+        "parent": "leg_near_thigh",
+        "offset_u": [
+          0.0,
+          0.0
+        ],
+        "length_u": 0.1,
+        "angle": -10,
+        "r1_u": 0.065,
+        "r2_u": 0.085,
+        "z": 2,
+        "fill": "stone_body"
+      }
+    ],
+    "locomotion": {
+      "stomp": {
+        "default_frames": 6,
+        "fist_swing_deg": 24.0,
+        "leg_swing_deg": 22.0,
+        "stomp_bob_amplitude": 0.035
+      }
+    }
+  },
+  "plant_flower": {
+    "id": "plant_flower",
+    "name": "Plant Flower (Chamomile / Sunflower)",
+    "category": "nature",
+    "description": "Parametric botanical bloom with central stamen disc, radial petal ring, organic curved stem, and foliage leaves.",
+    "default_view": "front",
+    "subtypes": {
+      "chamomile_daisy": "Classic chamomile with snow-white petals and golden center",
+      "sunflower": "Vibrant sunflower with blazing golden petals and chocolate seed disk",
+      "rose_bloom": "Lush scarlet rose bloom with multi-tiered petal folds"
+    },
+    "layers": [
+      {
+        "id": "shadow",
+        "op": "ellipse",
+        "cx_u": 0.5,
+        "cy_u": 0.94,
+        "rx_u": 0.22,
+        "ry_u": 0.06,
+        "fill": "shadow",
+        "z": 0
+      },
+      {
+        "id": "stem",
+        "op": "uneven_capsule",
+        "x1_u": 0.5,
+        "y1_u": 0.92,
+        "x2_u": 0.5,
+        "y2_u": 0.38,
+        "r1_u": 0.04,
+        "r2_u": 0.035,
+        "fill": "stem",
+        "sdf": true,
+        "z": 1
+      },
+      {
+        "id": "leaf_left",
+        "op": "vesica",
+        "cx_u": 0.38,
+        "cy_u": 0.65,
+        "rx_u": 0.06,
+        "ry_u": 0.14,
+        "angle": -45,
+        "fill": "foliage",
+        "sdf": true,
+        "z": 1
+      },
+      {
+        "id": "leaf_right",
+        "op": "vesica",
+        "cx_u": 0.62,
+        "cy_u": 0.58,
+        "rx_u": 0.06,
+        "ry_u": 0.14,
+        "angle": 45,
+        "fill": "foliage",
+        "sdf": true,
+        "z": 1
+      },
+      {
+        "id": "petal_ring",
+        "op": "star",
+        "cx_u": 0.5,
+        "cy_u": 0.35,
+        "r_u": 0.28,
+        "n": 10,
+        "innerRatio": 0.65,
+        "fill": "petal",
+        "sdf": true,
+        "z": 2
+      },
+      {
+        "id": "stamen_core",
+        "op": "ellipse",
+        "cx_u": 0.5,
+        "cy_u": 0.35,
+        "rx_u": 0.12,
+        "ry_u": 0.12,
+        "fill": "core",
+        "sdf": true,
+        "z": 2,
+        "dither": "worley",
+        "shaderScale": 5.0
+      },
+      {
+        "id": "glint",
+        "op": "pixels",
+        "color": "white",
+        "points_u": [
+          [
+            0.46,
+            0.31
+          ]
+        ],
+        "z": 2
+      }
+    ],
+    "motion": {
+      "breeze": {
+        "default_frames": 4,
+        "sway_amplitude_u": 0.035
+      }
+    }
+  },
+  "mushroom_fungus": {
+    "id": "mushroom_fungus",
+    "name": "Mushroom Fungus (Toadstool / Shroom)",
+    "category": "nature",
+    "description": "Fleshy forest fungi with domed parasol cap, spore spots, undercap gills, stem collar, and baby sprouts.",
+    "default_view": "front",
+    "subtypes": {
+      "toadstool_flyagaric": "Iconic red fairy toadstool with stark white polka dots",
+      "chanterelle": "Golden-orange wavy forest funnel mushroom",
+      "bioluminescent": "Nocturnal glowing blue cave fungus with eerie spores"
+    },
+    "layers": [
+      {
+        "id": "shadow",
+        "op": "ellipse",
+        "cx_u": 0.5,
+        "cy_u": 0.94,
+        "rx_u": 0.28,
+        "ry_u": 0.07,
+        "fill": "shadow",
+        "z": 0
+      },
+      {
+        "id": "stem",
+        "op": "uneven_capsule",
+        "x1_u": 0.5,
+        "y1_u": 0.9,
+        "x2_u": 0.5,
+        "y2_u": 0.45,
+        "r1_u": 0.09,
+        "r2_u": 0.07,
+        "fill": "stem",
+        "sdf": true,
+        "z": 1
+      },
+      {
+        "id": "veil_collar",
+        "op": "ellipse",
+        "cx_u": 0.5,
+        "cy_u": 0.65,
+        "rx_u": 0.095,
+        "ry_u": 0.03,
+        "fill": "veil",
+        "sdf": true,
+        "z": 1
+      },
+      {
+        "id": "cap_gills",
+        "op": "ellipse",
+        "cx_u": 0.5,
+        "cy_u": 0.46,
+        "rx_u": 0.32,
+        "ry_u": 0.12,
+        "fill": "gills",
+        "sdf": true,
+        "z": 1
+      },
+      {
+        "id": "cap_dome",
+        "op": "moon",
+        "cx_u": 0.5,
+        "cy_u": 0.38,
+        "r_u": 0.36,
+        "r2_u": 0.34,
+        "d_u": 0.16,
+        "angle": 0,
+        "fill": "cap",
+        "sdf": true,
+        "z": 2
+      },
+      {
+        "id": "spot_1",
+        "op": "ellipse",
+        "cx_u": 0.42,
+        "cy_u": 0.28,
+        "rx_u": 0.05,
+        "ry_u": 0.04,
+        "fill": "spots",
+        "z": 2
+      },
+      {
+        "id": "spot_2",
+        "op": "ellipse",
+        "cx_u": 0.58,
+        "cy_u": 0.26,
+        "rx_u": 0.045,
+        "ry_u": 0.035,
+        "fill": "spots",
+        "z": 2
+      },
+      {
+        "id": "spot_3",
+        "op": "ellipse",
+        "cx_u": 0.5,
+        "cy_u": 0.2,
+        "rx_u": 0.04,
+        "ry_u": 0.03,
+        "fill": "spots",
+        "z": 2
+      },
+      {
+        "id": "sprout_cap",
+        "op": "ellipse",
+        "cx_u": 0.26,
+        "cy_u": 0.82,
+        "rx_u": 0.1,
+        "ry_u": 0.08,
+        "fill": "cap",
+        "sdf": true,
+        "z": 2
+      }
+    ],
+    "motion": {
+      "pulse": {
+        "default_frames": 4,
+        "sway_amplitude_u": 0.02
+      }
+    }
+  },
+  "rock_boulder": {
+    "id": "rock_boulder",
+    "name": "Rock Boulder (Crag / Ore Vein)",
+    "category": "nature",
+    "description": "Faceted mineral monolith with jagged chisel planes, lichen moss cap, and embedded gemstone ore nodes.",
+    "default_view": "front",
+    "subtypes": {
+      "granite_boulder": "Solid weathered grey granite rock with micro-cracks",
+      "mossy_crag": "Lush emerald moss-covered forest outcrop",
+      "ore_deposit": "Rich gold and ruby gemstone vein protruding from rock"
+    },
+    "layers": [
+      {
+        "id": "shadow",
+        "op": "ellipse",
+        "cx_u": 0.5,
+        "cy_u": 0.92,
+        "rx_u": 0.38,
+        "ry_u": 0.08,
+        "fill": "shadow",
+        "z": 0
+      },
+      {
+        "id": "boulder_body",
+        "op": "polygon",
+        "points_u": [
+          [
+            0.18,
+            0.88
+          ],
+          [
+            0.12,
+            0.52
+          ],
+          [
+            0.28,
+            0.22
+          ],
+          [
+            0.65,
+            0.18
+          ],
+          [
+            0.88,
+            0.48
+          ],
+          [
+            0.84,
+            0.88
+          ]
+        ],
+        "fill": "stone",
+        "sdf": true,
+        "z": 1,
+        "dither": "worley",
+        "shaderScale": 5.0
+      },
+      {
+        "id": "facet_ridge",
+        "op": "polygon",
+        "points_u": [
+          [
+            0.28,
+            0.22
+          ],
+          [
+            0.55,
+            0.48
+          ],
+          [
+            0.48,
+            0.88
+          ],
+          [
+            0.18,
+            0.88
+          ],
+          [
+            0.12,
+            0.52
+          ]
+        ],
+        "fill": "stone_dark",
+        "z": 1
+      },
+      {
+        "id": "moss_cap",
+        "op": "polygon",
+        "points_u": [
+          [
+            0.24,
+            0.24
+          ],
+          [
+            0.66,
+            0.2
+          ],
+          [
+            0.78,
+            0.36
+          ],
+          [
+            0.55,
+            0.4
+          ],
+          [
+            0.35,
+            0.38
+          ]
+        ],
+        "fill": "moss",
+        "sdf": true,
+        "z": 2
+      },
+      {
+        "id": "gem_node",
+        "op": "star",
+        "cx_u": 0.68,
+        "cy_u": 0.58,
+        "r_u": 0.08,
+        "n": 4,
+        "innerRatio": 0.45,
+        "fill": "gem",
+        "sdf": true,
+        "z": 2
+      }
+    ],
+    "motion": {
+      "glimmer": {
+        "default_frames": 4,
+        "sway_amplitude_u": 0.0
+      }
+    }
+  },
+  "weapon_bow": {
+    "id": "weapon_bow",
+    "name": "Weapon Bow (Recurve / Longbow)",
+    "category": "items",
+    "description": "Flexible arched stave limbs with wrapped leather riser grip, silk string, and nocked steel-tipped arrow.",
+    "default_view": "side",
+    "subtypes": {
+      "hunting_shortbow": "Compact lightweight wooden hunter bow",
+      "elven_recurve": "Graceful recurve bow with carved golden tips",
+      "composite_longbow": "Heavy composite warbow reinforced with horn"
+    },
+    "layers": [
+      {
+        "id": "shadow",
+        "op": "ellipse",
+        "cx_u": 0.5,
+        "cy_u": 0.95,
+        "rx_u": 0.18,
+        "ry_u": 0.05,
+        "fill": "shadow",
+        "z": 0
+      },
+      {
+        "id": "bow_limbs",
+        "op": "moon",
+        "cx_u": 0.42,
+        "cy_u": 0.5,
+        "r_u": 0.44,
+        "r2_u": 0.42,
+        "d_u": 0.12,
+        "angle": 0,
+        "fill": "wood",
+        "sdf": true,
+        "z": 1
+      },
+      {
+        "id": "riser_grip",
+        "op": "uneven_capsule",
+        "x1_u": 0.32,
+        "y1_u": 0.42,
+        "x2_u": 0.32,
+        "y2_u": 0.58,
+        "r1_u": 0.038,
+        "r2_u": 0.038,
+        "fill": "leather",
+        "sdf": true,
+        "z": 1
+      },
+      {
+        "id": "bowstring",
+        "op": "line",
+        "x1_u": 0.44,
+        "y1_u": 0.12,
+        "x2_u": 0.44,
+        "y2_u": 0.88,
+        "thickness": 1,
+        "color": "string",
+        "z": 2
+      },
+      {
+        "id": "arrow_shaft",
+        "op": "line",
+        "x1_u": 0.2,
+        "y1_u": 0.5,
+        "x2_u": 0.78,
+        "y2_u": 0.5,
+        "thickness": 1,
+        "color": "arrow_wood",
+        "z": 2
+      },
+      {
+        "id": "arrow_head",
+        "op": "polygon",
+        "points_u": [
+          [
+            0.76,
+            0.46
+          ],
+          [
+            0.88,
+            0.5
+          ],
+          [
+            0.76,
+            0.54
+          ]
+        ],
+        "fill": "steel",
+        "z": 2
+      },
+      {
+        "id": "arrow_fletching",
+        "op": "polygon",
+        "points_u": [
+          [
+            0.22,
+            0.45
+          ],
+          [
+            0.26,
+            0.5
+          ],
+          [
+            0.22,
+            0.55
+          ],
+          [
+            0.18,
+            0.5
+          ]
+        ],
+        "fill": "fletch",
+        "z": 2
+      }
+    ],
+    "motion": {
+      "draw": {
+        "default_frames": 4,
+        "sway_amplitude_u": 0.02
+      }
+    }
+  },
+  "weapon_staff": {
+    "id": "weapon_staff",
+    "name": "Weapon Staff (Arcane / Druid)",
+    "category": "items",
+    "description": "Carved mystic stave with twisted spiral shaft, metal bracket claws, and levitating arcane focus orb.",
+    "default_view": "front",
+    "subtypes": {
+      "wizard_staff": "Gilded arcane staff with glowing sapphire sphere",
+      "druid_oak_staff": "Twisted ancient oak branch entwined with ivy leaves",
+      "necromancer_staff": "Dark bone stave topped with a glowing soul gem"
+    },
+    "layers": [
+      {
+        "id": "shadow",
+        "op": "ellipse",
+        "cx_u": 0.5,
+        "cy_u": 0.95,
+        "rx_u": 0.16,
+        "ry_u": 0.05,
+        "fill": "shadow",
+        "z": 0
+      },
+      {
+        "id": "shaft",
+        "op": "uneven_capsule",
+        "x1_u": 0.5,
+        "y1_u": 0.92,
+        "x2_u": 0.5,
+        "y2_u": 0.26,
+        "r1_u": 0.035,
+        "r2_u": 0.04,
+        "fill": "wood",
+        "sdf": true,
+        "z": 1
+      },
+      {
+        "id": "grip_wrap",
+        "op": "uneven_capsule",
+        "x1_u": 0.5,
+        "y1_u": 0.55,
+        "x2_u": 0.5,
+        "y2_u": 0.65,
+        "r1_u": 0.045,
+        "r2_u": 0.045,
+        "fill": "leather",
+        "sdf": true,
+        "z": 1
+      },
+      {
+        "id": "prong_left",
+        "op": "vesica",
+        "cx_u": 0.42,
+        "cy_u": 0.22,
+        "rx_u": 0.035,
+        "ry_u": 0.08,
+        "angle": -25,
+        "fill": "gold",
+        "sdf": true,
+        "z": 1
+      },
+      {
+        "id": "prong_right",
+        "op": "vesica",
+        "cx_u": 0.58,
+        "cy_u": 0.22,
+        "rx_u": 0.035,
+        "ry_u": 0.08,
+        "angle": 25,
+        "fill": "gold",
+        "sdf": true,
+        "z": 1
+      },
+      {
+        "id": "mana_orb",
+        "op": "ellipse",
+        "cx_u": 0.5,
+        "cy_u": 0.16,
+        "rx_u": 0.09,
+        "ry_u": 0.09,
+        "fill": "gem",
+        "sdf": true,
+        "z": 2
+      },
+      {
+        "id": "orb_glint",
+        "op": "star",
+        "cx_u": 0.48,
+        "cy_u": 0.14,
+        "r_u": 0.04,
+        "n": 4,
+        "innerRatio": 0.4,
+        "fill": "white",
+        "z": 2
+      }
+    ],
+    "motion": {
+      "levitate": {
+        "default_frames": 4,
+        "sway_amplitude_u": 0.02
+      }
+    }
+  },
+  "armor_shield": {
+    "id": "armor_shield",
+    "name": "Armor Shield (Knight Kite / Buckler)",
+    "category": "items",
+    "description": "Hardened knight shield with riveted steel rim, curved heraldic faceplate, and central gold emblem boss.",
+    "default_view": "front",
+    "subtypes": {
+      "heater_shield": "Classic medieval heater shield with triangular base",
+      "round_buckler": "Light agile dueling buckler with heavy steel boss",
+      "tower_pavise": "Massive rectangular pavise shield with sight slit"
+    },
+    "layers": [
+      {
+        "id": "shadow",
+        "op": "ellipse",
+        "cx_u": 0.5,
+        "cy_u": 0.94,
+        "rx_u": 0.32,
+        "ry_u": 0.07,
+        "fill": "shadow",
+        "z": 0
+      },
+      {
+        "id": "shield_rim",
+        "op": "vesica",
+        "cx_u": 0.5,
+        "cy_u": 0.48,
+        "rx_u": 0.34,
+        "ry_u": 0.4,
+        "fill": "steel",
+        "sdf": true,
+        "z": 1
+      },
+      {
+        "id": "shield_face",
+        "op": "vesica",
+        "cx_u": 0.5,
+        "cy_u": 0.48,
+        "rx_u": 0.27,
+        "ry_u": 0.33,
+        "fill": "faceplate",
+        "sdf": true,
+        "z": 2,
+        "dither": "worley",
+        "shaderScale": 5.0
+      },
+      {
+        "id": "heraldic_cross",
+        "op": "star",
+        "cx_u": 0.5,
+        "cy_u": 0.48,
+        "r_u": 0.16,
+        "n": 4,
+        "innerRatio": 0.45,
+        "fill": "gold",
+        "sdf": true,
+        "z": 2
+      },
+      {
+        "id": "boss_center",
+        "op": "ellipse",
+        "cx_u": 0.5,
+        "cy_u": 0.48,
+        "rx_u": 0.05,
+        "ry_u": 0.05,
+        "fill": "ruby",
+        "sdf": true,
+        "z": 2
+      }
+    ],
+    "motion": {
+      "guard": {
+        "default_frames": 4,
+        "sway_amplitude_u": 0.015
+      }
+    }
+  },
+  "spell_lightning": {
+    "id": "spell_lightning",
+    "name": "Spell Lightning (Chain / Storm Arc)",
+    "category": "vfx",
+    "description": "Jagged high-energy electric plasma discharge with fractal fork branches, ionized glow corona, and impact spark burst.",
+    "default_view": "front",
+    "subtypes": {
+      "chain_lightning": "High-voltage branching arc connecting multiple targets",
+      "thunder_strike": "Vertical devastating lightning pillar from storm clouds",
+      "plasma_arc": "Crackling erratic blue-white sphere discharge"
+    },
+    "layers": [
+      {
+        "id": "ground_glow",
+        "op": "ellipse",
+        "cx_u": 0.5,
+        "cy_u": 0.9,
+        "rx_u": 0.25,
+        "ry_u": 0.08,
+        "fill": "plasma_glow",
+        "z": 0
+      },
+      {
+        "id": "trunk_arc",
+        "op": "polygon",
+        "points_u": [
+          [
+            0.5,
+            0.05
+          ],
+          [
+            0.44,
+            0.25
+          ],
+          [
+            0.56,
+            0.35
+          ],
+          [
+            0.38,
+            0.55
+          ],
+          [
+            0.52,
+            0.65
+          ],
+          [
+            0.42,
+            0.85
+          ],
+          [
+            0.5,
+            0.92
+          ],
+          [
+            0.54,
+            0.85
+          ],
+          [
+            0.46,
+            0.65
+          ],
+          [
+            0.6,
+            0.55
+          ],
+          [
+            0.48,
+            0.35
+          ],
+          [
+            0.58,
+            0.25
+          ]
+        ],
+        "fill": "plasma_core",
+        "sdf": true,
+        "z": 1
+      },
+      {
+        "id": "branch_left",
+        "op": "polygon",
+        "points_u": [
+          [
+            0.44,
+            0.25
+          ],
+          [
+            0.28,
+            0.38
+          ],
+          [
+            0.32,
+            0.42
+          ],
+          [
+            0.48,
+            0.35
+          ]
+        ],
+        "fill": "plasma_mid",
+        "z": 1
+      },
+      {
+        "id": "branch_right",
+        "op": "polygon",
+        "points_u": [
+          [
+            0.52,
+            0.65
+          ],
+          [
+            0.72,
+            0.72
+          ],
+          [
+            0.68,
+            0.76
+          ],
+          [
+            0.46,
+            0.68
+          ]
+        ],
+        "fill": "plasma_mid",
+        "z": 1
+      },
+      {
+        "id": "spark_burst",
+        "op": "star",
+        "cx_u": 0.5,
+        "cy_u": 0.92,
+        "r_u": 0.12,
+        "n": 6,
+        "innerRatio": 0.35,
+        "fill": "plasma_bright",
+        "z": 2
+      }
+    ],
+    "motion": {
+      "discharge": {
+        "default_frames": 4,
+        "sway_amplitude_u": 0.03
+      }
+    }
+  },
+  "spell_fireball": {
+    "id": "spell_fireball",
+    "name": "Spell Fireball (Meteor / Hellfire)",
+    "category": "vfx",
+    "description": "Roaring pyrotechnic projectile with swirling incandescent core, turbulent flame mantle, trailing smoke, and flying embers.",
+    "default_view": "side",
+    "subtypes": {
+      "meteor": "Dense burning cosmic rock shrouded in atmospheric plasma",
+      "hellfire": "Dark crimson infernal fire with black smoke tendrils",
+      "phoenix_flame": "Blazing solar flame bird bursting with golden sparks"
+    },
+    "layers": [
+      {
+        "id": "smoke_trail",
+        "op": "ellipse",
+        "cx_u": 0.22,
+        "cy_u": 0.5,
+        "rx_u": 0.22,
+        "ry_u": 0.18,
+        "fill": "smoke",
+        "z": 0
+      },
+      {
+        "id": "outer_flame",
+        "op": "vesica",
+        "cx_u": 0.45,
+        "cy_u": 0.5,
+        "rx_u": 0.36,
+        "ry_u": 0.24,
+        "angle": 0,
+        "fill": "flame_dark",
+        "sdf": true,
+        "z": 1
+      },
+      {
+        "id": "mid_flame",
+        "op": "vesica",
+        "cx_u": 0.52,
+        "cy_u": 0.5,
+        "rx_u": 0.26,
+        "ry_u": 0.17,
+        "angle": 0,
+        "fill": "flame_mid",
+        "sdf": true,
+        "z": 2
+      },
+      {
+        "id": "core_white",
+        "op": "ellipse",
+        "cx_u": 0.62,
+        "cy_u": 0.5,
+        "rx_u": 0.14,
+        "ry_u": 0.11,
+        "fill": "white",
+        "sdf": true,
+        "z": 2
+      },
+      {
+        "id": "ember_1",
+        "op": "pixels",
+        "color": "flame_mid",
+        "points_u": [
+          [
+            0.15,
+            0.4
+          ],
+          [
+            0.12,
+            0.58
+          ],
+          [
+            0.26,
+            0.32
+          ]
+        ],
+        "z": 2
+      }
+    ],
+    "motion": {
+      "blaze": {
+        "default_frames": 4,
+        "sway_amplitude_u": 0.04
+      }
+    }
+  },
+  "tile_grass": {
+    "id": "tile_grass",
+    "name": "Tile Grass Meadow (\u0422\u0440\u0430\u0432\u0430 - Seamless)",
+    "category": "tilesets",
+    "description": "Seamlessly wrap-tiling lush meadow tile with multi-tone turf, blade tuft clusters, and wildflower flecks.",
+    "default_view": "top",
+    "subtypes": {
+      "lush_meadow": "Vibrant emerald grass with yellow buttercups and white daisies",
+      "autumn_turf": "Dry golden-brown late autumn pasture grass",
+      "mossy_swamp": "Dark saturated marsh grass with moisture puddles"
+    },
+    "layers": [
+      {
+        "id": "grass_base",
+        "op": "rect",
+        "x_u": 0.0,
+        "y_u": 0.0,
+        "w_u": 1.0,
+        "h_u": 1.0,
+        "fill": "grass_base",
+        "sdf": true,
+        "z": 0,
+        "dither": "worley",
+        "shaderScale": 5.0
+      },
+      {
+        "id": "tuft_1",
+        "op": "vesica",
+        "cx_u": 0.25,
+        "cy_u": 0.3,
+        "rx_u": 0.05,
+        "ry_u": 0.12,
+        "angle": -15,
+        "fill": "grass_light",
+        "sdf": true,
+        "z": 1
+      },
+      {
+        "id": "tuft_2",
+        "op": "vesica",
+        "cx_u": 0.28,
+        "cy_u": 0.3,
+        "rx_u": 0.045,
+        "ry_u": 0.13,
+        "angle": 15,
+        "fill": "grass_light",
+        "sdf": true,
+        "z": 1
+      },
+      {
+        "id": "tuft_3",
+        "op": "vesica",
+        "cx_u": 0.72,
+        "cy_u": 0.22,
+        "rx_u": 0.05,
+        "ry_u": 0.12,
+        "angle": -10,
+        "fill": "grass_light",
+        "sdf": true,
+        "z": 1
+      },
+      {
+        "id": "tuft_4",
+        "op": "vesica",
+        "cx_u": 0.45,
+        "cy_u": 0.7,
+        "rx_u": 0.05,
+        "ry_u": 0.12,
+        "angle": 20,
+        "fill": "grass_light",
+        "sdf": true,
+        "z": 1
+      },
+      {
+        "id": "tuft_5",
+        "op": "vesica",
+        "cx_u": 0.85,
+        "cy_u": 0.8,
+        "rx_u": 0.045,
+        "ry_u": 0.11,
+        "angle": -15,
+        "fill": "grass_light",
+        "sdf": true,
+        "z": 1
+      },
+      {
+        "id": "flower_buttercup",
+        "op": "ellipse",
+        "cx_u": 0.38,
+        "cy_u": 0.45,
+        "rx_u": 0.035,
+        "ry_u": 0.035,
+        "fill": "flower_yellow",
+        "z": 2
+      },
+      {
+        "id": "flower_daisy",
+        "op": "ellipse",
+        "cx_u": 0.65,
+        "cy_u": 0.62,
+        "rx_u": 0.035,
+        "ry_u": 0.035,
+        "fill": "flower_white",
+        "z": 2
+      }
+    ]
+  },
+  "tile_dirt": {
+    "id": "tile_dirt",
+    "name": "Tile Dirt & Earth (\u0417\u0435\u043c\u043b\u044f - Seamless)",
+    "category": "tilesets",
+    "description": "Seamlessly wrap-tiling rich soil tile with organic humus texture, loam fissures, pebbles, and clay clods.",
+    "default_view": "top",
+    "subtypes": {
+      "rich_humus": "Dark moist fertile forest loam soil",
+      "arid_clay": "Dry red-orange cracked savanna earth",
+      "gravel_path": "Soil packed with small rounded river pebbles"
+    },
+    "layers": [
+      {
+        "id": "dirt_base",
+        "op": "rect",
+        "x_u": 0.0,
+        "y_u": 0.0,
+        "w_u": 1.0,
+        "h_u": 1.0,
+        "fill": "dirt_base",
+        "sdf": true,
+        "z": 0,
+        "dither": "worley",
+        "shaderScale": 4.5
+      },
+      {
+        "id": "fissure_crack",
+        "op": "bezier_sdf",
+        "points_u": [
+          [
+            0.15,
+            0.2
+          ],
+          [
+            0.45,
+            0.35
+          ],
+          [
+            0.65,
+            0.55
+          ]
+        ],
+        "r1_u": 0.025,
+        "r2_u": 0.015,
+        "fill": "dirt_dark",
+        "z": 1
+      },
+      {
+        "id": "fissure_crack_2",
+        "op": "bezier_sdf",
+        "points_u": [
+          [
+            0.7,
+            0.65
+          ],
+          [
+            0.85,
+            0.75
+          ],
+          [
+            0.92,
+            0.9
+          ]
+        ],
+        "r1_u": 0.022,
+        "r2_u": 0.012,
+        "fill": "dirt_dark",
+        "z": 1
+      },
+      {
+        "id": "pebble_1",
+        "op": "ellipse",
+        "cx_u": 0.35,
+        "cy_u": 0.65,
+        "rx_u": 0.05,
+        "ry_u": 0.035,
+        "fill": "pebble",
+        "sdf": true,
+        "z": 2
+      },
+      {
+        "id": "pebble_2",
+        "op": "ellipse",
+        "cx_u": 0.78,
+        "cy_u": 0.3,
+        "rx_u": 0.04,
+        "ry_u": 0.03,
+        "fill": "pebble",
+        "sdf": true,
+        "z": 2
+      },
+      {
+        "id": "clay_clod",
+        "op": "ellipse",
+        "cx_u": 0.52,
+        "cy_u": 0.82,
+        "rx_u": 0.065,
+        "ry_u": 0.045,
+        "fill": "dirt_warm",
+        "sdf": true,
+        "z": 1
+      }
+    ]
+  },
+  "tile_sand": {
+    "id": "tile_sand",
+    "name": "Tile Sand Dunes (\u041f\u0435\u0441\u043e\u043a - Seamless)",
+    "category": "tilesets",
+    "description": "Seamlessly wrap-tiling warm golden desert sand with gentle wind ripple lines and silica glints.",
+    "default_view": "top",
+    "subtypes": {
+      "desert_dunes": "Deep golden Sahara desert sand with warm rippled ridges",
+      "tropical_beach": "Pale soft coastal beach sand with shell flecks",
+      "red_canyon_sand": "Crimson Martian / canyon sandstone grain"
+    },
+    "layers": [
+      {
+        "id": "sand_base",
+        "op": "rect",
+        "x_u": 0.0,
+        "y_u": 0.0,
+        "w_u": 1.0,
+        "h_u": 1.0,
+        "fill": "sand_base",
+        "sdf": true,
+        "z": 0,
+        "dither": "worley",
+        "shaderScale": 6.5
+      },
+      {
+        "id": "dune_ripple_1",
+        "op": "bezier_sdf",
+        "points_u": [
+          [
+            0.05,
+            0.25
+          ],
+          [
+            0.5,
+            0.2
+          ],
+          [
+            0.95,
+            0.28
+          ]
+        ],
+        "r1_u": 0.035,
+        "r2_u": 0.025,
+        "fill": "sand_light",
+        "z": 1
+      },
+      {
+        "id": "dune_ripple_2",
+        "op": "bezier_sdf",
+        "points_u": [
+          [
+            0.05,
+            0.55
+          ],
+          [
+            0.45,
+            0.6
+          ],
+          [
+            0.95,
+            0.52
+          ]
+        ],
+        "r1_u": 0.035,
+        "r2_u": 0.025,
+        "fill": "sand_light",
+        "z": 1
+      },
+      {
+        "id": "dune_ripple_3",
+        "op": "bezier_sdf",
+        "points_u": [
+          [
+            0.05,
+            0.85
+          ],
+          [
+            0.55,
+            0.8
+          ],
+          [
+            0.95,
+            0.88
+          ]
+        ],
+        "r1_u": 0.035,
+        "r2_u": 0.025,
+        "fill": "sand_light",
+        "z": 1
+      },
+      {
+        "id": "silica_glints",
+        "op": "pixels",
+        "color": "white",
+        "points_u": [
+          [
+            0.22,
+            0.18
+          ],
+          [
+            0.72,
+            0.48
+          ],
+          [
+            0.38,
+            0.78
+          ],
+          [
+            0.82,
+            0.85
+          ]
+        ],
+        "z": 2
+      }
+    ]
+  },
+  "tile_stone": {
+    "id": "tile_stone",
+    "name": "Tile Stone Flagstones (\u041a\u0430\u043c\u0435\u043d\u044c - Seamless)",
+    "category": "tilesets",
+    "description": "Seamlessly wrap-tiling dungeon / castle flagstone floor with dark mortar grout joints and chisel bevels.",
+    "default_view": "top",
+    "subtypes": {
+      "dungeon_flagstones": "Chiseled slate grey slabs with damp mortar lines",
+      "ancient_ruins": "Cracked weathered stones with moss growing in crevices",
+      "cobblestone_road": "Rounded river cobbles paved for town streets"
+    },
+    "layers": [
+      {
+        "id": "mortar_bed",
+        "op": "rect",
+        "x_u": 0.0,
+        "y_u": 0.0,
+        "w_u": 1.0,
+        "h_u": 1.0,
+        "fill": "mortar",
+        "z": 0
+      },
+      {
+        "id": "slab_nw",
+        "op": "rect",
+        "x_u": 0.04,
+        "y_u": 0.04,
+        "w_u": 0.42,
+        "h_u": 0.42,
+        "fill": "stone_base",
+        "sdf": true,
+        "z": 1,
+        "dither": "worley",
+        "shaderScale": 4.0
+      },
+      {
+        "id": "slab_ne",
+        "op": "rect",
+        "x_u": 0.54,
+        "y_u": 0.04,
+        "w_u": 0.42,
+        "h_u": 0.42,
+        "fill": "stone_base",
+        "sdf": true,
+        "z": 1,
+        "dither": "worley",
+        "shaderScale": 4.0
+      },
+      {
+        "id": "slab_sw",
+        "op": "rect",
+        "x_u": 0.04,
+        "y_u": 0.54,
+        "w_u": 0.42,
+        "h_u": 0.42,
+        "fill": "stone_base",
+        "sdf": true,
+        "z": 1,
+        "dither": "worley",
+        "shaderScale": 4.0
+      },
+      {
+        "id": "slab_se",
+        "op": "rect",
+        "x_u": 0.54,
+        "y_u": 0.54,
+        "w_u": 0.42,
+        "h_u": 0.42,
+        "fill": "stone_base",
+        "sdf": true,
+        "z": 1,
+        "dither": "worley",
+        "shaderScale": 4.0
+      },
+      {
+        "id": "moss_fleck",
+        "op": "ellipse",
+        "cx_u": 0.48,
+        "cy_u": 0.48,
+        "rx_u": 0.06,
+        "ry_u": 0.06,
+        "fill": "moss",
+        "z": 2
+      }
+    ]
+  },
+  "tile_water": {
+    "id": "tile_water",
+    "name": "Tile Water Caustics (\u0412\u043e\u0434\u0430 - Seamless)",
+    "category": "tilesets",
+    "description": "Seamlessly wrap-tiling fluid water tile with animated caustic refraction loops and foam crests.",
+    "default_view": "top",
+    "subtypes": {
+      "ocean_azure": "Deep crystal azure sea with sunbeam caustic ripples",
+      "swamp_murk": "Dark olive-green murky bayou water with lilypad flecks",
+      "crystal_spring": "Bright cyan alpine spring with high-specular glints"
+    },
+    "layers": [
+      {
+        "id": "water_depth",
+        "op": "rect",
+        "x_u": 0.0,
+        "y_u": 0.0,
+        "w_u": 1.0,
+        "h_u": 1.0,
+        "fill": "water_deep",
+        "z": 0
+      },
+      {
+        "id": "caustic_ring_1",
+        "op": "ellipse",
+        "cx_u": 0.35,
+        "cy_u": 0.35,
+        "rx_u": 0.22,
+        "ry_u": 0.16,
+        "fill": "water_caustic",
+        "sdf": true,
+        "z": 1
+      },
+      {
+        "id": "caustic_ring_2",
+        "op": "ellipse",
+        "cx_u": 0.72,
+        "cy_u": 0.68,
+        "rx_u": 0.24,
+        "ry_u": 0.18,
+        "fill": "water_caustic",
+        "sdf": true,
+        "z": 1
+      },
+      {
+        "id": "foam_crest",
+        "op": "bezier_sdf",
+        "points_u": [
+          [
+            0.15,
+            0.65
+          ],
+          [
+            0.45,
+            0.55
+          ],
+          [
+            0.85,
+            0.75
+          ]
+        ],
+        "r1_u": 0.03,
+        "r2_u": 0.015,
+        "fill": "foam",
+        "z": 2
+      },
+      {
+        "id": "glints",
+        "op": "pixels",
+        "color": "white",
+        "points_u": [
+          [
+            0.35,
+            0.32
+          ],
+          [
+            0.72,
+            0.65
+          ]
+        ],
+        "z": 2
+      }
+    ],
+    "motion": {
+      "flow": {
+        "default_frames": 4,
+        "sway_amplitude_u": 0.02
+      }
+    }
+  }
 };
 
 window.DEFAULT_ARCHETYPE_PALETTES = {
@@ -2437,6 +4875,153 @@ window.DEFAULT_ARCHETYPE_PALETTES = {
     "dirt": "#5d4037",
     "stone": "#78909c",
     "stone_dark": "#37474f"
+  }
+,
+  "mythic_dragon": {
+    ".": "transparent",
+    "O": "#160a0a",
+    "scales": "#dc2626",
+    "scales_dark": "#991b1b",
+    "scales_accent": "#ea580c",
+    "membrane": "#f97316",
+    "membrane_dark": "#c2410c",
+    "white": "#ffffff"
+  },
+  "crawler_spider": {
+    ".": "transparent",
+    "O": "#0f0f14",
+    "chitin": "#334155",
+    "chitin_dark": "#1e293b",
+    "chitin_body": "#0f172a",
+    "chitin_head": "#1e293b",
+    "chitin_fangs": "#dc2626",
+    "white": "#ffffff"
+  },
+  "serpent_snake": {
+    ".": "transparent",
+    "O": "#0c170d",
+    "snake_head": "#16a34a",
+    "snake_hood": "#15803d",
+    "snake_scales": "#22c55e",
+    "snake_rattle": "#eab308",
+    "white": "#ffffff"
+  },
+  "golem_stone": {
+    ".": "transparent",
+    "O": "#111827",
+    "stone_body": "#64748b",
+    "stone_dark": "#334155",
+    "core": "#06b6d4",
+    "white": "#ffffff"
+  },
+  "plant_flower": {
+    ".": "transparent",
+    "O": "#141c14",
+    "stem": "#16a34a",
+    "foliage": "#22c55e",
+    "petal": "#f8fafc",
+    "core": "#eab308",
+    "white": "#ffffff",
+    "shadow": "#14182e38"
+  },
+  "mushroom_fungus": {
+    ".": "transparent",
+    "O": "#1c1414",
+    "stem": "#f1f5f9",
+    "veil": "#e2e8f0",
+    "cap": "#dc2626",
+    "gills": "#7f1d1d",
+    "spots": "#ffffff",
+    "shadow": "#14182e38"
+  },
+  "rock_boulder": {
+    ".": "transparent",
+    "O": "#181e24",
+    "stone": "#64748b",
+    "stone_dark": "#334155",
+    "moss": "#16a34a",
+    "gem": "#a855f7",
+    "white": "#ffffff",
+    "shadow": "#14182e38"
+  },
+  "weapon_bow": {
+    ".": "transparent",
+    "O": "#1c1612",
+    "wood": "#78350f",
+    "leather": "#451a03",
+    "string": "#e2e8f0",
+    "arrow_wood": "#a16207",
+    "steel": "#94a3b8",
+    "fletch": "#dc2626",
+    "shadow": "#14182e38"
+  },
+  "weapon_staff": {
+    ".": "transparent",
+    "O": "#1a1614",
+    "wood": "#78350f",
+    "leather": "#451a03",
+    "gold": "#eab308",
+    "gem": "#38bdf8",
+    "white": "#ffffff",
+    "shadow": "#14182e38"
+  },
+  "armor_shield": {
+    ".": "transparent",
+    "O": "#141724",
+    "steel": "#e2e8f0",
+    "faceplate": "#2563eb",
+    "gold": "#eab308",
+    "ruby": "#dc2626",
+    "shadow": "#14182e38"
+  },
+  "spell_lightning": {
+    ".": "transparent",
+    "O": "#0c1a2e",
+    "plasma_core": "#ffffff",
+    "plasma_bright": "#a5f3fc",
+    "plasma_mid": "#38bdf8",
+    "plasma_glow": "#0284c744"
+  },
+  "spell_fireball": {
+    ".": "transparent",
+    "O": "#1c0a0a",
+    "smoke": "#404040",
+    "flame_dark": "#7f1d1d",
+    "flame_mid": "#ea580c",
+    "white": "#ffffff"
+  },
+  "tile_grass": {
+    ".": "transparent",
+    "grass_base": "#15803d",
+    "grass_light": "#4ade80",
+    "flower_yellow": "#fde047",
+    "flower_white": "#f8fafc"
+  },
+  "tile_dirt": {
+    ".": "transparent",
+    "dirt_base": "#5c3d24",
+    "dirt_dark": "#3b2414",
+    "dirt_warm": "#784b2c",
+    "pebble": "#94a3b8"
+  },
+  "tile_sand": {
+    ".": "transparent",
+    "sand_base": "#d97706",
+    "sand_light": "#fbbf24",
+    "white": "#fffbeb"
+  },
+  "tile_stone": {
+    ".": "transparent",
+    "mortar": "#1e293b",
+    "stone_base": "#64748b",
+    "moss": "#16a34a"
+  },
+  "tile_water": {
+    ".": "transparent",
+    "water_deep": "#0369a1",
+    "water_caustic": "#38bdf8",
+    "foam": "#e0f2fe",
+    "white": "#ffffff"
   }
 };
 
@@ -2946,6 +5531,69 @@ window.ArchetypeCompiler = class ArchetypeCompiler {
             poseDeltas["wing_arm_far"] = { dAngle: wingFlap };
             poseDeltas["wing_fore_far"] = { dAngle: wingFold };
             poseDeltas["wing_tip_far"] = { dAngle: Math.round(wingFold * 0.7 * 10) / 10 };
+          } else if (archId === "mythic_dragon") {
+            const flapAmp = loco.wing_flap_amplitude_deg || 52.0;
+            const foldAmp = loco.wing_fold_amplitude_deg || 30.0;
+            const bobAmp = (loco.torso_bob_amplitude || 0.04) * height;
+            const wingFlap = Math.round(flapAmp * Math.sin(tRad) * 10) / 10;
+            const wingFold = Math.round(foldAmp * Math.max(0, Math.sin(tRad + 0.4)) * 10) / 10;
+            const tailSway = Math.round((loco.tail_sway_amplitude_deg || 14.0) * Math.sin(tRad - 0.8) * 10) / 10;
+
+            poseDeltas["pelvis"] = { dy: Math.round(-bobAmp * Math.sin(tRad) * 10) / 10 };
+            poseDeltas["neck"] = { dAngle: Math.round(-6.0 * Math.sin(tRad) * 10) / 10 };
+            poseDeltas["wing_arm_near"] = { dAngle: wingFlap };
+            poseDeltas["wing_finger_near"] = { dAngle: wingFold };
+            poseDeltas["wing_arm_far"] = { dAngle: wingFlap };
+            poseDeltas["wing_finger_far"] = { dAngle: wingFold };
+            poseDeltas["tail_base"] = { dAngle: tailSway };
+            poseDeltas["tail_mid"] = { dAngle: Math.round(tailSway * 1.2 * 10) / 10 };
+            poseDeltas["tail_tip"] = { dAngle: Math.round(tailSway * 1.4 * 10) / 10 };
+            poseDeltas["hind_thigh_near"] = { dAngle: Math.round(15.0 * Math.sin(tRad) * 10) / 10 };
+            poseDeltas["hind_thigh_far"] = { dAngle: Math.round(15.0 * Math.sin(tRad) * 10) / 10 };
+          } else if (archId === "crawler_spider") {
+            const legAmp = loco.leg_swing_amplitude_deg || 26.0;
+            const shinAmp = loco.shin_flex_amplitude_deg || 22.0;
+            const sw1 = Math.round(legAmp * Math.sin(tRad) * 10) / 10;
+            const sw2 = Math.round(legAmp * Math.sin(tRad + Math.PI) * 10) / 10;
+            const sh1 = Math.round(shinAmp * Math.max(0, Math.sin(tRad)) * 10) / 10;
+            const sh2 = Math.round(shinAmp * Math.max(0, Math.sin(tRad + Math.PI)) * 10) / 10;
+
+            poseDeltas["leg_f1_thigh"] = { dAngle: sw1 };
+            poseDeltas["leg_f1_shin"] = { dAngle: sh1 };
+            poseDeltas["leg_f3_thigh"] = { dAngle: sw1 };
+            poseDeltas["leg_f3_shin"] = { dAngle: sh1 };
+            poseDeltas["leg_n2_thigh"] = { dAngle: sw1 };
+            poseDeltas["leg_n2_shin"] = { dAngle: -sh1 };
+            poseDeltas["leg_n4_thigh"] = { dAngle: sw1 };
+            poseDeltas["leg_n4_shin"] = { dAngle: -sh1 };
+
+            poseDeltas["leg_f2_thigh"] = { dAngle: sw2 };
+            poseDeltas["leg_f2_shin"] = { dAngle: sh2 };
+            poseDeltas["leg_f4_thigh"] = { dAngle: sw2 };
+            poseDeltas["leg_f4_shin"] = { dAngle: sh2 };
+            poseDeltas["leg_n1_thigh"] = { dAngle: sw2 };
+            poseDeltas["leg_n1_shin"] = { dAngle: -sh2 };
+            poseDeltas["leg_n3_thigh"] = { dAngle: sw2 };
+            poseDeltas["leg_n3_shin"] = { dAngle: -sh2 };
+          } else if (archId === "serpent_snake") {
+            const waveAmp = loco.wave_amplitude_deg || 25.0;
+            const step = loco.wave_phase_step || 0.85;
+            poseDeltas["seg1_head"] = { dAngle: Math.round(waveAmp * 0.5 * Math.sin(tRad) * 10) / 10 };
+            poseDeltas["seg2_hood"] = { dAngle: Math.round(waveAmp * Math.sin(tRad - step) * 10) / 10 };
+            poseDeltas["seg3_body1"] = { dAngle: Math.round(waveAmp * Math.sin(tRad - step * 2) * 10) / 10 };
+            poseDeltas["seg4_body2"] = { dAngle: Math.round(waveAmp * Math.sin(tRad - step * 3) * 10) / 10 };
+            poseDeltas["seg5_tail1"] = { dAngle: Math.round(waveAmp * Math.sin(tRad - step * 4) * 10) / 10 };
+            poseDeltas["seg6_tail2"] = { dAngle: Math.round(waveAmp * 1.3 * Math.sin(tRad - step * 5) * 10) / 10 };
+          } else if (archId === "golem_stone") {
+            const fistSw = loco.fist_swing_deg || 24.0;
+            const legSw = loco.leg_swing_deg || 22.0;
+            const bobAmp = (loco.stomp_bob_amplitude || 0.035) * height;
+
+            poseDeltas["pelvis"] = { dy: Math.round(-bobAmp * Math.abs(Math.sin(tRad * 2.0)) * 10) / 10 };
+            poseDeltas["shoulder_near"] = { dAngle: Math.round(fistSw * Math.sin(tRad) * 10) / 10 };
+            poseDeltas["shoulder_far"] = { dAngle: Math.round(-fistSw * Math.sin(tRad) * 10) / 10 };
+            poseDeltas["leg_near_thigh"] = { dAngle: Math.round(-legSw * Math.sin(tRad) * 10) / 10 };
+            poseDeltas["leg_far_thigh"] = { dAngle: Math.round(legSw * Math.sin(tRad) * 10) / 10 };
           }
 
           framesList.push({ pose: poseDeltas });

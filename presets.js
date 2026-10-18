@@ -8901,6 +8901,2748 @@ window.PIXEL_PRESETS["magma_rock_48x48"] = {
 }
 };
 
+
+// Auto-synced by pixeldsl.py CLI
+window.PIXEL_PRESETS["proc_grass_tile_s42_32x32"] = {
+  label: "proc_grass_tile_s42_32x32",
+  prompt: "Procedural grass_tile (seed=42, 32x32) — 100% LLM-Free PixelDSL v3.0",
+  data: {
+  "name": "proc_grass_tile_s42_32x32",
+  "prompt": "Procedural grass_tile (seed=42, 32x32) — 100% LLM-Free PixelDSL v3.0",
+  "width": 32,
+  "height": 32,
+  "symmetry": "none",
+  "rle": false,
+  "ramps": {
+    "M": {
+      "base": "#4d8400",
+      "light": "L",
+      "dark": "D",
+      "outline": "O"
+    },
+    "A": {
+      "base": "#5ec02e",
+      "light": "W",
+      "dark": "B",
+      "outline": "O"
+    },
+    "S": {
+      "base": "#c6b59b",
+      "light": "w",
+      "dark": "d",
+      "outline": "O"
+    },
+    "H": {
+      "base": "#8c4a11",
+      "light": "h",
+      "dark": "b",
+      "outline": "O"
+    }
+  },
+  "palette": {
+    ".": "transparent",
+    "O": "#14182e",
+    "e": "#0e101c",
+    "w": "#ffffff",
+    "a": "#14182e44",
+    "y": "#fde047",
+    "f": "#f8fafc"
+  },
+  "postProcess": {
+    "autoOutline": false,
+    "outlineColor": "#14182e",
+    "autoShading": false,
+    "shadingStrength": 0.16,
+    "sdfShading": true,
+    "selOut": true
+  },
+  "layers": [
+    {
+      "id": "turf_base",
+      "op": "rect",
+      "x": 0,
+      "y": 0,
+      "w": 32,
+      "h": 32,
+      "fill": "M",
+      "sdf": true,
+      "dither": "worley",
+      "shaderScale": 5.5,
+      "seed": 42
+    },
+    {
+      "id": "tuft_1",
+      "op": "vesica",
+      "cx": 8.5,
+      "cy": 9.5,
+      "rx": 2.0,
+      "ry": 4.5,
+      "angle": -15,
+      "fill": "A",
+      "sdf": true
+    },
+    {
+      "id": "tuft_2",
+      "op": "vesica",
+      "cx": 23.5,
+      "cy": 8.5,
+      "rx": 1.8,
+      "ry": 4.2,
+      "angle": 12,
+      "fill": "A",
+      "sdf": true
+    },
+    {
+      "id": "tuft_3",
+      "op": "vesica",
+      "cx": 13.5,
+      "cy": 21.5,
+      "rx": 2.2,
+      "ry": 4.8,
+      "angle": -8,
+      "fill": "A",
+      "sdf": true
+    },
+    {
+      "id": "tuft_4",
+      "op": "vesica",
+      "cx": 24.5,
+      "cy": 23.5,
+      "rx": 1.9,
+      "ry": 4.0,
+      "angle": 18,
+      "fill": "A",
+      "sdf": true
+    },
+    {
+      "id": "flower_1",
+      "op": "ellipse",
+      "cx": 10.5,
+      "cy": 17.5,
+      "rx": 1.2,
+      "ry": 1.2,
+      "fill": "y"
+    },
+    {
+      "id": "flower_2",
+      "op": "ellipse",
+      "cx": 19.5,
+      "cy": 18.5,
+      "rx": 1.2,
+      "ry": 1.2,
+      "fill": "f"
+    }
+  ],
+  "frames": [],
+  "grid": []
+}
+};
+
+
+// Auto-synced by pixeldsl.py CLI
+window.PIXEL_PRESETS["proc_boulder_s42_32x32"] = {
+  label: "proc_boulder_s42_32x32",
+  prompt: "Procedural boulder (seed=42, 32x32) — 100% LLM-Free PixelDSL v3.0",
+  data: {
+  "name": "proc_boulder_s42_32x32",
+  "prompt": "Procedural boulder (seed=42, 32x32) — 100% LLM-Free PixelDSL v3.0",
+  "width": 32,
+  "height": 32,
+  "symmetry": "none",
+  "rle": false,
+  "ramps": {
+    "M": {
+      "base": "#00bef1",
+      "light": "L",
+      "dark": "D",
+      "outline": "O"
+    },
+    "A": {
+      "base": "#ff6537",
+      "light": "W",
+      "dark": "B",
+      "outline": "O"
+    },
+    "S": {
+      "base": "#c6b59b",
+      "light": "w",
+      "dark": "d",
+      "outline": "O"
+    },
+    "H": {
+      "base": "#8c4a11",
+      "light": "h",
+      "dark": "b",
+      "outline": "O"
+    }
+  },
+  "palette": {
+    ".": "transparent",
+    "O": "#14182e",
+    "e": "#0e101c",
+    "w": "#ffffff",
+    "a": "#14182e44"
+  },
+  "postProcess": {
+    "autoOutline": false,
+    "outlineColor": "#14182e",
+    "autoShading": false,
+    "shadingStrength": 0.16,
+    "sdfShading": true,
+    "selOut": true
+  },
+  "layers": [
+    {
+      "id": "shadow",
+      "op": "ellipse",
+      "cx": 15.5,
+      "cy": 28.5,
+      "rx": 11.0,
+      "ry": 2.2,
+      "fill": "a"
+    },
+    {
+      "id": "rock_body",
+      "op": "polygon",
+      "points": [
+        [
+          5.0,
+          27.0
+        ],
+        [
+          4.0,
+          14.5
+        ],
+        [
+          12.5,
+          6.0
+        ],
+        [
+          21.5,
+          5.0
+        ],
+        [
+          28.0,
+          17.5
+        ],
+        [
+          26.0,
+          27.0
+        ]
+      ],
+      "fill": "M",
+      "outline": "O",
+      "sdf": true,
+      "dither": "worley",
+      "shaderScale": 5.0,
+      "seed": 42
+    },
+    {
+      "id": "chisel_facet",
+      "op": "polygon",
+      "points": [
+        [
+          12.5,
+          6.0
+        ],
+        [
+          18.5,
+          15.5
+        ],
+        [
+          15.5,
+          27.0
+        ],
+        [
+          5.0,
+          27.0
+        ],
+        [
+          4.0,
+          14.5
+        ]
+      ],
+      "fill": "S",
+      "sdf": true
+    },
+    {
+      "id": "moss_cap",
+      "op": "ellipse",
+      "cx": 16.5,
+      "cy": 7.0,
+      "rx": 8.5,
+      "ry": 3.2,
+      "fill": "H",
+      "outline": "O",
+      "sdf": true,
+      "domainWarp": {
+        "amp": 1.2,
+        "freq": 0.3,
+        "seed": 42
+      }
+    },
+    {
+      "id": "ore_gem",
+      "op": "star",
+      "cx": 21.5,
+      "cy": 18.5,
+      "r": 2.8,
+      "n": 4,
+      "innerRatio": 0.5,
+      "fill": "A",
+      "outline": "O",
+      "sdf": true
+    }
+  ],
+  "frames": [],
+  "grid": []
+}
+};
+
+
+// Auto-synced by pixeldsl.py CLI
+window.PIXEL_PRESETS["proc_bow_s42_32x32"] = {
+  label: "proc_bow_s42_32x32",
+  prompt: "Procedural bow (seed=42, 32x32) — 100% LLM-Free PixelDSL v3.0",
+  data: {
+  "name": "proc_bow_s42_32x32",
+  "prompt": "Procedural bow (seed=42, 32x32) — 100% LLM-Free PixelDSL v3.0",
+  "width": 32,
+  "height": 32,
+  "symmetry": "none",
+  "rle": false,
+  "ramps": {
+    "M": {
+      "base": "#00bef1",
+      "light": "L",
+      "dark": "D",
+      "outline": "O"
+    },
+    "A": {
+      "base": "#ff6537",
+      "light": "W",
+      "dark": "B",
+      "outline": "O"
+    },
+    "S": {
+      "base": "#c6b59b",
+      "light": "w",
+      "dark": "d",
+      "outline": "O"
+    },
+    "H": {
+      "base": "#8c4a11",
+      "light": "h",
+      "dark": "b",
+      "outline": "O"
+    }
+  },
+  "palette": {
+    ".": "transparent",
+    "O": "#14182e",
+    "e": "#0e101c",
+    "w": "#ffffff",
+    "a": "#14182e44"
+  },
+  "postProcess": {
+    "autoOutline": false,
+    "outlineColor": "#14182e",
+    "autoShading": false,
+    "shadingStrength": 0.16,
+    "sdfShading": true,
+    "selOut": true
+  },
+  "layers": [
+    {
+      "id": "shadow",
+      "op": "ellipse",
+      "cx": 15.5,
+      "cy": 29.0,
+      "rx": 6.0,
+      "ry": 1.5,
+      "fill": "a"
+    },
+    {
+      "id": "stave",
+      "op": "moon",
+      "cx": 11.5,
+      "cy": 15.5,
+      "r": 13.0,
+      "r2": 12.0,
+      "d": 3.5,
+      "angle": 0,
+      "fill": "H",
+      "outline": "O",
+      "sdf": true
+    },
+    {
+      "id": "handle",
+      "op": "uneven_capsule",
+      "x1": 8.5,
+      "y1": 12.5,
+      "x2": 8.5,
+      "y2": 18.5,
+      "r1": 1.8,
+      "r2": 1.8,
+      "fill": "A",
+      "outline": "O",
+      "sdf": true
+    },
+    {
+      "id": "bowstring",
+      "op": "line",
+      "x1": 11.5,
+      "y1": 4.0,
+      "x2": 11.5,
+      "y2": 27.0,
+      "thickness": 1,
+      "color": "w"
+    },
+    {
+      "id": "arrow_shaft",
+      "op": "line",
+      "x1": 5.5,
+      "y1": 15.5,
+      "x2": 27.0,
+      "y2": 15.5,
+      "thickness": 1,
+      "color": "H"
+    },
+    {
+      "id": "arrow_head",
+      "op": "polygon",
+      "points": [
+        [
+          25.0,
+          13.5
+        ],
+        [
+          28.0,
+          15.5
+        ],
+        [
+          25.0,
+          17.5
+        ]
+      ],
+      "fill": "S",
+      "outline": "O"
+    }
+  ],
+  "frames": [],
+  "grid": []
+}
+};
+
+
+// Auto-synced by pixeldsl.py CLI
+window.PIXEL_PRESETS["proc_bunny_s999_32x32"] = {
+  label: "proc_bunny_s999_32x32",
+  prompt: "Procedural bunny (seed=999, 32x32) — 100% LLM-Free PixelDSL v3.0",
+  data: {
+  "name": "proc_bunny_s999_32x32",
+  "prompt": "Procedural bunny (seed=999, 32x32) — 100% LLM-Free PixelDSL v3.0",
+  "width": 32,
+  "height": 32,
+  "symmetry": "none",
+  "rle": false,
+  "ramps": {
+    "M": {
+      "base": "#e04ba0",
+      "light": "L",
+      "dark": "D",
+      "outline": "O"
+    },
+    "A": {
+      "base": "#00cfdd",
+      "light": "W",
+      "dark": "B",
+      "outline": "O"
+    },
+    "S": {
+      "base": "#9bbfc5",
+      "light": "w",
+      "dark": "d",
+      "outline": "O"
+    },
+    "H": {
+      "base": "#8c4a11",
+      "light": "h",
+      "dark": "b",
+      "outline": "O"
+    }
+  },
+  "palette": {
+    ".": "transparent",
+    "O": "#14182e",
+    "e": "#0e101c",
+    "w": "#ffffff",
+    "a": "#14182e44"
+  },
+  "postProcess": {
+    "autoOutline": false,
+    "outlineColor": "#14182e",
+    "autoShading": false,
+    "shadingStrength": 0.16,
+    "sdfShading": true,
+    "selOut": true
+  },
+  "layers": [
+    {
+      "id": "shadow",
+      "op": "ellipse",
+      "cx": 15.5,
+      "cy": 28.5,
+      "rx": 8.5,
+      "ry": 1.5,
+      "fill": "a"
+    },
+    {
+      "id": "ear_back",
+      "op": "uneven_capsule",
+      "x1": 16.5,
+      "y1": 12.5,
+      "x2": 13.5,
+      "y2": 5.5,
+      "r1": 2.1,
+      "r2": 1.4,
+      "fill": "A",
+      "outline": "O",
+      "sdf": true,
+      "parent": "body"
+    },
+    {
+      "id": "tail",
+      "op": "ellipse",
+      "cx": 6.5,
+      "cy": 20.0,
+      "rx": 2.6,
+      "ry": 2.6,
+      "fill": "S",
+      "outline": "O",
+      "sdf": true,
+      "parent": "body"
+    },
+    {
+      "id": "body",
+      "op": "ellipse",
+      "cx": 15.5,
+      "cy": 20.0,
+      "rx": 6.2,
+      "ry": 5.0,
+      "angle": -8,
+      "fill": "S",
+      "outline": "O",
+      "sdf": true,
+      "smoothBlend": 2.0,
+      "z": 1
+    },
+    {
+      "id": "thigh",
+      "op": "ellipse",
+      "cx": 11.0,
+      "cy": 21.0,
+      "rx": 4.8,
+      "ry": 3.8,
+      "angle": -10,
+      "fill": "S",
+      "outline": "O",
+      "sdf": true,
+      "smoothBlend": 1.8,
+      "z": 2,
+      "crease": true,
+      "parent": "body"
+    },
+    {
+      "id": "head",
+      "op": "ellipse",
+      "cx": 20.0,
+      "cy": 14.5,
+      "rx": 4.8,
+      "ry": 4.5,
+      "fill": "S",
+      "outline": "O",
+      "sdf": true,
+      "smoothBlend": 1.6,
+      "z": 1,
+      "parent": "body"
+    },
+    {
+      "id": "ear_front",
+      "op": "uneven_capsule",
+      "x1": 19.0,
+      "y1": 12.5,
+      "x2": 16.5,
+      "y2": 5.5,
+      "r1": 2.2,
+      "r2": 1.5,
+      "fill": "S",
+      "outline": "O",
+      "sdf": true,
+      "smoothBlend": 1.4,
+      "z": 2,
+      "crease": true,
+      "parent": "body"
+    },
+    {
+      "id": "eye",
+      "op": "ellipse",
+      "cx": 22.0,
+      "cy": 13.5,
+      "rx": 1.3,
+      "ry": 1.6,
+      "fill": "e",
+      "parent": "body"
+    }
+  ],
+  "frames": [],
+  "grid": [],
+  "motion": {
+    "type": "jump_arc",
+    "frames": 4,
+    "amplitude": 1.0,
+    "squash": 0.1
+  }
+}
+};
+
+
+// Auto-synced by pixeldsl.py CLI
+window.PIXEL_PRESETS["proc_dirt_tile_s101_32x32"] = {
+  label: "proc_dirt_tile_s101_32x32",
+  prompt: "Procedural dirt_tile (seed=101, 32x32) — 100% LLM-Free PixelDSL v3.0",
+  data: {
+  "name": "proc_dirt_tile_s101_32x32",
+  "prompt": "Procedural dirt_tile (seed=101, 32x32) — 100% LLM-Free PixelDSL v3.0",
+  "width": 32,
+  "height": 32,
+  "symmetry": "none",
+  "rle": false,
+  "ramps": {
+    "M": {
+      "base": "#7d3500",
+      "light": "L",
+      "dark": "D",
+      "outline": "O"
+    },
+    "A": {
+      "base": "#a74a04",
+      "light": "W",
+      "dark": "B",
+      "outline": "O"
+    },
+    "S": {
+      "base": "#adb7d2",
+      "light": "w",
+      "dark": "d",
+      "outline": "O"
+    },
+    "H": {
+      "base": "#8c4a11",
+      "light": "h",
+      "dark": "b",
+      "outline": "O"
+    }
+  },
+  "palette": {
+    ".": "transparent",
+    "O": "#14182e",
+    "e": "#0e101c",
+    "w": "#ffffff",
+    "a": "#14182e44",
+    "p": "#94a3b8",
+    "d": "#382014"
+  },
+  "postProcess": {
+    "autoOutline": false,
+    "outlineColor": "#14182e",
+    "autoShading": false,
+    "shadingStrength": 0.16,
+    "sdfShading": true,
+    "selOut": true
+  },
+  "layers": [
+    {
+      "id": "soil_base",
+      "op": "rect",
+      "x": 0,
+      "y": 0,
+      "w": 32,
+      "h": 32,
+      "fill": "M",
+      "sdf": true,
+      "dither": "worley",
+      "shaderScale": 4.5,
+      "seed": 101
+    },
+    {
+      "id": "crack_1",
+      "op": "bezier_sdf",
+      "points": [
+        [
+          5.0,
+          7.0
+        ],
+        [
+          13.5,
+          12.5
+        ],
+        [
+          19.5,
+          21.5
+        ]
+      ],
+      "r1": 1.2,
+      "r2": 0.7,
+      "fill": "d"
+    },
+    {
+      "id": "pebble_1",
+      "op": "ellipse",
+      "cx": 8.5,
+      "cy": 21.5,
+      "rx": 2.0,
+      "ry": 1.4,
+      "fill": "p",
+      "outline": "O",
+      "sdf": true
+    },
+    {
+      "id": "pebble_2",
+      "op": "ellipse",
+      "cx": 23.5,
+      "cy": 9.5,
+      "rx": 1.6,
+      "ry": 1.2,
+      "fill": "p",
+      "outline": "O",
+      "sdf": true
+    },
+    {
+      "id": "clay_patch",
+      "op": "ellipse",
+      "cx": 17.5,
+      "cy": 9.5,
+      "rx": 4.5,
+      "ry": 3.2,
+      "fill": "A",
+      "sdf": true
+    }
+  ],
+  "frames": [],
+  "grid": []
+}
+};
+
+
+// Auto-synced by pixeldsl.py CLI
+window.PIXEL_PRESETS["proc_dragon_s42_48x48"] = {
+  label: "proc_dragon_s42_48x48",
+  prompt: "Procedural dragon (seed=42, 48x48) — 100% LLM-Free PixelDSL v3.0",
+  data: {
+  "name": "proc_dragon_s42_48x48",
+  "prompt": "Procedural dragon (seed=42, 48x48) — 100% LLM-Free PixelDSL v3.0",
+  "width": 48,
+  "height": 48,
+  "symmetry": "none",
+  "rle": false,
+  "ramps": {
+    "M": {
+      "base": "#00bef1",
+      "light": "L",
+      "dark": "D",
+      "outline": "O"
+    },
+    "A": {
+      "base": "#ff6537",
+      "light": "W",
+      "dark": "B",
+      "outline": "O"
+    },
+    "S": {
+      "base": "#c6b59b",
+      "light": "w",
+      "dark": "d",
+      "outline": "O"
+    },
+    "H": {
+      "base": "#8c4a11",
+      "light": "h",
+      "dark": "b",
+      "outline": "O"
+    }
+  },
+  "palette": {
+    ".": "transparent",
+    "O": "#14182e",
+    "e": "#0e101c",
+    "w": "#ffffff",
+    "a": "#14182e44"
+  },
+  "postProcess": {
+    "autoOutline": false,
+    "outlineColor": "#14182e",
+    "autoShading": false,
+    "shadingStrength": 0.16,
+    "sdfShading": true,
+    "selOut": true
+  },
+  "layers": [
+    {
+      "id": "shadow",
+      "op": "ellipse",
+      "cx": 23.5,
+      "cy": 43.5,
+      "rx": 16.5,
+      "ry": 3.3,
+      "fill": "a"
+    },
+    {
+      "id": "wing_far",
+      "op": "moon",
+      "cx": 13.0,
+      "cy": 14.5,
+      "r": 15.0,
+      "r2": 11.3,
+      "d": 5.3,
+      "angle": -115,
+      "fill": "A",
+      "outline": "O",
+      "sdf": true,
+      "z": 0
+    },
+    {
+      "id": "tail",
+      "op": "bezier_sdf",
+      "points": [
+        [
+          13.0,
+          26.5
+        ],
+        [
+          5.5,
+          29.5
+        ],
+        [
+          4.0,
+          20.5
+        ]
+      ],
+      "r1": 4.2,
+      "r2": 1.5,
+      "fill": "M",
+      "outline": "O",
+      "sdf": true,
+      "z": 1
+    },
+    {
+      "id": "body",
+      "op": "ellipse",
+      "cx": 23.5,
+      "cy": 25.0,
+      "rx": 10.2,
+      "ry": 8.3,
+      "fill": "M",
+      "outline": "O",
+      "sdf": true,
+      "z": 1
+    },
+    {
+      "id": "neck",
+      "op": "uneven_capsule",
+      "x1": 28.0,
+      "y1": 22.0,
+      "x2": 35.5,
+      "y2": 13.0,
+      "r1": 5.3,
+      "r2": 4.2,
+      "fill": "M",
+      "outline": "O",
+      "sdf": true,
+      "z": 1
+    },
+    {
+      "id": "head",
+      "op": "uneven_capsule",
+      "x1": 35.5,
+      "y1": 13.0,
+      "x2": 41.5,
+      "y2": 14.5,
+      "r1": 4.5,
+      "r2": 2.4,
+      "fill": "M",
+      "outline": "O",
+      "sdf": true,
+      "z": 1
+    },
+    {
+      "id": "horns",
+      "op": "moon",
+      "cx": 35.5,
+      "cy": 8.5,
+      "r": 5.3,
+      "r2": 4.2,
+      "d": 1.8,
+      "angle": -60,
+      "fill": "S",
+      "outline": "O",
+      "sdf": true,
+      "z": 1
+    },
+    {
+      "id": "wing_near",
+      "op": "moon",
+      "cx": 26.5,
+      "cy": 13.0,
+      "r": 16.5,
+      "r2": 12.8,
+      "d": 5.7,
+      "angle": -115,
+      "fill": "M",
+      "outline": "O",
+      "sdf": true,
+      "crease": true,
+      "z": 2
+    },
+    {
+      "id": "eye",
+      "op": "pixels",
+      "color": "w",
+      "points": [
+        [
+          37,
+          13
+        ]
+      ]
+    }
+  ],
+  "frames": [],
+  "grid": [],
+  "motion": {
+    "type": "idle_breathe",
+    "frames": 4,
+    "amplitude": 1.0,
+    "squash": 0.05
+  }
+}
+};
+
+
+// Auto-synced by pixeldsl.py CLI
+window.PIXEL_PRESETS["proc_fireball_s42_32x32"] = {
+  label: "proc_fireball_s42_32x32",
+  prompt: "Procedural fireball (seed=42, 32x32) — 100% LLM-Free PixelDSL v3.0",
+  data: {
+  "name": "proc_fireball_s42_32x32",
+  "prompt": "Procedural fireball (seed=42, 32x32) — 100% LLM-Free PixelDSL v3.0",
+  "width": 32,
+  "height": 32,
+  "symmetry": "none",
+  "rle": false,
+  "ramps": {
+    "M": {
+      "base": "#00bef1",
+      "light": "L",
+      "dark": "D",
+      "outline": "O"
+    },
+    "A": {
+      "base": "#ff6537",
+      "light": "W",
+      "dark": "B",
+      "outline": "O"
+    },
+    "S": {
+      "base": "#c6b59b",
+      "light": "w",
+      "dark": "d",
+      "outline": "O"
+    },
+    "H": {
+      "base": "#8c4a11",
+      "light": "h",
+      "dark": "b",
+      "outline": "O"
+    }
+  },
+  "palette": {
+    ".": "transparent",
+    "O": "#14182e",
+    "e": "#0e101c",
+    "w": "#ffffff",
+    "a": "#14182e44"
+  },
+  "postProcess": {
+    "autoOutline": false,
+    "outlineColor": "#14182e",
+    "autoShading": false,
+    "shadingStrength": 0.16,
+    "sdfShading": true,
+    "selOut": true
+  },
+  "layers": [
+    {
+      "id": "smoke",
+      "op": "ellipse",
+      "cx": 8.5,
+      "cy": 15.5,
+      "rx": 6.5,
+      "ry": 5.5,
+      "fill": "a"
+    },
+    {
+      "id": "outer_flame",
+      "op": "vesica",
+      "cx": 14.5,
+      "cy": 15.5,
+      "rx": 11.0,
+      "ry": 7.5,
+      "angle": 0,
+      "fill": "M",
+      "outline": "O",
+      "sdf": true
+    },
+    {
+      "id": "mid_flame",
+      "op": "vesica",
+      "cx": 17.5,
+      "cy": 15.5,
+      "rx": 8.0,
+      "ry": 5.5,
+      "angle": 0,
+      "fill": "A",
+      "outline": "O",
+      "sdf": true
+    },
+    {
+      "id": "core",
+      "op": "ellipse",
+      "cx": 19.5,
+      "cy": 15.5,
+      "rx": 4.2,
+      "ry": 3.5,
+      "fill": "w",
+      "sdf": true
+    },
+    {
+      "id": "spark",
+      "op": "pixels",
+      "color": "w",
+      "points": [
+        [
+          8,
+          12
+        ],
+        [
+          6,
+          19
+        ]
+      ]
+    }
+  ],
+  "frames": [],
+  "grid": [],
+  "motion": {
+    "type": "idle_breathe",
+    "frames": 4,
+    "amplitude": 0.8,
+    "squash": 0.08
+  }
+}
+};
+
+
+// Auto-synced by pixeldsl.py CLI
+window.PIXEL_PRESETS["proc_flower_s42_32x32"] = {
+  label: "proc_flower_s42_32x32",
+  prompt: "Procedural flower (seed=42, 32x32) — 100% LLM-Free PixelDSL v3.0",
+  data: {
+  "name": "proc_flower_s42_32x32",
+  "prompt": "Procedural flower (seed=42, 32x32) — 100% LLM-Free PixelDSL v3.0",
+  "width": 32,
+  "height": 32,
+  "symmetry": "none",
+  "rle": false,
+  "ramps": {
+    "M": {
+      "base": "#00bef1",
+      "light": "L",
+      "dark": "D",
+      "outline": "O"
+    },
+    "A": {
+      "base": "#ff6537",
+      "light": "W",
+      "dark": "B",
+      "outline": "O"
+    },
+    "S": {
+      "base": "#c6b59b",
+      "light": "w",
+      "dark": "d",
+      "outline": "O"
+    },
+    "H": {
+      "base": "#8c4a11",
+      "light": "h",
+      "dark": "b",
+      "outline": "O"
+    }
+  },
+  "palette": {
+    ".": "transparent",
+    "O": "#14182e",
+    "e": "#0e101c",
+    "w": "#ffffff",
+    "a": "#14182e44",
+    "y": "#fde047"
+  },
+  "postProcess": {
+    "autoOutline": false,
+    "outlineColor": "#14182e",
+    "autoShading": false,
+    "shadingStrength": 0.16,
+    "sdfShading": true,
+    "selOut": true
+  },
+  "layers": [
+    {
+      "id": "shadow",
+      "op": "ellipse",
+      "cx": 15.5,
+      "cy": 29.0,
+      "rx": 6.5,
+      "ry": 1.5,
+      "fill": "a"
+    },
+    {
+      "id": "stem",
+      "op": "uneven_capsule",
+      "x1": 15.5,
+      "y1": 28.0,
+      "x2": 15.5,
+      "y2": 13.5,
+      "r1": 1.6,
+      "r2": 1.2,
+      "fill": "H",
+      "outline": "O",
+      "sdf": true
+    },
+    {
+      "id": "leaf_l",
+      "op": "vesica",
+      "cx": 11.0,
+      "cy": 20.5,
+      "rx": 2.2,
+      "ry": 4.5,
+      "angle": -50,
+      "fill": "H",
+      "outline": "O",
+      "sdf": true
+    },
+    {
+      "id": "leaf_r",
+      "op": "vesica",
+      "cx": 20.0,
+      "cy": 18.5,
+      "rx": 2.2,
+      "ry": 4.5,
+      "angle": 50,
+      "fill": "H",
+      "outline": "O",
+      "sdf": true
+    },
+    {
+      "id": "petals",
+      "op": "star",
+      "cx": 15.5,
+      "cy": 12.5,
+      "r": 9.0,
+      "n": 8,
+      "innerRatio": 0.65,
+      "fill": "M",
+      "outline": "O",
+      "sdf": true
+    },
+    {
+      "id": "core",
+      "op": "ellipse",
+      "cx": 15.5,
+      "cy": 12.5,
+      "rx": 3.6,
+      "ry": 3.6,
+      "fill": "y",
+      "outline": "O",
+      "sdf": true
+    }
+  ],
+  "frames": [],
+  "grid": [],
+  "motion": {
+    "type": "idle_breathe",
+    "frames": 4,
+    "amplitude": 0.8,
+    "squash": 0.04
+  }
+}
+};
+
+
+// Auto-synced by pixeldsl.py CLI
+window.PIXEL_PRESETS["proc_golem_s42_32x32"] = {
+  label: "proc_golem_s42_32x32",
+  prompt: "Procedural golem (seed=42, 32x32) — 100% LLM-Free PixelDSL v3.0",
+  data: {
+  "name": "proc_golem_s42_32x32",
+  "prompt": "Procedural golem (seed=42, 32x32) — 100% LLM-Free PixelDSL v3.0",
+  "width": 32,
+  "height": 32,
+  "symmetry": "none",
+  "rle": false,
+  "ramps": {
+    "M": {
+      "base": "#00bef1",
+      "light": "L",
+      "dark": "D",
+      "outline": "O"
+    },
+    "A": {
+      "base": "#ff6537",
+      "light": "W",
+      "dark": "B",
+      "outline": "O"
+    },
+    "S": {
+      "base": "#c6b59b",
+      "light": "w",
+      "dark": "d",
+      "outline": "O"
+    },
+    "H": {
+      "base": "#8c4a11",
+      "light": "h",
+      "dark": "b",
+      "outline": "O"
+    }
+  },
+  "palette": {
+    ".": "transparent",
+    "O": "#14182e",
+    "e": "#0e101c",
+    "w": "#ffffff",
+    "a": "#14182e44"
+  },
+  "postProcess": {
+    "autoOutline": false,
+    "outlineColor": "#14182e",
+    "autoShading": false,
+    "shadingStrength": 0.16,
+    "sdfShading": true,
+    "selOut": true
+  },
+  "layers": [
+    {
+      "id": "shadow",
+      "op": "ellipse",
+      "cx": 15.5,
+      "cy": 29.0,
+      "rx": 11.0,
+      "ry": 2.2,
+      "fill": "a"
+    },
+    {
+      "id": "leg_l",
+      "op": "uneven_capsule",
+      "x1": 10.5,
+      "y1": 19.5,
+      "x2": 10.5,
+      "y2": 28.0,
+      "r1": 3.2,
+      "r2": 3.8,
+      "fill": "H",
+      "outline": "O",
+      "sdf": true
+    },
+    {
+      "id": "leg_r",
+      "op": "uneven_capsule",
+      "x1": 20.5,
+      "y1": 19.5,
+      "x2": 20.5,
+      "y2": 28.0,
+      "r1": 3.2,
+      "r2": 3.8,
+      "fill": "H",
+      "outline": "O",
+      "sdf": true
+    },
+    {
+      "id": "torso",
+      "op": "rect",
+      "x": 7.5,
+      "y": 10.5,
+      "w": 16.0,
+      "h": 11.0,
+      "rx": 2.5,
+      "fill": "M",
+      "outline": "O",
+      "sdf": true,
+      "dither": "worley",
+      "shaderScale": 4.5,
+      "seed": 42
+    },
+    {
+      "id": "head",
+      "op": "rect",
+      "x": 11.0,
+      "y": 4.5,
+      "w": 9.0,
+      "h": 6.0,
+      "rx": 1.5,
+      "fill": "H",
+      "outline": "O",
+      "sdf": true
+    },
+    {
+      "id": "shoulder_l",
+      "op": "ellipse",
+      "cx": 6.0,
+      "cy": 12.5,
+      "rx": 3.5,
+      "ry": 3.5,
+      "fill": "H",
+      "outline": "O",
+      "sdf": true
+    },
+    {
+      "id": "shoulder_r",
+      "op": "ellipse",
+      "cx": 25.0,
+      "cy": 12.5,
+      "rx": 3.5,
+      "ry": 3.5,
+      "fill": "H",
+      "outline": "O",
+      "sdf": true
+    },
+    {
+      "id": "fist_l",
+      "op": "rect",
+      "x": 3.0,
+      "y": 17.5,
+      "w": 5.0,
+      "h": 6.0,
+      "rx": 1.5,
+      "fill": "M",
+      "outline": "O",
+      "sdf": true
+    },
+    {
+      "id": "fist_r",
+      "op": "rect",
+      "x": 23.0,
+      "y": 17.5,
+      "w": 5.0,
+      "h": 6.0,
+      "rx": 1.5,
+      "fill": "M",
+      "outline": "O",
+      "sdf": true
+    },
+    {
+      "id": "core_rune",
+      "op": "star",
+      "cx": 15.5,
+      "cy": 15.5,
+      "r": 3.2,
+      "n": 4,
+      "innerRatio": 0.45,
+      "fill": "A",
+      "outline": "O",
+      "sdf": true
+    },
+    {
+      "id": "eye_slit",
+      "op": "pixels",
+      "color": "A",
+      "points": [
+        [
+          14,
+          8
+        ],
+        [
+          18,
+          8
+        ]
+      ]
+    }
+  ],
+  "frames": [],
+  "grid": [],
+  "motion": {
+    "type": "walk_cycle",
+    "frames": 4,
+    "amplitude": 1.0,
+    "squash": 0.04
+  }
+}
+};
+
+
+// Auto-synced by pixeldsl.py CLI
+window.PIXEL_PRESETS["proc_lightning_s42_32x32"] = {
+  label: "proc_lightning_s42_32x32",
+  prompt: "Procedural lightning (seed=42, 32x32) — 100% LLM-Free PixelDSL v3.0",
+  data: {
+  "name": "proc_lightning_s42_32x32",
+  "prompt": "Procedural lightning (seed=42, 32x32) — 100% LLM-Free PixelDSL v3.0",
+  "width": 32,
+  "height": 32,
+  "symmetry": "none",
+  "rle": false,
+  "ramps": {
+    "M": {
+      "base": "#00bef1",
+      "light": "L",
+      "dark": "D",
+      "outline": "O"
+    },
+    "A": {
+      "base": "#ff6537",
+      "light": "W",
+      "dark": "B",
+      "outline": "O"
+    },
+    "S": {
+      "base": "#c6b59b",
+      "light": "w",
+      "dark": "d",
+      "outline": "O"
+    },
+    "H": {
+      "base": "#8c4a11",
+      "light": "h",
+      "dark": "b",
+      "outline": "O"
+    }
+  },
+  "palette": {
+    ".": "transparent",
+    "O": "#14182e",
+    "e": "#0e101c",
+    "w": "#ffffff",
+    "a": "#14182e44",
+    "b": "#a5f3fc"
+  },
+  "postProcess": {
+    "autoOutline": false,
+    "outlineColor": "#14182e",
+    "autoShading": false,
+    "shadingStrength": 0.16,
+    "sdfShading": true,
+    "selOut": true
+  },
+  "layers": [
+    {
+      "id": "glow",
+      "op": "ellipse",
+      "cx": 15.5,
+      "cy": 28.0,
+      "rx": 9.0,
+      "ry": 2.5,
+      "fill": "a"
+    },
+    {
+      "id": "bolt",
+      "op": "polygon",
+      "points": [
+        [
+          15.5,
+          3.0
+        ],
+        [
+          12.5,
+          10.0
+        ],
+        [
+          17.5,
+          13.0
+        ],
+        [
+          11.5,
+          20.0
+        ],
+        [
+          16.5,
+          23.0
+        ],
+        [
+          15.5,
+          28.0
+        ],
+        [
+          18.5,
+          22.0
+        ],
+        [
+          14.5,
+          19.0
+        ],
+        [
+          19.5,
+          12.0
+        ],
+        [
+          14.5,
+          9.0
+        ]
+      ],
+      "fill": "w",
+      "sdf": true
+    },
+    {
+      "id": "fork",
+      "op": "polygon",
+      "points": [
+        [
+          12.5,
+          10.0
+        ],
+        [
+          7.5,
+          16.0
+        ],
+        [
+          9.5,
+          17.0
+        ],
+        [
+          14.5,
+          12.0
+        ]
+      ],
+      "fill": "b"
+    },
+    {
+      "id": "impact",
+      "op": "star",
+      "cx": 15.5,
+      "cy": 28.0,
+      "r": 4.2,
+      "n": 6,
+      "innerRatio": 0.4,
+      "fill": "w"
+    }
+  ],
+  "frames": [],
+  "grid": [],
+  "motion": {
+    "type": "idle_breathe",
+    "frames": 4,
+    "amplitude": 0.6,
+    "squash": 0.08
+  }
+}
+};
+
+
+// Auto-synced by pixeldsl.py CLI
+window.PIXEL_PRESETS["proc_mushroom_s42_32x32"] = {
+  label: "proc_mushroom_s42_32x32",
+  prompt: "Procedural mushroom (seed=42, 32x32) — 100% LLM-Free PixelDSL v3.0",
+  data: {
+  "name": "proc_mushroom_s42_32x32",
+  "prompt": "Procedural mushroom (seed=42, 32x32) — 100% LLM-Free PixelDSL v3.0",
+  "width": 32,
+  "height": 32,
+  "symmetry": "none",
+  "rle": false,
+  "ramps": {
+    "M": {
+      "base": "#00bef1",
+      "light": "L",
+      "dark": "D",
+      "outline": "O"
+    },
+    "A": {
+      "base": "#ff6537",
+      "light": "W",
+      "dark": "B",
+      "outline": "O"
+    },
+    "S": {
+      "base": "#c6b59b",
+      "light": "w",
+      "dark": "d",
+      "outline": "O"
+    },
+    "H": {
+      "base": "#8c4a11",
+      "light": "h",
+      "dark": "b",
+      "outline": "O"
+    }
+  },
+  "palette": {
+    ".": "transparent",
+    "O": "#14182e",
+    "e": "#0e101c",
+    "w": "#ffffff",
+    "a": "#14182e44"
+  },
+  "postProcess": {
+    "autoOutline": false,
+    "outlineColor": "#14182e",
+    "autoShading": false,
+    "shadingStrength": 0.16,
+    "sdfShading": true,
+    "selOut": true
+  },
+  "layers": [
+    {
+      "id": "shadow",
+      "op": "ellipse",
+      "cx": 15.5,
+      "cy": 28.5,
+      "rx": 8.5,
+      "ry": 1.8,
+      "fill": "a"
+    },
+    {
+      "id": "stem",
+      "op": "uneven_capsule",
+      "x1": 15.5,
+      "y1": 28.0,
+      "x2": 15.5,
+      "y2": 14.5,
+      "r1": 3.5,
+      "r2": 2.5,
+      "fill": "S",
+      "outline": "O",
+      "sdf": true
+    },
+    {
+      "id": "veil",
+      "op": "ellipse",
+      "cx": 15.5,
+      "cy": 18.5,
+      "rx": 3.8,
+      "ry": 1.2,
+      "fill": "w",
+      "outline": "O",
+      "sdf": true
+    },
+    {
+      "id": "gills",
+      "op": "ellipse",
+      "cx": 15.5,
+      "cy": 14.5,
+      "rx": 9.5,
+      "ry": 3.5,
+      "fill": "A",
+      "outline": "O",
+      "sdf": true
+    },
+    {
+      "id": "cap",
+      "op": "moon",
+      "cx": 15.5,
+      "cy": 11.5,
+      "r": 11.5,
+      "r2": 10.5,
+      "d": 4.8,
+      "angle": 0,
+      "fill": "M",
+      "outline": "O",
+      "sdf": true
+    },
+    {
+      "id": "spot_1",
+      "op": "ellipse",
+      "cx": 12.0,
+      "cy": 8.5,
+      "rx": 1.5,
+      "ry": 1.2,
+      "fill": "w"
+    },
+    {
+      "id": "spot_2",
+      "op": "ellipse",
+      "cx": 19.5,
+      "cy": 9.5,
+      "rx": 1.4,
+      "ry": 1.1,
+      "fill": "w"
+    },
+    {
+      "id": "sprout",
+      "op": "ellipse",
+      "cx": 8.5,
+      "cy": 26.0,
+      "rx": 2.6,
+      "ry": 2.2,
+      "fill": "M",
+      "outline": "O",
+      "sdf": true
+    }
+  ],
+  "frames": [],
+  "grid": [],
+  "motion": {
+    "type": "idle_breathe",
+    "frames": 4,
+    "amplitude": 0.7,
+    "squash": 0.05
+  }
+}
+};
+
+
+// Auto-synced by pixeldsl.py CLI
+window.PIXEL_PRESETS["proc_sand_tile_s77_32x32"] = {
+  label: "proc_sand_tile_s77_32x32",
+  prompt: "Procedural sand_tile (seed=77, 32x32) — 100% LLM-Free PixelDSL v3.0",
+  data: {
+  "name": "proc_sand_tile_s77_32x32",
+  "prompt": "Procedural sand_tile (seed=77, 32x32) — 100% LLM-Free PixelDSL v3.0",
+  "width": 32,
+  "height": 32,
+  "symmetry": "none",
+  "rle": false,
+  "ramps": {
+    "M": {
+      "base": "#e49900",
+      "light": "L",
+      "dark": "D",
+      "outline": "O"
+    },
+    "A": {
+      "base": "#fbc456",
+      "light": "W",
+      "dark": "B",
+      "outline": "O"
+    },
+    "S": {
+      "base": "#d0adb0",
+      "light": "w",
+      "dark": "d",
+      "outline": "O"
+    },
+    "H": {
+      "base": "#8c4a11",
+      "light": "h",
+      "dark": "b",
+      "outline": "O"
+    }
+  },
+  "palette": {
+    ".": "transparent",
+    "O": "#14182e",
+    "e": "#0e101c",
+    "w": "#ffffff",
+    "a": "#14182e44"
+  },
+  "postProcess": {
+    "autoOutline": false,
+    "outlineColor": "#14182e",
+    "autoShading": false,
+    "shadingStrength": 0.16,
+    "sdfShading": true,
+    "selOut": true
+  },
+  "layers": [
+    {
+      "id": "sand_base",
+      "op": "rect",
+      "x": 0,
+      "y": 0,
+      "w": 32,
+      "h": 32,
+      "fill": "M",
+      "sdf": true,
+      "dither": "worley",
+      "shaderScale": 6.5,
+      "seed": 77
+    },
+    {
+      "id": "dune_1",
+      "op": "bezier_sdf",
+      "points": [
+        [
+          2.0,
+          8.0
+        ],
+        [
+          15.5,
+          6.0
+        ],
+        [
+          29.0,
+          9.0
+        ]
+      ],
+      "r1": 1.6,
+      "r2": 1.1,
+      "fill": "A"
+    },
+    {
+      "id": "dune_2",
+      "op": "bezier_sdf",
+      "points": [
+        [
+          2.0,
+          17.5
+        ],
+        [
+          15.5,
+          19.5
+        ],
+        [
+          29.0,
+          16.5
+        ]
+      ],
+      "r1": 1.6,
+      "r2": 1.1,
+      "fill": "A"
+    },
+    {
+      "id": "dune_3",
+      "op": "bezier_sdf",
+      "points": [
+        [
+          2.0,
+          25.0
+        ],
+        [
+          15.5,
+          23.0
+        ],
+        [
+          29.0,
+          26.0
+        ]
+      ],
+      "r1": 1.6,
+      "r2": 1.1,
+      "fill": "A"
+    },
+    {
+      "id": "glints",
+      "op": "pixels",
+      "color": "w",
+      "points": [
+        [
+          7,
+          6
+        ],
+        [
+          22,
+          16
+        ],
+        [
+          11,
+          24
+        ]
+      ]
+    }
+  ],
+  "frames": [],
+  "grid": []
+}
+};
+
+
+// Auto-synced by pixeldsl.py CLI
+window.PIXEL_PRESETS["proc_snake_s42_32x32"] = {
+  label: "proc_snake_s42_32x32",
+  prompt: "Procedural snake (seed=42, 32x32) — 100% LLM-Free PixelDSL v3.0",
+  data: {
+  "name": "proc_snake_s42_32x32",
+  "prompt": "Procedural snake (seed=42, 32x32) — 100% LLM-Free PixelDSL v3.0",
+  "width": 32,
+  "height": 32,
+  "symmetry": "none",
+  "rle": false,
+  "ramps": {
+    "M": {
+      "base": "#00bef1",
+      "light": "L",
+      "dark": "D",
+      "outline": "O"
+    },
+    "A": {
+      "base": "#ff6537",
+      "light": "W",
+      "dark": "B",
+      "outline": "O"
+    },
+    "S": {
+      "base": "#c6b59b",
+      "light": "w",
+      "dark": "d",
+      "outline": "O"
+    },
+    "H": {
+      "base": "#8c4a11",
+      "light": "h",
+      "dark": "b",
+      "outline": "O"
+    }
+  },
+  "palette": {
+    ".": "transparent",
+    "O": "#14182e",
+    "e": "#0e101c",
+    "w": "#ffffff",
+    "a": "#14182e44"
+  },
+  "postProcess": {
+    "autoOutline": false,
+    "outlineColor": "#14182e",
+    "autoShading": false,
+    "shadingStrength": 0.16,
+    "sdfShading": true,
+    "selOut": true
+  },
+  "layers": [
+    {
+      "id": "shadow",
+      "op": "ellipse",
+      "cx": 15.5,
+      "cy": 29.0,
+      "rx": 10.0,
+      "ry": 2.0,
+      "fill": "a"
+    },
+    {
+      "id": "coil_1",
+      "op": "ellipse",
+      "cx": 10.5,
+      "cy": 19.5,
+      "rx": 5.5,
+      "ry": 4.2,
+      "fill": "M",
+      "outline": "O",
+      "sdf": true,
+      "smoothBlend": 2.0
+    },
+    {
+      "id": "coil_2",
+      "op": "ellipse",
+      "cx": 19.5,
+      "cy": 20.5,
+      "rx": 5.5,
+      "ry": 4.2,
+      "fill": "M",
+      "outline": "O",
+      "sdf": true,
+      "smoothBlend": 2.0
+    },
+    {
+      "id": "neck_body",
+      "op": "uneven_capsule",
+      "x1": 12.5,
+      "y1": 17.5,
+      "x2": 13.5,
+      "y2": 11.5,
+      "r1": 3.2,
+      "r2": 2.5,
+      "fill": "M",
+      "outline": "O",
+      "sdf": true,
+      "smoothBlend": 2.0
+    },
+    {
+      "id": "hood",
+      "op": "vesica",
+      "cx": 16.5,
+      "cy": 9.5,
+      "rx": 5.5,
+      "ry": 3.2,
+      "angle": 0,
+      "fill": "A",
+      "outline": "O",
+      "sdf": true
+    },
+    {
+      "id": "head",
+      "op": "ellipse",
+      "cx": 16.5,
+      "cy": 9.5,
+      "rx": 3.2,
+      "ry": 2.8,
+      "fill": "M",
+      "outline": "O",
+      "sdf": true
+    },
+    {
+      "id": "tongue",
+      "op": "polygon",
+      "points": [
+        [
+          19.5,
+          9.5
+        ],
+        [
+          22.5,
+          8.5
+        ],
+        [
+          24.5,
+          7.5
+        ],
+        [
+          22.5,
+          9.5
+        ],
+        [
+          24.5,
+          10.5
+        ]
+      ],
+      "fill": "S"
+    }
+  ],
+  "frames": [],
+  "grid": [],
+  "motion": {
+    "type": "idle_breathe",
+    "frames": 4,
+    "amplitude": 0.8,
+    "squash": 0.05
+  }
+}
+};
+
+
+// Auto-synced by pixeldsl.py CLI
+window.PIXEL_PRESETS["proc_spider_s42_32x32"] = {
+  label: "proc_spider_s42_32x32",
+  prompt: "Procedural spider (seed=42, 32x32) — 100% LLM-Free PixelDSL v3.0",
+  data: {
+  "name": "proc_spider_s42_32x32",
+  "prompt": "Procedural spider (seed=42, 32x32) — 100% LLM-Free PixelDSL v3.0",
+  "width": 32,
+  "height": 32,
+  "symmetry": "none",
+  "rle": false,
+  "ramps": {
+    "M": {
+      "base": "#00bef1",
+      "light": "L",
+      "dark": "D",
+      "outline": "O"
+    },
+    "A": {
+      "base": "#ff6537",
+      "light": "W",
+      "dark": "B",
+      "outline": "O"
+    },
+    "S": {
+      "base": "#c6b59b",
+      "light": "w",
+      "dark": "d",
+      "outline": "O"
+    },
+    "H": {
+      "base": "#8c4a11",
+      "light": "h",
+      "dark": "b",
+      "outline": "O"
+    }
+  },
+  "palette": {
+    ".": "transparent",
+    "O": "#14182e",
+    "e": "#0e101c",
+    "w": "#ffffff",
+    "a": "#14182e44"
+  },
+  "postProcess": {
+    "autoOutline": false,
+    "outlineColor": "#14182e",
+    "autoShading": false,
+    "shadingStrength": 0.16,
+    "sdfShading": true,
+    "selOut": true
+  },
+  "layers": [
+    {
+      "id": "shadow",
+      "op": "ellipse",
+      "cx": 15.5,
+      "cy": 29.0,
+      "rx": 10.0,
+      "ry": 2.2,
+      "fill": "a"
+    },
+    {
+      "id": "legs_l",
+      "op": "bezier_sdf",
+      "points": [
+        [
+          12.5,
+          15.5
+        ],
+        [
+          4.5,
+          9.5
+        ],
+        [
+          2.5,
+          21.5
+        ]
+      ],
+      "r1": 1.5,
+      "r2": 0.8,
+      "fill": "H",
+      "outline": "O",
+      "mirror": "x",
+      "sdf": true
+    },
+    {
+      "id": "legs_mid",
+      "op": "bezier_sdf",
+      "points": [
+        [
+          12.5,
+          17.5
+        ],
+        [
+          3.5,
+          17.5
+        ],
+        [
+          1.5,
+          25.5
+        ]
+      ],
+      "r1": 1.5,
+      "r2": 0.8,
+      "fill": "H",
+      "outline": "O",
+      "mirror": "x",
+      "sdf": true
+    },
+    {
+      "id": "abdomen",
+      "op": "ellipse",
+      "cx": 15.5,
+      "cy": 12.5,
+      "rx": 7.5,
+      "ry": 6.8,
+      "fill": "M",
+      "outline": "O",
+      "sdf": true,
+      "dither": "worley",
+      "shaderScale": 4.5,
+      "seed": 42
+    },
+    {
+      "id": "thorax",
+      "op": "ellipse",
+      "cx": 15.5,
+      "cy": 19.5,
+      "rx": 4.8,
+      "ry": 3.8,
+      "fill": "A",
+      "outline": "O",
+      "sdf": true
+    },
+    {
+      "id": "fangs",
+      "op": "vesica",
+      "cx": 13.7,
+      "cy": 23.5,
+      "rx": 1.2,
+      "ry": 2.2,
+      "fill": "S",
+      "outline": "O",
+      "mirror": "x",
+      "sdf": true
+    },
+    {
+      "id": "eyes",
+      "op": "pixels",
+      "color": "w",
+      "mirror": "x",
+      "points": [
+        [
+          14,
+          20
+        ],
+        [
+          15,
+          19
+        ]
+      ]
+    }
+  ],
+  "frames": [],
+  "grid": [],
+  "motion": {
+    "type": "walk_cycle",
+    "frames": 4,
+    "amplitude": 1.0,
+    "squash": 0.05
+  }
+}
+};
+
+
+// Auto-synced by pixeldsl.py CLI
+window.PIXEL_PRESETS["proc_staff_s42_32x32"] = {
+  label: "proc_staff_s42_32x32",
+  prompt: "Procedural staff (seed=42, 32x32) — 100% LLM-Free PixelDSL v3.0",
+  data: {
+  "name": "proc_staff_s42_32x32",
+  "prompt": "Procedural staff (seed=42, 32x32) — 100% LLM-Free PixelDSL v3.0",
+  "width": 32,
+  "height": 32,
+  "symmetry": "none",
+  "rle": false,
+  "ramps": {
+    "M": {
+      "base": "#00bef1",
+      "light": "L",
+      "dark": "D",
+      "outline": "O"
+    },
+    "A": {
+      "base": "#ff6537",
+      "light": "W",
+      "dark": "B",
+      "outline": "O"
+    },
+    "S": {
+      "base": "#c6b59b",
+      "light": "w",
+      "dark": "d",
+      "outline": "O"
+    },
+    "H": {
+      "base": "#8c4a11",
+      "light": "h",
+      "dark": "b",
+      "outline": "O"
+    }
+  },
+  "palette": {
+    ".": "transparent",
+    "O": "#14182e",
+    "e": "#0e101c",
+    "w": "#ffffff",
+    "a": "#14182e44"
+  },
+  "postProcess": {
+    "autoOutline": false,
+    "outlineColor": "#14182e",
+    "autoShading": false,
+    "shadingStrength": 0.16,
+    "sdfShading": true,
+    "selOut": true
+  },
+  "layers": [
+    {
+      "id": "shadow",
+      "op": "ellipse",
+      "cx": 15.5,
+      "cy": 29.0,
+      "rx": 5.0,
+      "ry": 1.5,
+      "fill": "a"
+    },
+    {
+      "id": "shaft",
+      "op": "uneven_capsule",
+      "x1": 15.5,
+      "y1": 28.0,
+      "x2": 15.5,
+      "y2": 9.0,
+      "r1": 1.8,
+      "r2": 1.5,
+      "fill": "H",
+      "outline": "O",
+      "sdf": true
+    },
+    {
+      "id": "bracket_l",
+      "op": "vesica",
+      "cx": 12.3,
+      "cy": 7.5,
+      "rx": 1.5,
+      "ry": 3.5,
+      "angle": -25,
+      "fill": "A",
+      "outline": "O",
+      "sdf": true
+    },
+    {
+      "id": "bracket_r",
+      "op": "vesica",
+      "cx": 18.7,
+      "cy": 7.5,
+      "rx": 1.5,
+      "ry": 3.5,
+      "angle": 25,
+      "fill": "A",
+      "outline": "O",
+      "sdf": true
+    },
+    {
+      "id": "crystal_orb",
+      "op": "ellipse",
+      "cx": 15.5,
+      "cy": 5.5,
+      "rx": 3.2,
+      "ry": 3.2,
+      "fill": "M",
+      "outline": "O",
+      "sdf": true
+    },
+    {
+      "id": "orb_spark",
+      "op": "star",
+      "cx": 15.5,
+      "cy": 5.5,
+      "r": 1.6,
+      "n": 4,
+      "innerRatio": 0.4,
+      "fill": "w"
+    }
+  ],
+  "frames": [],
+  "grid": [],
+  "motion": {
+    "type": "idle_breathe",
+    "frames": 4,
+    "amplitude": 0.8,
+    "squash": 0.04
+  }
+}
+};
+
+
+// Auto-synced by pixeldsl.py CLI
+window.PIXEL_PRESETS["proc_stone_tile_s88_32x32"] = {
+  label: "proc_stone_tile_s88_32x32",
+  prompt: "Procedural stone_tile (seed=88, 32x32) — 100% LLM-Free PixelDSL v3.0",
+  data: {
+  "name": "proc_stone_tile_s88_32x32",
+  "prompt": "Procedural stone_tile (seed=88, 32x32) — 100% LLM-Free PixelDSL v3.0",
+  "width": 32,
+  "height": 32,
+  "symmetry": "none",
+  "rle": false,
+  "ramps": {
+    "M": {
+      "base": "#6b8496",
+      "light": "L",
+      "dark": "D",
+      "outline": "O"
+    },
+    "A": {
+      "base": "#36c66e",
+      "light": "W",
+      "dark": "B",
+      "outline": "O"
+    },
+    "S": {
+      "base": "#a2c0af",
+      "light": "w",
+      "dark": "d",
+      "outline": "O"
+    },
+    "H": {
+      "base": "#8c4a11",
+      "light": "h",
+      "dark": "b",
+      "outline": "O"
+    }
+  },
+  "palette": {
+    ".": "transparent",
+    "O": "#14182e",
+    "e": "#0e101c",
+    "w": "#ffffff",
+    "a": "#14182e44",
+    "m": "#1e293b",
+    "v": "#15803d"
+  },
+  "postProcess": {
+    "autoOutline": false,
+    "outlineColor": "#14182e",
+    "autoShading": false,
+    "shadingStrength": 0.16,
+    "sdfShading": true,
+    "selOut": true
+  },
+  "layers": [
+    {
+      "id": "mortar",
+      "op": "rect",
+      "x": 0,
+      "y": 0,
+      "w": 32,
+      "h": 32,
+      "fill": "m"
+    },
+    {
+      "id": "slab_nw",
+      "op": "rect",
+      "x": 1.5,
+      "y": 1.5,
+      "w": 14.0,
+      "h": 14.0,
+      "rx": 1.2,
+      "fill": "M",
+      "outline": "O",
+      "sdf": true,
+      "dither": "worley",
+      "shaderScale": 4.5,
+      "seed": 88
+    },
+    {
+      "id": "slab_ne",
+      "op": "rect",
+      "x": 16.5,
+      "y": 1.5,
+      "w": 14.0,
+      "h": 14.0,
+      "rx": 1.2,
+      "fill": "M",
+      "outline": "O",
+      "sdf": true,
+      "dither": "worley",
+      "shaderScale": 4.5,
+      "seed": 89
+    },
+    {
+      "id": "slab_sw",
+      "op": "rect",
+      "x": 1.5,
+      "y": 16.5,
+      "w": 14.0,
+      "h": 14.0,
+      "rx": 1.2,
+      "fill": "M",
+      "outline": "O",
+      "sdf": true,
+      "dither": "worley",
+      "shaderScale": 4.5,
+      "seed": 90
+    },
+    {
+      "id": "slab_se",
+      "op": "rect",
+      "x": 16.5,
+      "y": 16.5,
+      "w": 14.0,
+      "h": 14.0,
+      "rx": 1.2,
+      "fill": "M",
+      "outline": "O",
+      "sdf": true,
+      "dither": "worley",
+      "shaderScale": 4.5,
+      "seed": 91
+    },
+    {
+      "id": "moss",
+      "op": "ellipse",
+      "cx": 15.5,
+      "cy": 15.5,
+      "rx": 2.5,
+      "ry": 2.5,
+      "fill": "v"
+    }
+  ],
+  "frames": [],
+  "grid": []
+}
+};
+
+
+// Auto-synced by pixeldsl.py CLI
+window.PIXEL_PRESETS["proc_sword_s123_32x32"] = {
+  label: "proc_sword_s123_32x32",
+  prompt: "Procedural sword (seed=123, 32x32) — 100% LLM-Free PixelDSL v3.0",
+  data: {
+  "name": "proc_sword_s123_32x32",
+  "prompt": "Procedural sword (seed=123, 32x32) — 100% LLM-Free PixelDSL v3.0",
+  "width": 32,
+  "height": 32,
+  "symmetry": "none",
+  "rle": false,
+  "ramps": {
+    "M": {
+      "base": "#8a85f2",
+      "light": "L",
+      "dark": "D",
+      "outline": "O"
+    },
+    "A": {
+      "base": "#ff6800",
+      "light": "W",
+      "dark": "B",
+      "outline": "O"
+    },
+    "S": {
+      "base": "#a9bea7",
+      "light": "w",
+      "dark": "d",
+      "outline": "O"
+    },
+    "H": {
+      "base": "#8c4a11",
+      "light": "h",
+      "dark": "b",
+      "outline": "O"
+    }
+  },
+  "palette": {
+    ".": "transparent",
+    "O": "#14182e",
+    "e": "#0e101c",
+    "w": "#ffffff",
+    "a": "#14182e44"
+  },
+  "postProcess": {
+    "autoOutline": false,
+    "outlineColor": "#14182e",
+    "autoShading": false,
+    "shadingStrength": 0.16,
+    "sdfShading": true,
+    "selOut": true
+  },
+  "layers": [
+    {
+      "id": "shadow",
+      "op": "ellipse",
+      "cx": 15.5,
+      "cy": 29.0,
+      "rx": 6.0,
+      "ry": 1.5,
+      "fill": "a"
+    },
+    {
+      "id": "pommel",
+      "op": "ellipse",
+      "cx": 15.5,
+      "cy": 27.5,
+      "rx": 2.2,
+      "ry": 2.2,
+      "fill": "A",
+      "outline": "O",
+      "sdf": true
+    },
+    {
+      "id": "grip",
+      "op": "uneven_capsule",
+      "x1": 15.5,
+      "y1": 26.0,
+      "x2": 15.5,
+      "y2": 21.0,
+      "r1": 1.6,
+      "r2": 1.9,
+      "fill": "H",
+      "outline": "O",
+      "sdf": true
+    },
+    {
+      "id": "blade",
+      "op": "uneven_capsule",
+      "x1": 15.5,
+      "y1": 21.0,
+      "x2": 15.5,
+      "y2": 4.5,
+      "r1": 4.2,
+      "r2": 1.5,
+      "fill": "S",
+      "outline": "O",
+      "sdf": true
+    },
+    {
+      "id": "blade_tip",
+      "op": "vesica",
+      "cx": 15.5,
+      "cy": 7.5,
+      "rx": 4.0,
+      "ry": 5.0,
+      "fill": "S",
+      "outline": "O",
+      "sdf": true,
+      "smoothBlend": 1.5
+    },
+    {
+      "id": "fuller",
+      "op": "uneven_capsule",
+      "x1": 15.5,
+      "y1": 20.0,
+      "x2": 15.5,
+      "y2": 9.0,
+      "r1": 1.0,
+      "r2": 0.6,
+      "fill": "M",
+      "sdf": true
+    },
+    {
+      "id": "guard",
+      "op": "vesica",
+      "cx": 15.5,
+      "cy": 21.0,
+      "rx": 7.9,
+      "ry": 2.2,
+      "angle": -1.4545059241354465,
+      "fill": "A",
+      "outline": "O",
+      "sdf": true
+    },
+    {
+      "id": "gem",
+      "op": "ellipse",
+      "cx": 15.5,
+      "cy": 21.0,
+      "rx": 1.8,
+      "ry": 1.8,
+      "fill": "M",
+      "outline": "O",
+      "sdf": true
+    }
+  ],
+  "frames": [],
+  "grid": [],
+  "motion": {
+    "type": "idle_breathe",
+    "frames": 4,
+    "amplitude": 0.8,
+    "squash": 0.04
+  }
+}
+};
+
+
+// Auto-synced by pixeldsl.py CLI
+window.PIXEL_PRESETS["proc_water_tile_s99_32x32"] = {
+  label: "proc_water_tile_s99_32x32",
+  prompt: "Procedural water_tile (seed=99, 32x32) — 100% LLM-Free PixelDSL v3.0",
+  data: {
+  "name": "proc_water_tile_s99_32x32",
+  "prompt": "Procedural water_tile (seed=99, 32x32) — 100% LLM-Free PixelDSL v3.0",
+  "width": 32,
+  "height": 32,
+  "symmetry": "none",
+  "rle": false,
+  "ramps": {
+    "M": {
+      "base": "#0067a9",
+      "light": "L",
+      "dark": "D",
+      "outline": "O"
+    },
+    "A": {
+      "base": "#00beea",
+      "light": "W",
+      "dark": "B",
+      "outline": "O"
+    },
+    "S": {
+      "base": "#c1b0ca",
+      "light": "w",
+      "dark": "d",
+      "outline": "O"
+    },
+    "H": {
+      "base": "#8c4a11",
+      "light": "h",
+      "dark": "b",
+      "outline": "O"
+    }
+  },
+  "palette": {
+    ".": "transparent",
+    "O": "#14182e",
+    "e": "#0e101c",
+    "w": "#ffffff",
+    "a": "#14182e44",
+    "f": "#e0f2fe"
+  },
+  "postProcess": {
+    "autoOutline": false,
+    "outlineColor": "#14182e",
+    "autoShading": false,
+    "shadingStrength": 0.16,
+    "sdfShading": true,
+    "selOut": true
+  },
+  "layers": [
+    {
+      "id": "water_base",
+      "op": "rect",
+      "x": 0,
+      "y": 0,
+      "w": 32,
+      "h": 32,
+      "fill": "M",
+      "sdf": true,
+      "dither": "voronoi",
+      "shaderScale": 4.5,
+      "seed": 99
+    },
+    {
+      "id": "caustic_1",
+      "op": "ellipse",
+      "cx": 10.5,
+      "cy": 11.5,
+      "rx": 6.5,
+      "ry": 4.5,
+      "fill": "A",
+      "sdf": true
+    },
+    {
+      "id": "caustic_2",
+      "op": "ellipse",
+      "cx": 22.5,
+      "cy": 20.5,
+      "rx": 7.0,
+      "ry": 5.0,
+      "fill": "A",
+      "sdf": true
+    },
+    {
+      "id": "foam_crest",
+      "op": "bezier_sdf",
+      "points": [
+        [
+          4.0,
+          20.5
+        ],
+        [
+          15.5,
+          17.5
+        ],
+        [
+          27.0,
+          21.5
+        ]
+      ],
+      "r1": 1.5,
+      "r2": 0.8,
+      "fill": "f"
+    }
+  ],
+  "frames": [],
+  "grid": [],
+  "motion": {
+    "type": "wave",
+    "frames": 4,
+    "amplitude": 0.8
+  }
+}
+};
+
 window.SKILL_PROMPT_TEMPLATE = function(userRequest, width, height, mode) {
   if (mode === "rig") {
     return `You are a 2D pixel-art skeletal capsule rig generator following the PixelDSL v3.0 Rig Engine specification.

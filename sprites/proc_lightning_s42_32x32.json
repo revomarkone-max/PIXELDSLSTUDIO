@@ -1,0 +1,150 @@
+{
+  "name": "proc_lightning_s42_32x32",
+  "prompt": "Procedural lightning (seed=42, 32x32) — 100% LLM-Free PixelDSL v3.0",
+  "width": 32,
+  "height": 32,
+  "symmetry": "none",
+  "rle": false,
+  "ramps": {
+    "M": {
+      "base": "#00bef1",
+      "light": "L",
+      "dark": "D",
+      "outline": "O"
+    },
+    "A": {
+      "base": "#ff6537",
+      "light": "W",
+      "dark": "B",
+      "outline": "O"
+    },
+    "S": {
+      "base": "#c6b59b",
+      "light": "w",
+      "dark": "d",
+      "outline": "O"
+    },
+    "H": {
+      "base": "#8c4a11",
+      "light": "h",
+      "dark": "b",
+      "outline": "O"
+    }
+  },
+  "palette": {
+    ".": "transparent",
+    "O": "#14182e",
+    "e": "#0e101c",
+    "w": "#ffffff",
+    "a": "#14182e44",
+    "b": "#a5f3fc"
+  },
+  "postProcess": {
+    "autoOutline": false,
+    "outlineColor": "#14182e",
+    "autoShading": false,
+    "shadingStrength": 0.16,
+    "sdfShading": true,
+    "selOut": true
+  },
+  "layers": [
+    {
+      "id": "glow",
+      "op": "ellipse",
+      "cx": 15.5,
+      "cy": 28.0,
+      "rx": 9.0,
+      "ry": 2.5,
+      "fill": "a"
+    },
+    {
+      "id": "bolt",
+      "op": "polygon",
+      "points": [
+        [
+          15.5,
+          3.0
+        ],
+        [
+          12.5,
+          10.0
+        ],
+        [
+          17.5,
+          13.0
+        ],
+        [
+          11.5,
+          20.0
+        ],
+        [
+          16.5,
+          23.0
+        ],
+        [
+          15.5,
+          28.0
+        ],
+        [
+          18.5,
+          22.0
+        ],
+        [
+          14.5,
+          19.0
+        ],
+        [
+          19.5,
+          12.0
+        ],
+        [
+          14.5,
+          9.0
+        ]
+      ],
+      "fill": "w",
+      "sdf": true
+    },
+    {
+      "id": "fork",
+      "op": "polygon",
+      "points": [
+        [
+          12.5,
+          10.0
+        ],
+        [
+          7.5,
+          16.0
+        ],
+        [
+          9.5,
+          17.0
+        ],
+        [
+          14.5,
+          12.0
+        ]
+      ],
+      "fill": "b"
+    },
+    {
+      "id": "impact",
+      "op": "star",
+      "cx": 15.5,
+      "cy": 28.0,
+      "r": 4.2,
+      "n": 6,
+      "innerRatio": 0.4,
+      "fill": "w"
+    }
+  ],
+  "frames": [],
+  "grid": [],
+  "motion": {
+    "type": "idle_breathe",
+    "frames": 4,
+    "amplitude": 0.6,
+    "squash": 0.08
+  }
+}

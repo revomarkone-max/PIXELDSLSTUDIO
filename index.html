@@ -607,6 +607,10 @@
           <div class="forge-section">
             <label class="forge-label">Archetype Model</label>
             <div id="forgeArchetypeGrid" class="forge-archetype-grid"></div>
+            <div class="forge-control-row" id="rowForgeSubtype" style="margin-top: 8px;">
+              <label class="forge-label" style="min-width: 60px;">Subtype:</label>
+              <select id="selForgeSubtype" class="forge-select" style="flex: 1;"></select>
+            </div>
           </div>
 
           <!-- Parametric Proportions & Dimensions -->
@@ -1178,18 +1182,44 @@ litMat.SetTexture("_NormalMap", normalTexture);</code></pre>
           <div style="display: flex; align-items: center; gap: 6px;">
             <label style="font-size: 11.5px; color: var(--text-muted);">Archetype:</label>
             <select id="selGenArchetype">
-              <option value="sword">⚔️ Sword (Quilez Vesica + Capsule)</option>
-              <option value="axe">🪓 Battle Axe (Crescent Moon + Haft)</option>
-              <option value="shield">🛡️ Shield (Vesica + Star Emblem)</option>
-              <option value="potion">🧪 Potion Flask (Voronoi Liquid)</option>
-              <option value="gem">💎 Faceted Gem (N-Gon + Worley)</option>
-              <option value="slime">👑 Slime King (Metaball + Crown)</option>
-              <option value="beetle">🪲 Horned Beetle (Bezier Legs + Walk)</option>
-              <option value="turtle">🐢 Sea Turtle (Swim Cycle + Shell)</option>
-              <option value="bunny">🐰 Bunny (2.5D Crease + Jump Arc)</option>
-              <option value="crystal_monolith">🔮 Crystal Monolith (Floating Shards)</option>
-              <option value="spaceship">🚀 Starfighter (Polygon Wings + Hull)</option>
-              <option value="autotile_blob47">🧱 Mossy Stone Block (Domain Warp + Drip)</option>
+              <optgroup label="🗺️ Seamless Terrain &amp; Tilesets">
+                <option value="grass_tile">🌱 Grass Meadow Tile (Трава — Seamless)</option>
+                <option value="dirt_tile">🟫 Earth &amp; Dirt Tile (Земля — Seamless)</option>
+                <option value="sand_tile">🏖️ Sand Dunes Tile (Песок — Seamless)</option>
+                <option value="stone_tile">🧱 Stone Flagstones Tile (Камень — Seamless)</option>
+                <option value="water_tile">🌊 Water Caustics Tile (Вода — Seamless)</option>
+                <option value="autotile_blob47">🧱 Mossy Stone Block (Domain Warp + Drip)</option>
+              </optgroup>
+              <optgroup label="🐾 Creatures &amp; Monsters">
+                <option value="dragon">🐉 Mythic Dragon (Wyvern / Drake Wings)</option>
+                <option value="spider">🕷️ Crawler Spider (8 Bezier Articulated Legs)</option>
+                <option value="snake">🐍 Serpent Snake (Cobra Hood + Strike Coil)</option>
+                <option value="golem">🗿 Stone Golem (Craggy Boulders + Rune Core)</option>
+                <option value="slime">👑 Slime King (Metaball + Crown)</option>
+                <option value="beetle">🪲 Horned Beetle (Bezier Legs + Walk)</option>
+                <option value="turtle">🐢 Sea Turtle (Swim Cycle + Shell)</option>
+                <option value="bunny">🐰 Bunny (2.5D Crease + Jump Arc)</option>
+              </optgroup>
+              <optgroup label="🌳 Nature &amp; Environment">
+                <option value="flower">🌼 Botanical Flower (Petals + Foliage Stem)</option>
+                <option value="mushroom">🍄 Toadstool Fungus (Parasol Cap + Spore Spots)</option>
+                <option value="boulder">🪨 Craggy Boulder (Faceted Rock + Ore Vein)</option>
+              </optgroup>
+              <optgroup label="⚔️ Weapons &amp; Equipment">
+                <option value="sword" selected>⚔️ Sword (Quilez Vesica + Capsule)</option>
+                <option value="axe">🪓 Battle Axe (Crescent Moon + Haft)</option>
+                <option value="bow">🏹 Recurve Bow (Arched Stave + Arrow)</option>
+                <option value="staff">🪄 Arcane Staff (Twisted Stave + Mana Orb)</option>
+                <option value="shield">🛡️ Shield (Vesica + Star Emblem)</option>
+                <option value="potion">🧪 Potion Flask (Voronoi Liquid)</option>
+                <option value="gem">💎 Faceted Gem (N-Gon + Worley)</option>
+              </optgroup>
+              <optgroup label="💥 Spells &amp; VFX">
+                <option value="lightning">⚡ Chain Lightning (Fractal Plasma Arc)</option>
+                <option value="fireball">🔥 Blazing Fireball (Turbulent Plasma Core)</option>
+                <option value="crystal_monolith">🔮 Crystal Monolith (Floating Shards)</option>
+                <option value="spaceship">🚀 Starfighter (Polygon Wings + Hull)</option>
+              </optgroup>
             </select>
           </div>
 

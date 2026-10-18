@@ -1,0 +1,121 @@
+{
+  "name": "proc_dirt_tile_s101_32x32",
+  "prompt": "Procedural dirt_tile (seed=101, 32x32) — 100% LLM-Free PixelDSL v3.0",
+  "width": 32,
+  "height": 32,
+  "symmetry": "none",
+  "rle": false,
+  "ramps": {
+    "M": {
+      "base": "#7d3500",
+      "light": "L",
+      "dark": "D",
+      "outline": "O"
+    },
+    "A": {
+      "base": "#a74a04",
+      "light": "W",
+      "dark": "B",
+      "outline": "O"
+    },
+    "S": {
+      "base": "#adb7d2",
+      "light": "w",
+      "dark": "d",
+      "outline": "O"
+    },
+    "H": {
+      "base": "#8c4a11",
+      "light": "h",
+      "dark": "b",
+      "outline": "O"
+    }
+  },
+  "palette": {
+    ".": "transparent",
+    "O": "#14182e",
+    "e": "#0e101c",
+    "w": "#ffffff",
+    "a": "#14182e44",
+    "p": "#94a3b8",
+    "d": "#382014"
+  },
+  "postProcess": {
+    "autoOutline": false,
+    "outlineColor": "#14182e",
+    "autoShading": false,
+    "shadingStrength": 0.16,
+    "sdfShading": true,
+    "selOut": true
+  },
+  "layers": [
+    {
+      "id": "soil_base",
+      "op": "rect",
+      "x": 0,
+      "y": 0,
+      "w": 32,
+      "h": 32,
+      "fill": "M",
+      "sdf": true,
+      "dither": "worley",
+      "shaderScale": 4.5,
+      "seed": 101
+    },
+    {
+      "id": "crack_1",
+      "op": "bezier_sdf",
+      "points": [
+        [
+          5.0,
+          7.0
+        ],
+        [
+          13.5,
+          12.5
+        ],
+        [
+          19.5,
+          21.5
+        ]
+      ],
+      "r1": 1.2,
+      "r2": 0.7,
+      "fill": "d"
+    },
+    {
+      "id": "pebble_1",
+      "op": "ellipse",
+      "cx": 8.5,
+      "cy": 21.5,
+      "rx": 2.0,
+      "ry": 1.4,
+      "fill": "p",
+      "outline": "O",
+      "sdf": true
+    },
+    {
+      "id": "pebble_2",
+      "op": "ellipse",
+      "cx": 23.5,
+      "cy": 9.5,
+      "rx": 1.6,
+      "ry": 1.2,
+      "fill": "p",
+      "outline": "O",
+      "sdf": true
+    },
+    {
+      "id": "clay_patch",
+      "op": "ellipse",
+      "cx": 17.5,
+      "cy": 9.5,
+      "rx": 4.5,
+      "ry": 3.2,
+      "fill": "A",
+      "sdf": true
+    }
+  ],
+  "frames": [],
+  "grid": []
+}
