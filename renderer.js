@@ -1518,6 +1518,10 @@ class PixelDSLRenderer {
     const outlineRGBA = (hasOutline && outlineKey) ? (paletteRGBA[outlineKey] || this.parseColor(outlineKey)) : [0, 0, 0, 0];
     const outlineW = hasOutline ? Number(rigDef.outlineWidth ?? 1.0) : 0.0;
 
+    // Internal crease line between overlapping parts (see pixeldsl.render_rig).
+    const creaseDelta = Number(rigDef.creaseDelta) || 1.5;
+    const creaseDarken = Number(rigDef.creaseDarken) || 0.72;
+
     const sortedBones = bonesDef
       .filter((b) => b && b.id && !b.hidden)
       .sort((a, b) => Number(a.z || 0) - Number(b.z || 0));
@@ -1687,7 +1691,7 @@ class PixelDSLRenderer {
             const nx = x + neighbors[ni][1];
             if (ny >= 0 && ny < height && nx >= 0 && nx < width) {
               const nIdx = ny * width + nx;
-              if (zBuf[nIdx] > -9000.0 && curZ - zBuf[nIdx] >= 1.5) {
+              if (zBuf[nIdx] > -9000.0 && curZ - zBuf[nIdx] >= creaseDelta) {
                 isInternalCrease = true;
                 break;
               }
@@ -1695,9 +1699,9 @@ class PixelDSLRenderer {
           }
           if (isInternalCrease) {
             const c = colorBuf[idx];
-            buffer[idx * 4] = Math.max(0, Math.round(c[0] * 0.72));
-            buffer[idx * 4 + 1] = Math.max(0, Math.round(c[1] * 0.72));
-            buffer[idx * 4 + 2] = Math.max(0, Math.round(c[2] * 0.72));
+            buffer[idx * 4] = Math.max(0, Math.round(c[0] * creaseDarken));
+            buffer[idx * 4 + 1] = Math.max(0, Math.round(c[1] * creaseDarken));
+            buffer[idx * 4 + 2] = Math.max(0, Math.round(c[2] * creaseDarken));
             buffer[idx * 4 + 3] = 255;
           } else {
             const c = colorBuf[idx];

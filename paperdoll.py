@@ -99,10 +99,10 @@ THEMES = {
     "obsidian": {
         "id": "obsidian",
         "name": "Volcanic Obsidian & Flame",
-        "gear_base": "#18181b",
-        "gear_hi": "#3f3f46",
-        "gear_shadow": "#09090b",
-        "gear_dark": "#000000",
+        "gear_base": "#3b3b46",
+        "gear_hi": "#6e6e7c",
+        "gear_shadow": "#26262e",
+        "gear_dark": "#16161b",
         "trim": "#ea580c",
         "trim_hi": "#fed7aa"
     }
@@ -439,10 +439,10 @@ ITEMS = {
     "runed_broadsword": {
         "id": "runed_broadsword", "slot": "weapon", "name": "Runed Broadsword",
         "bones": [
-            {"id": "eq_sw_blade", "parent": "arm_near_lower", "offset": [0, 0], "length": 17.0, "angle": -85, "r1": 2.0, "r2": 0.6, "z": 3.1, "fill": "gear_hi"},
-            {"id": "eq_sw_fuller", "parent": "arm_near_lower", "offset": [0.2, 0], "length": 12.0, "angle": -85, "r1": 0.8, "r2": 0.4, "z": 3.15, "fill": "trim_hi"},
-            {"id": "eq_sw_guard", "parent": "arm_near_lower", "offset": [0, 0], "length": 6.0, "angle": 5, "r1": 1.5, "r2": 1.5, "z": 3.12, "fill": "trim"},
-            {"id": "eq_sw_pommel", "parent": "arm_near_lower", "offset": [0, 0], "length": 3.0, "angle": 95, "r1": 1.2, "r2": 1.6, "z": 3.1, "fill": "gear_dark"}
+            {"id": "eq_sw_blade", "parent": "arm_near_lower", "offset": [0, 0], "length": 17.0, "angle": -40, "r1": 2.0, "r2": 0.6, "z": 3.1, "fill": "gear_hi"},
+            {"id": "eq_sw_fuller", "parent": "arm_near_lower", "offset": [0.2, 0], "length": 12.0, "angle": -40, "r1": 0.8, "r2": 0.4, "z": 3.15, "fill": "trim_hi"},
+            {"id": "eq_sw_guard", "parent": "arm_near_lower", "offset": [0, 0], "length": 6.0, "angle": 50, "r1": 1.5, "r2": 1.5, "z": 3.12, "fill": "trim"},
+            {"id": "eq_sw_pommel", "parent": "arm_near_lower", "offset": [0, 0], "length": 3.0, "angle": 140, "r1": 1.2, "r2": 1.6, "z": 3.1, "fill": "gear_dark"}
         ]
     },
     "battle_axe": {
@@ -483,9 +483,9 @@ ITEMS = {
     "kite_shield": {
         "id": "kite_shield", "slot": "shield", "name": "Royal Kite Shield",
         "bones": [
-            {"id": "eq_shd_body", "parent": "arm_far_upper", "offset": [0.5, 2.0], "length": 11.0, "angle": 85, "r1": 5.0, "r2": 3.0, "z": 0.08, "fill": "gear_base"},
+            {"id": "eq_shd_body", "parent": "arm_far_upper", "offset": [0.5, 2.0], "length": 11.0, "angle": 15, "r1": 5.0, "r2": 3.0, "z": 0.08, "fill": "cape"},
             {"id": "eq_shd_boss", "parent": "arm_far_upper", "offset": [0.8, 5.0], "length": 0, "shape": "head_oval", "r1": 2.6, "r2": 2.6, "z": 0.09, "fill": "trim"},
-            {"id": "eq_shd_cross", "parent": "arm_far_upper", "offset": [0.8, 5.0], "length": 7.0, "angle": 85, "r1": 1.2, "r2": 1.0, "z": 0.095, "fill": "trim_hi"}
+            {"id": "eq_shd_cross", "parent": "arm_far_upper", "offset": [0.8, 5.0], "length": 7.0, "angle": 15, "r1": 1.2, "r2": 1.0, "z": 0.095, "fill": "trim_hi"}
         ]
     },
     "round_buckler": {
@@ -523,9 +523,9 @@ ITEMS = {
     "red_cape": {
         "id": "red_cape", "slot": "back", "name": "Flowing Crimson Knight Cape",
         "bones": [
-            {"id": "eq_cape_root", "parent": "chest", "offset": [-1.5, 0], "length": 6.0, "angle": 145, "r1": 3.5, "r2": 4.8, "z": -0.4, "fill": "gear_shadow"},
-            {"id": "eq_cape_mid", "parent": "eq_cape_root", "offset": [0, 0], "length": 9.0, "angle": -10, "r1": 4.8, "r2": 6.2, "z": -0.42, "fill": "gear_base"},
-            {"id": "eq_cape_tail", "parent": "eq_cape_mid", "offset": [0, 0], "length": 7.0, "angle": 15, "r1": 6.2, "r2": 7.5, "z": -0.44, "fill": "gear_dark"}
+            {"id": "eq_cape_root", "parent": "chest", "offset": [-1.5, 0], "length": 6.0, "angle": 145, "r1": 3.5, "r2": 4.8, "z": -0.4, "fill": "cape_shadow"},
+            {"id": "eq_cape_mid", "parent": "eq_cape_root", "offset": [0, 0], "length": 9.0, "angle": -10, "r1": 4.8, "r2": 6.2, "z": -0.42, "fill": "cape"},
+            {"id": "eq_cape_tail", "parent": "eq_cape_mid", "offset": [0, 0], "length": 7.0, "angle": 15, "r1": 6.2, "r2": 7.5, "z": -0.44, "fill": "cape_dark"}
         ]
     },
     "shadow_cloak": {
@@ -759,8 +759,28 @@ def adapt_bones_for_direction(bones, direction="right"):
                     nb["features"] = None
 
             # Equipment Z-ordering & resting angle in front/back view
-            if "cape" in bid:
+            if "cape" in bid or "cloak" in bid:
                 nb["z"] = 0.4 if direction == "down" else 2.5
+                # Hang straight down behind/over the back instead of the profile's diagonal sweep.
+                if bid.endswith("_root"):
+                    nb["angle"] = 180
+                    nb["offset"] = [0, 0]
+                else:
+                    nb["angle"] = 0
+            if bid.startswith("eq_helm_crest"):
+                nb["angle"] = 0
+                nb["offset"] = [0, 0]
+            if bid.startswith("eq_helm_brow"):
+                if direction == "down":
+                    # Front view: a dark horizontal visor slit across the helmet.
+                    nb["angle"] = 90
+                    nb["offset"] = [0.5, -1.6]
+                    nb["length"] = 3.2
+                    nb["r1"] = 0.7
+                    nb["r2"] = 0.7
+                    nb["fill"] = "gear_dark"
+                else:
+                    nb["hidden"] = True
             if "shd" in bid:
                 nb["z"] = 1.4 if direction == "down" else 1.1
                 if "body" in bid:
@@ -772,13 +792,15 @@ def adapt_bones_for_direction(bones, direction="right"):
                 elif "boss" in bid:
                     nb["offset"] = [0, 2]
             if "sw_" in bid or "axe_" in bid or "stf_" in bid or "dgr_" in bid or "spear_" in bid:
-                nb["z"] = 1.4 if direction == "down" else 1.1
-                if "blade" in bid or "shaft" in bid or "head" in bid or "spear_tip" in bid:
-                    nb["angle"] = 20
+                # In front of leg armour when facing the camera, behind the body from the back.
+                nb["z"] = 2.9 if direction == "down" else 0.9
+                # Carried low and angled outward so the silhouette stays readable.
+                if "blade" in bid or "fuller" in bid or "shaft" in bid or "head" in bid or "spear_tip" in bid:
+                    nb["angle"] = -25
                 elif "guard" in bid:
-                    nb["angle"] = 110
+                    nb["angle"] = 65
                 elif "pommel" in bid:
-                    nb["angle"] = -160
+                    nb["angle"] = 155
 
         adapted.append(nb)
     return adapted
@@ -1043,7 +1065,11 @@ def assemble_spec(mannequin_id="humanoid", equipped_slots=None, action_id="walk"
         "gear_shadow": theme_def["gear_shadow"],
         "gear_dark": theme_def["gear_dark"],
         "trim": theme_def["trim"],
-        "trim_hi": theme_def["trim_hi"]
+        "trim_hi": theme_def["trim_hi"],
+        # Cloth is independent of the metal theme so capes never turn into metal blobs.
+        "cape": theme_def.get("cape", "#a8323a"),
+        "cape_shadow": theme_def.get("cape_shadow", "#7a2230"),
+        "cape_dark": theme_def.get("cape_dark", "#561a28")
     })
 
     composite_bones = []
@@ -1091,6 +1117,8 @@ def assemble_spec(mannequin_id="humanoid", equipped_slots=None, action_id="walk"
             "outline": "o",
             "outlineWidth": 1,
             "crease": True,
+            "creaseDelta": 0.45,
+            "creaseDarken": 0.6,
             "bones": composite_bones
         },
         "postProcess": {
@@ -1204,11 +1232,14 @@ def generate_godot4_tres(sheet_path: str, mannequin: str, action: str, frame_w: 
         )
 
     total_steps = 2 + len(directions) * num_frames
-    return f"""[gd_resource type="SpriteFrames" load_steps={total_steps} format=3 uid="uid://pixeldsl_{mannequin}_{action}"]
+    # Backslashes are not allowed inside f-string expressions before Python 3.12.
+    sub_text = "\n".join(sub_resources)
+    # No uid: Godot assigns one on import; a hand-made uid string is not a valid uid.
+    return f"""[gd_resource type="SpriteFrames" load_steps={total_steps} format=3]
 
 [ext_resource type="Texture2D" path="res://{sheet_filename}" id="1_sheet"]
 
-{"\n".join(sub_resources)}
+{sub_text}
 [resource]
 animations = [{", ".join(anim_blocks)}]
 """

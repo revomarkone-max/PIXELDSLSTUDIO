@@ -86,10 +86,10 @@
     obsidian: {
       id: "obsidian",
       name: "Volcanic Obsidian & Flame",
-      gear_base: "#18181b",
-      gear_hi: "#3f3f46",
-      gear_shadow: "#09090b",
-      gear_dark: "#000000",
+      gear_base: "#3b3b46",
+      gear_hi: "#6e6e7c",
+      gear_shadow: "#26262e",
+      gear_dark: "#16161b",
       trim: "#ea580c",
       trim_hi: "#fed7aa"
     }
@@ -534,10 +534,10 @@
       name: "Runed Broadsword",
       stats: { atk: 28, weight: 4.5, crit: 12 },
       bones: [
-        { id: "eq_sw_blade", parent: "arm_near_lower", offset: [0, 0], length: 17.0, angle: -85, r1: 2.0, r2: 0.6, z: 3.1, fill: "gear_hi" },
-        { id: "eq_sw_fuller", parent: "arm_near_lower", offset: [0.2, 0], length: 12.0, angle: -85, r1: 0.8, r2: 0.4, z: 3.15, fill: "trim_hi" },
-        { id: "eq_sw_guard", parent: "arm_near_lower", offset: [0, 0], length: 6.0, angle: 5, r1: 1.5, r2: 1.5, z: 3.12, fill: "trim" },
-        { id: "eq_sw_pommel", parent: "arm_near_lower", offset: [0, 0], length: 3.0, angle: 95, r1: 1.2, r2: 1.6, z: 3.1, fill: "gear_dark" }
+        { id: "eq_sw_blade", parent: "arm_near_lower", offset: [0, 0], length: 17.0, angle: -40, r1: 2.0, r2: 0.6, z: 3.1, fill: "gear_hi" },
+        { id: "eq_sw_fuller", parent: "arm_near_lower", offset: [0.2, 0], length: 12.0, angle: -40, r1: 0.8, r2: 0.4, z: 3.15, fill: "trim_hi" },
+        { id: "eq_sw_guard", parent: "arm_near_lower", offset: [0, 0], length: 6.0, angle: 50, r1: 1.5, r2: 1.5, z: 3.12, fill: "trim" },
+        { id: "eq_sw_pommel", parent: "arm_near_lower", offset: [0, 0], length: 3.0, angle: 140, r1: 1.2, r2: 1.6, z: 3.1, fill: "gear_dark" }
       ]
     },
 
@@ -599,9 +599,9 @@
       name: "Royal Kite Shield",
       stats: { def: 22, weight: 6.5, block: 35 },
       bones: [
-        { id: "eq_shd_body", parent: "arm_far_upper", offset: [0.5, 2.0], length: 11.0, angle: 85, r1: 5.0, r2: 3.0, z: 0.08, fill: "gear_base" },
+        { id: "eq_shd_body", parent: "arm_far_upper", offset: [0.5, 2.0], length: 11.0, angle: 15, r1: 5.0, r2: 3.0, z: 0.08, fill: "cape" },
         { id: "eq_shd_boss", parent: "arm_far_upper", offset: [0.8, 5.0], length: 0, shape: "head_oval", r1: 2.6, r2: 2.6, z: 0.09, fill: "trim" },
-        { id: "eq_shd_cross", parent: "arm_far_upper", offset: [0.8, 5.0], length: 7.0, angle: 85, r1: 1.2, r2: 1.0, z: 0.095, fill: "trim_hi" }
+        { id: "eq_shd_cross", parent: "arm_far_upper", offset: [0.8, 5.0], length: 7.0, angle: 15, r1: 1.2, r2: 1.0, z: 0.095, fill: "trim_hi" }
       ]
     },
 
@@ -660,9 +660,9 @@
       name: "Flowing Crimson Knight Cape",
       stats: { def: 2, weight: 1.0, charisma: 10 },
       bones: [
-        { id: "eq_cape_root", parent: "chest", offset: [-1.5, 0], length: 6.0, angle: 145, r1: 3.5, r2: 4.8, z: -0.4, fill: "gear_shadow" },
-        { id: "eq_cape_mid", parent: "eq_cape_root", offset: [0, 0], length: 9.0, angle: -10, r1: 4.8, r2: 6.2, z: -0.42, fill: "gear_base" },
-        { id: "eq_cape_tail", parent: "eq_cape_mid", offset: [0, 0], length: 7.0, angle: 15, r1: 6.2, r2: 7.5, z: -0.44, fill: "gear_dark" }
+        { id: "eq_cape_root", parent: "chest", offset: [-1.5, 0], length: 6.0, angle: 145, r1: 3.5, r2: 4.8, z: -0.4, fill: "cape_shadow" },
+        { id: "eq_cape_mid", parent: "eq_cape_root", offset: [0, 0], length: 9.0, angle: -10, r1: 4.8, r2: 6.2, z: -0.42, fill: "cape" },
+        { id: "eq_cape_tail", parent: "eq_cape_mid", offset: [0, 0], length: 7.0, angle: 15, r1: 6.2, r2: 7.5, z: -0.44, fill: "cape_dark" }
       ]
     },
 
@@ -900,9 +900,33 @@
           }
         }
 
-        // Equipment Z-ordering & resting angle in front/back view
-        if (bid.includes("cape")) {
+        // Equipment Z-ordering & resting angle in front/back view (mirrors paperdoll.py)
+        if (bid.includes("cape") || bid.includes("cloak")) {
           nb.z = dir === "down" ? 0.4 : 2.5;
+          // Hang straight down behind/over the back instead of the profile's diagonal sweep.
+          if (bid.endsWith("_root")) {
+            nb.angle = 180;
+            nb.offset = [0, 0];
+          } else {
+            nb.angle = 0;
+          }
+        }
+        if (bid.startsWith("eq_helm_crest")) {
+          nb.angle = 0;
+          nb.offset = [0, 0];
+        }
+        if (bid.startsWith("eq_helm_brow")) {
+          if (dir === "down") {
+            // Front view: a dark horizontal visor slit across the helmet.
+            nb.angle = 90;
+            nb.offset = [0.5, -1.6];
+            nb.length = 3.2;
+            nb.r1 = 0.7;
+            nb.r2 = 0.7;
+            nb.fill = "gear_dark";
+          } else {
+            nb.hidden = true;
+          }
         }
         if (bid.includes("shd")) {
           nb.z = dir === "down" ? 1.4 : 1.1;
@@ -916,19 +940,22 @@
             nb.offset = [0, 2];
           }
         }
-        if (bid.startsWith("sw_") || bid.startsWith("axe_") || bid.startsWith("stf_") || bid.startsWith("dgr_") || bid.startsWith("spear_")) {
-          nb.z = dir === "down" ? 1.4 : 1.1;
-          if (bid.includes("blade") || bid.includes("shaft") || bid.includes("head") || bid.includes("spear_tip")) {
-            nb.angle = 20;
+        // Substring match (ids look like "eq_sw_blade"), same as the Python version.
+        if (bid.includes("sw_") || bid.includes("axe_") || bid.includes("stf_") || bid.includes("dgr_") || bid.includes("spear_")) {
+          // In front of leg armour when facing the camera, behind the body from the back.
+          nb.z = dir === "down" ? 2.9 : 0.9;
+          // Carried low and angled outward so the silhouette stays readable.
+          if (bid.includes("blade") || bid.includes("fuller") || bid.includes("shaft") || bid.includes("head") || bid.includes("spear_tip")) {
+            nb.angle = -25;
           } else if (bid.includes("guard")) {
-            nb.angle = 110;
+            nb.angle = 65;
           } else if (bid.includes("pommel")) {
-            nb.angle = -160;
+            nb.angle = 155;
           }
         }
       }
 
-      adapted.append ? adapted.append(nb) : adapted.push(nb);
+      adapted.push(nb);
     }
     return adapted;
   }
@@ -1347,7 +1374,11 @@
         gear_shadow: themeDef.gear_shadow,
         gear_dark: themeDef.gear_dark,
         trim: themeDef.trim,
-        trim_hi: themeDef.trim_hi
+        trim_hi: themeDef.trim_hi,
+        // Cloth is independent of the metal theme so capes never turn into metal blobs.
+        cape: themeDef.cape || "#a8323a",
+        cape_shadow: themeDef.cape_shadow || "#7a2230",
+        cape_dark: themeDef.cape_dark || "#561a28"
       }
     );
 
@@ -1410,6 +1441,8 @@
         outline: opts.outline !== undefined ? opts.outline : "o",
         outlineWidth: opts.outlineWidth !== undefined ? opts.outlineWidth : 1,
         crease: true,
+        creaseDelta: 0.45,
+        creaseDarken: 0.6,
         bones: adaptedBones
       },
       postProcess: {

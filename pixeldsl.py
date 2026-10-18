@@ -1454,6 +1454,12 @@ def render_rig(spec, frame_index=0):
 
     sorted_bones = sorted(bones_def, key=lambda b: float(b.get("z", 0.0) or 0.0))
 
+    # Internal crease line between overlapping parts: drawn on the front pixel when
+    # a 4-neighbour sits at least `creaseDelta` deeper. Paper-doll rigs use a small
+    # delta so overlapping limbs/gear stay readable instead of merging into one mass.
+    crease_delta = float(rig_def.get("creaseDelta", 1.5) or 1.5)
+    crease_darken = float(rig_def.get("creaseDarken", 0.72) or 0.72)
+
     color_buf = [None] * (width * height)
     z_buf = [-9999.0] * (width * height)
     bone_id_buf = [None] * (width * height)
@@ -1593,12 +1599,12 @@ def render_rig(spec, frame_index=0):
                     ny, nx = y + dy, x + dx
                     if 0 <= ny < height and 0 <= nx < width:
                         n_idx = ny * width + nx
-                        if z_buf[n_idx] > -9000.0 and (cur_z - z_buf[n_idx]) >= 1.5:
+                        if z_buf[n_idx] > -9000.0 and (cur_z - z_buf[n_idx]) >= crease_delta:
                             is_internal_crease = True
                             break
                 if is_internal_crease:
                     c = color_buf[idx]
-                    crease_c = (max(0, int(c[0] * 0.72)), max(0, int(c[1] * 0.72)), max(0, int(c[2] * 0.72)), 255)
+                    crease_c = (max(0, int(c[0] * crease_darken)), max(0, int(c[1] * crease_darken)), max(0, int(c[2] * crease_darken)), 255)
                     buffer[idx * 4:idx * 4 + 4] = bytes(crease_c)
                 else:
                     buffer[idx * 4:idx * 4 + 4] = bytes(color_buf[idx])
