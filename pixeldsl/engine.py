@@ -366,7 +366,7 @@ def render(scene, resolved, cam, materials, outline="#16121d", steps=120, normal
     matid = np.full((H, W), -1, dtype=np.int64)
     rect = _screen_rect(cam, resolved)
     if rect is None:
-        return dict(rgba=rgba, normal=nrm, depth=depth, mat=matid)
+        return dict(rgba=rgba, normal=nrm, depth=depth, mat=matid, glow=rgba.copy(), team=rgba.copy())
     O, (pj, pi) = cam.pixel_rays(rect)
     D = cam.fwd
     # cull rays that miss every bounding sphere and start the others at the first one
@@ -415,8 +415,11 @@ def render(scene, resolved, cam, materials, outline="#16121d", steps=120, normal
                 continue
             ramp = np.array([hex_rgb(c) for c in mdef["ramp"]], dtype=np.uint8)
             tt = tone[sel]
-            if mdef.get("flat"):
-                tt = np.full_like(tt, mdef.get("flat_tone", 1))
+            if mdef.get("team"):
+                # team-coloured light: dark in the body layer, the game adds the tinted team layer
+                tt = np.zeros_like(tt)
+            elif mdef.get("flat") or mdef.get("glow"):
+                tt = np.full_like(tt, mdef.get("flat_tone", 2 if mdef.get("glow") else 1))
             if mdef.get("gloss") and len(ramp) > 4:
                 tt = np.where(spec[sel], 4, tt)
             rgba[jj[sel], ii[sel], :3] = ramp[np.clip(tt, 0, len(ramp) - 1)]
@@ -433,10 +436,23 @@ def render(scene, resolved, cam, materials, outline="#16121d", steps=120, normal
             nrm[jj, ii, 2] = np.clip((sz * 0.5 + 0.5) * 255, 0, 255).astype(np.uint8)
             nrm[jj, ii, 3] = 255
     rgba = _postprocess(rgba, depth, matid, materials, outline, cam.scale)
+    # emissive layers: "glow" materials keep their colour, "team" materials are written in
+    # their brightest ramp colour (white) so the game can tint them with the team colour
+    glow = np.zeros_like(rgba)
+    team = np.zeros_like(rgba)
+    for mi, mdef in enumerate(materials):
+        sel = (matid == mi) & (rgba[:, :, 3] > 0)
+        if not sel.any():
+            continue
+        if mdef.get("glow"):
+            glow[sel] = rgba[sel]
+        if mdef.get("team"):
+            team[sel, :3] = np.array(hex_rgb(mdef["ramp"][-1]), dtype=np.uint8)
+            team[sel, 3] = 255
     if normals:
         ring = (rgba[:, :, 3] > 0) & (nrm[:, :, 3] == 0)
         nrm[ring] = (128, 128, 255, 255)
-    return dict(rgba=rgba, normal=nrm, depth=depth, mat=matid)
+    return dict(rgba=rgba, normal=nrm, depth=depth, mat=matid, glow=glow, team=team)
 
 
 def _postprocess(rgba, depth, matid, materials, outline, scale=1.0):

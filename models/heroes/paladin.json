@@ -1,0 +1,36 @@
+{
+  "name": "paladin",
+  "type": "character",
+  "body": "chibi",
+  "rigs": ["cape", "grip"],
+  "anims": ["idle", "walk", "attack", "cast", "hurt", "death"],
+  "views": ["topdown"],
+  "materials": {
+    "cloth":   ["#16171c", "#202228", "#2c2e36", "#3a3d48"],
+    "rim":     ["#22242c", "#30333e", "#424654", "#565b6c"],
+    "void":    {"ramp": ["#040406", "#050508", "#07070b", "#09090e"], "flat": true},
+    "eyes":    {"ramp": ["#0a0a10", "#0a0a10", "#0a0a10", "#ffffff"], "team": true},
+    "steel":   ["#20242c", "#323844", "#48505e", "#646e80"],
+    "steel_d": ["#16181e", "#22252e", "#30343e", "#40454f"],
+    "cape":    ["#1c0e12", "#2a141a", "#3a1c24", "#4c2630"],
+    "leather": ["#1a120e", "#281c16", "#38281e", "#4a3628"],
+    "boot":    ["#121318", "#1c1d24", "#282a32", "#363842"],
+    "rune":    {"ramp": ["#b8862e", "#d8a23c", "#f2c25a", "#ffe09a"], "glow": true}
+  },
+  "parts": [
+    {"shirt": {"mat": "cloth", "sleeves": "long", "add": 0.8}},
+    {"pants": {"mat": "cloth", "add": 0.6}},
+    {"ellipsoid": {"joint": "chest", "at": [0, 0.6, 0.6], "radii": [7.8, 6.2, 5.8], "mat": "steel", "group": "plate"}},
+    {"ellipsoid": {"joint": "shoulder_R", "at": [-0.6, 1.0, 0], "radii": [4.4, 3.2, 4.4], "mat": "steel", "group": "pauldron_R"}, "mirror": true},
+    {"belt": {"mat": "leather"}},
+    {"gloves": {"mat": "steel_d", "add": 0.6}},
+    {"boots": {"mat": "boot", "top": 0.3, "add": 1.4}},
+    {"cape": {"mat": "cape", "ragged": true}},
+    {"clasp": {"mat": "steel"}},
+    {"spirit_hood": {"mat": "cloth", "rim": "rim", "tip": 0.9}},
+
+    {"cone": {"joint": "grip_R", "a": [0, -5.0, 0.4], "b": [0, 20.0, 0.4], "r1": 0.9, "r2": 1.0, "mat": "leather", "group": "weapon"}},
+    {"box":  {"joint": "grip_R", "at": [0, 22.5, 0.4], "half": [5.2, 3.0, 3.0], "mat": "steel", "group": "weapon_h", "rnd": 0.9}},
+    {"box":  {"joint": "grip_R", "at": [0, 22.5, 0.4], "half": [5.5, 0.6, 3.3], "mat": "rune", "group": "weapon_b", "rnd": 0.3}}
+  ]
+}

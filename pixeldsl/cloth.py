@@ -39,7 +39,8 @@ class CapeSim:
         names = model.skel.names
         rest = model.skel.rest
         self.attach_local = rest["cape_top"] - rest["chest"]
-        pts = [rest[n] for n in CHAIN] + [rest["cape_low"] + END_LOCAL]
+        self.end_local = np.array([0.0, -model.cape_end, 0.0])
+        pts = [rest[n] for n in CHAIN] + [rest["cape_low"] + self.end_local]
         self.lengths = [float(np.linalg.norm(pts[i + 1] - pts[i])) for i in range(len(pts) - 1)]
         self.cache = {}
         self.solid = [p for p in model.solid_prims if not p.get("group", "").startswith("weapon")]
@@ -124,7 +125,7 @@ class CapeSim:
     def _rest_points(self, J):
         pts = [J[n][0] for n in CHAIN]
         pos, R = J["cape_low"]
-        pts.append(pos + R @ END_LOCAL)
+        pts.append(pos + R @ self.end_local)
         return np.array(pts)
 
     def apply(self, J, anim, u, yaw_R, root_pos):

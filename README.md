@@ -9,8 +9,11 @@ Reproducible pixel-art game assets from small JSON models. A model is built from
 an orthographic game camera and turns it into crisp, outlined, toon-shaded sprites:
 
 - **views**: top-down 2.5D (8 directions), side view (platformers), isometric, front (icons/portraits)
-- **one shared human base** with idle, walk, run, attack, cast, jump, hurt, death - every
-  character is the base plus clothing/props, so all of them animate and turn the same way
+- **shared bases**: human (`adult`, `chibi`) and four-legged (`feline`), each with idle, walk,
+  run, attack, cast, jump, hurt, death - every character is a base plus clothing/props, so all of
+  them animate and turn the same way
+- **emissive layers**: `glow` materials (crystals, halos) and `team` materials (eyes, exported white
+  for tinting with the team colour) are also written as separate sheets/sprites
 - **props**: chests, barrels, crystals, trees, items (static, `bob`, `spin`)
 - **seamless tiles**: grass, dirt, sand, stone, water (animated), side-view ground
 - **export**: PNG sheets + JSON metadata, normal maps, GameMaker sprites, Godot `SpriteFrames`
@@ -20,6 +23,8 @@ Deterministic: the same JSON always produces the same pixels, so assets live in 
 as text and can be regenerated at any size (`--scale 0.5` for half-size sprites).
 
 ![Heroes in the top-down and side views](docs/showcase.png)
+
+![MOBA heroes in the Black Marble & Murky Ice style, 8 directions](docs/heroes.png)
 
 ## Install
 
@@ -53,6 +58,7 @@ python -m pixeldsl gallery -o out/gallery.html
 {
   "name": "mage",
   "type": "character",
+  "body": "chibi",
   "hide": ["hair"],
   "rigs": ["cape", "grip"],
   "materials": {
@@ -68,9 +74,13 @@ python -m pixeldsl gallery -o out/gallery.html
 }
 ```
 
+- **type / body**: `character` with `body` `adult` or `chibi`, `quadruped` with `feline`, or `prop`.
+  `"size": 1.2` scales the whole model.
 - **materials**: 4 colours dark -> light (a 5th = specular highlight with `"gloss": true`).
+  `"glow": true` = unlit emissive colour (also exported on the `_glow` layer); `"team": true` =
+  dark in the body, white on the `_team` layer (tint it with the team colour in the game).
 - **parts**: a builder call (`shirt`, `flared_sleeves`, `pants`, `boots`, `gloves`, `robe`, `belt`,
-  `hood`, `cape`) or a raw primitive (`sphere`, `ellipsoid`, `cone`, `ccone`, `box`, `torus`, `seg`)
+  `hood`, `spirit_hood` (void face + glowing eyes), `cape` (`"ragged": true` for a torn hem), `clasp`, `hide`) or a raw primitive (`sphere`, `ellipsoid`, `cone`, `ccone`, `box`, `torus`, `seg`)
   attached to a joint. `"mirror": true` adds the left/right copy. Primitives in one `group`
   blend smoothly; `"cut": true` subtracts from its group.
 - **rigs**: `cape` (cape chain driven by a small cloth simulation: gravity, drag from the
@@ -109,7 +119,10 @@ feet, no texture filtering. Godot gets one `SpriteFrames` per view with animatio
 | `pixeldsl/export.py` | sheets, metadata, normal maps, GameMaker, Godot |
 | `pixeldsl/tiles.py` | seamless tiles |
 | `pixeldsl/preview.py`, `cli.py` | HTML player and command line |
-| `models/` | characters and props |
+| `pixeldsl/quadruped.py` | four-legged base (feline) and gaits |
+| `pixeldsl/cloth.py` | cape simulation |
+| `models/heroes/` | MOBA heroes (Black Marble & Murky Ice style: chibi, void hoods, team eyes) + druid panther |
+| `models/characters/`, `models/props/` | adult characters and props |
 
 ## License
 

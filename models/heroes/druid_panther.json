@@ -1,0 +1,111 @@
+{
+  "name": "druid_panther",
+  "type": "quadruped",
+  "body": "feline",
+  "anims": [
+    "idle",
+    "walk",
+    "run",
+    "attack",
+    "hurt",
+    "death"
+  ],
+  "views": [
+    "topdown"
+  ],
+  "materials": {
+    "fur": [
+      "#16161c",
+      "#202028",
+      "#2c2c36",
+      "#3a3a48"
+    ],
+    "fur_d": [
+      "#0e0e12",
+      "#16161c",
+      "#1e1e26",
+      "#282832"
+    ],
+    "nose": [
+      "#08080a",
+      "#0c0c0e",
+      "#121216",
+      "#18181c"
+    ],
+    "mark": {
+      "ramp": [
+        "#2e6a3a",
+        "#3e8a4c",
+        "#5aa868",
+        "#88c896"
+      ],
+      "glow": true
+    }
+  },
+  "parts": [
+    {
+      "ellipsoid": {
+        "joint": "chest",
+        "at": [
+          -7.2,
+          2.4,
+          1.0
+        ],
+        "radii": [
+          0.6,
+          0.8,
+          3.6
+        ],
+        "mat": "mark",
+        "group": "mark",
+        "rot": [
+          -20,
+          0,
+          0
+        ]
+      },
+      "mirror": true
+    },
+    {
+      "ellipsoid": {
+        "joint": "hips",
+        "at": [
+          -6.4,
+          2.6,
+          0.0
+        ],
+        "radii": [
+          0.6,
+          0.8,
+          3.0
+        ],
+        "mat": "mark",
+        "group": "mark",
+        "rot": [
+          20,
+          0,
+          0
+        ]
+      },
+      "mirror": true
+    },
+    {
+      "ellipsoid": {
+        "joint": "head",
+        "at": [
+          0,
+          4.6,
+          1.5
+        ],
+        "radii": [
+          0.6,
+          0.5,
+          2.2
+        ],
+        "mat": "mark",
+        "group": "mark"
+      }
+    }
+  ],
+  "size": 1.2
+}

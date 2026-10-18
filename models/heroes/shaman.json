@@ -1,0 +1,37 @@
+{
+  "name": "shaman",
+  "type": "character",
+  "body": "chibi",
+  "rigs": ["grip"],
+  "anims": ["idle", "walk", "attack", "cast", "hurt", "death"],
+  "views": ["topdown"],
+  "materials": {
+    "fur":     ["#1c1e22", "#2a2c32", "#3a3d45", "#4c505a"],
+    "fur_d":   ["#121316", "#1c1d22", "#26282e", "#32353c"],
+    "void":    {"ramp": ["#040406", "#050508", "#07070b", "#09090e"], "flat": true},
+    "eyes":    {"ramp": ["#0a0a10", "#0a0a10", "#0a0a10", "#ffffff"], "team": true},
+    "leather": ["#1c140f", "#2a1e16", "#3a2a1e", "#4c3828"],
+    "bone":    ["#3a352c", "#524a3c", "#6a604e", "#827660"],
+    "boot":    ["#121214", "#1c1c20", "#26262c", "#323238"],
+    "spirit":  {"ramp": ["#2a7aa8", "#3a98c8", "#5ab8e0", "#9ad8f4"], "glow": true}
+  },
+  "parts": [
+    {"shirt": {"mat": "leather", "sleeves": "short", "add": 0.6}},
+    {"pants": {"mat": "leather", "add": 0.6}},
+    {"boots": {"mat": "fur_d", "top": 0.35, "add": 1.4}},
+    {"gloves": {"mat": "leather", "cuff": "fur", "add": 0.4}},
+    {"belt": {"mat": "leather", "buckle": "bone"}},
+    {"ellipsoid": {"joint": "chest", "at": [0, 3.2, -0.6], "radii": [9.6, 3.6, 6.6], "mat": "fur", "group": "mantle"}},
+    {"ellipsoid": {"joint": "chest", "at": [-6.2, 1.8, 0.0], "radii": [3.8, 4.0, 4.8], "mat": "fur", "group": "mantle"}, "mirror": true},
+    {"spirit_hood": {"mat": "fur", "rim": "fur_d", "tip": 0.2}},
+    {"cone": {"joint": "head", "a": [0, 7.0, 6.0], "b": [0, 5.0, 14.0], "r1": 5.4, "r2": 3.2, "mat": "fur", "group": "wolf"}},
+    {"sphere": {"joint": "head", "at": [0, 5.2, 14.4], "r": 1.6, "mat": "fur_d", "group": "wolf_n"}},
+    {"cone": {"joint": "head", "a": [-6.0, 9.0, -1.0], "b": [-7.6, 16.5, -2.4], "r1": 3.0, "r2": 0.5, "mat": "fur", "group": "wolf_e"}, "mirror": true},
+    {"cone": {"joint": "head", "a": [-3.4, 2.8, 12.0], "b": [-3.2, -0.6, 11.6], "r1": 0.8, "r2": 0.2, "mat": "bone", "group": "fang"}, "mirror": true},
+
+    {"cone":      {"joint": "grip_R", "a": [0, -8.0, 0.4], "b": [0, 24.0, 0.4], "r1": 0.9, "r2": 1.1, "mat": "leather", "group": "weapon"}},
+    {"torus":     {"joint": "grip_R", "at": [0, 20.0, 0.4], "big": 1.5, "small": 0.6, "mat": "bone", "group": "weapon_r"}},
+    {"ellipsoid": {"joint": "grip_R", "at": [0, 26.0, 0.4], "radii": [2.6, 3.0, 2.6], "mat": "fur_d", "group": "weapon_h"}},
+    {"sphere":    {"joint": "grip_R", "at": [0, 26.4, 2.4], "r": 1.8, "mat": "spirit", "group": "weapon_g"}}
+  ]
+}

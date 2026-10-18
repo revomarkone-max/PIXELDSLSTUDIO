@@ -1,0 +1,35 @@
+{
+  "name": "priest",
+  "type": "character",
+  "body": "chibi",
+  "rigs": ["cape", "grip"],
+  "anims": ["idle", "walk", "attack", "cast", "hurt", "death"],
+  "views": ["topdown"],
+  "materials": {
+    "cloth":   ["#2a2620", "#3a352c", "#4c463a", "#605848"],
+    "cloth_d": ["#1c1a16", "#28241e", "#363028", "#443d32"],
+    "rim":     ["#3c3626", "#544a32", "#6a5e3e", "#80724a"],
+    "void":    {"ramp": ["#040406", "#050508", "#07070b", "#09090e"], "flat": true},
+    "eyes":    {"ramp": ["#0a0a10", "#0a0a10", "#0a0a10", "#ffffff"], "team": true},
+    "gold_d":  ["#2e2414", "#463620", "#5e4a2a", "#766036"],
+    "boot":    ["#14120f", "#1e1b16", "#2a261f", "#363128"],
+    "halo":    {"ramp": ["#a8863c", "#c8a04a", "#e8c46a", "#f8dc90"], "glow": true},
+    "sun":     {"ramp": ["#c88a2a", "#e8a838", "#ffcf6a", "#ffe8a8"], "glow": true}
+  },
+  "parts": [
+    {"shirt": {"mat": "cloth", "sleeves": null, "add": 0.7}},
+    {"flared_sleeves": {"mat": "cloth", "flare": 1.6, "add": 0.9}},
+    {"robe": {"mat": "cloth", "hem_r": 9.0, "hem": "gold_d"}},
+    {"box": {"joint": "chest", "at": [0, -4.0, 5.4], "half": [1.3, 8.0, 0.5], "mat": "gold_d", "group": "stole"}},
+    {"gloves": {"mat": "cloth_d", "add": 0.4}},
+    {"boots": {"mat": "boot", "top": 0.4, "add": 1.3}},
+    {"cape": {"mat": "cloth_d", "ragged": true}},
+    {"clasp": {"mat": "gold_d"}},
+    {"spirit_hood": {"mat": "cloth", "rim": "rim", "tip": 0.7}},
+    {"torus": {"joint": "head", "at": [0, 15.5, -2.0], "big": 7.0, "small": 0.8, "mat": "halo", "group": "halo", "rot": [-14, 0, 0]}},
+
+    {"cone":   {"joint": "grip_R", "a": [0, -6.0, 0.4], "b": [0, 26.0, 0.4], "r1": 0.8, "r2": 0.9, "mat": "gold_d", "group": "weapon"}},
+    {"torus":  {"joint": "grip_R", "at": [0, 30.0, 0.4], "big": 3.4, "small": 0.7, "mat": "gold_d", "group": "weapon_r", "rot": [90, 0, 0]}},
+    {"sphere": {"joint": "grip_R", "at": [0, 30.0, 0.4], "r": 2.3, "mat": "sun", "group": "weapon_s"}}
+  ]
+}

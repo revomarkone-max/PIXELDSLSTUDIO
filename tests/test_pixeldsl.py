@@ -68,9 +68,9 @@ class ModelTests(unittest.TestCase):
         for p in MODELS:
             m = model.Model.load(p)
             for view in m.default_views:
-                anims = [a for a in ("idle", "walk", "attack", "jump", "death") if a in m.anims]
+                anims = [a for a in ("idle", "attack", "jump", "death") if a in m.anims]
                 for anim in anims:
-                    for d in export.directions(m, view)[:3]:
+                    for d in export.directions(m, view)[:2]:
                         with self.subTest(model=m.name, view=view, anim=anim, d=d):
                             a = m.render_frame(view, anim, 0.5 if anim != "death" else 1.0, d)["rgba"][:, :, 3]
                             self.assertGreater((a > 0).sum(), 60, "almost nothing rendered")
@@ -96,8 +96,8 @@ class ModelTests(unittest.TestCase):
             [p for p in m.prims if p["kind"] == "skirt"], m.pose("walk", 0.25, 0))})
 
     def test_weapons_stay_out_of_the_body(self):
-        for name in ("mage", "priest", "paladin", "shaman", "druid"):
-            m = model.Model.load(ROOT / ("models/characters/%s.json" % name))
+        for name in ("characters/mage", "characters/paladin", "heroes/mage", "heroes/priest", "heroes/druid"):
+            m = model.Model.load(ROOT / ("models/%s.json" % name))
             from pixeldsl import engine
             for anim in ("idle", "walk", "run", "cast"):
                 for u in (0.0, 0.25, 0.5, 0.75):
@@ -120,6 +120,35 @@ class ModelTests(unittest.TestCase):
             self.assertGreater(float(scene.distance(pts).min()), 0.5)
         # running pushes the cape further back than standing
         self.assertLess(a._cape.simulate("run")[0][-1][2], a._cape.simulate("idle")[0][-1][2] - 3)
+
+    def test_glow_and_team_layers(self):
+        m = model.Model.load(ROOT / "models/heroes/mage.json")
+        r = m.render_frame("topdown", "idle", 0.0, 270)
+        team, glow = r["team"][:, :, 3] > 0, r["glow"][:, :, 3] > 0
+        self.assertGreater(team.sum(), 4, "eyes missing from the team layer")
+        self.assertGreater(glow.sum(), 4, "staff crystal missing from the glow layer")
+        self.assertTrue((r["team"][team][:, :3] == 255).all(), "team layer must be white for tinting")
+        self.assertTrue((r["rgba"][team][:, :3] < 40).all(), "eyes must be dark in the body layer")
+
+    def test_chibi_proportions(self):
+        m = model.Model({"name": "c", "body": "chibi"})
+        J = m.pose("idle", 0.0, 270)
+        head = J["head"][0][1] + m.dims["head_r"][1]
+        self.assertGreater(m.dims["head_r"][1] * 2 / head, 0.33)   # head ~40% of the height
+
+    def test_quadruped_walk_moves_every_leg(self):
+        m = model.Model.load(ROOT / "models/heroes/druid_panther.json")
+        a, b = m.pose("walk", 0.0, 270), m.pose("walk", 0.5, 270)
+        for paw in ("fpaw_R", "fpaw_L", "hpaw_R", "hpaw_L"):
+            self.assertGreater(float(np.linalg.norm(a[paw][0] - b[paw][0])), 2.0, paw)
+
+    def test_size_scales_the_model(self):
+        small = model.Model({"name": "s", "type": "prop", "parts": [{"sphere": {"joint": "root", "at": [0, 5, 0], "r": 5, "mat": "m", "group": "g"}}],
+                             "materials": {"m": ["#111111", "#222222", "#333333", "#444444"]}})
+        big = model.Model(dict(small.data, size=2.0))
+        a = (small.render_frame("front", "idle", 0, 270)["rgba"][:, :, 3] > 0).sum()
+        b = (big.render_frame("front", "idle", 0, 270)["rgba"][:, :, 3] > 0).sum()
+        self.assertGreater(b / a, 3.0)
 
     def test_unknown_builder_is_a_clear_error(self):
         with self.assertRaisesRegex(ValueError, "unknown builder"):

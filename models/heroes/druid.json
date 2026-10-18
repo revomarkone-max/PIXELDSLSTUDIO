@@ -1,0 +1,40 @@
+{
+  "name": "druid",
+  "type": "character",
+  "body": "chibi",
+  "rigs": ["cape", "grip"],
+  "anims": ["idle", "walk", "attack", "cast", "hurt", "death"],
+  "views": ["topdown"],
+  "materials": {
+    "moss":    ["#121a12", "#1a2618", "#243420", "#30442a"],
+    "moss_d":  ["#0c120c", "#121a10", "#1a2416", "#22301c"],
+    "leaf":    ["#142014", "#1c2e1a", "#264022", "#32522c"],
+    "cloth":   ["#1a1610", "#262016", "#342c1e", "#443a28"],
+    "void":    {"ramp": ["#040406", "#050508", "#07070b", "#09090e"], "flat": true},
+    "eyes":    {"ramp": ["#0a0a10", "#0a0a10", "#0a0a10", "#ffffff"], "team": true},
+    "antler":  ["#2a2620", "#3c362e", "#504840", "#665c50"],
+    "bark":    ["#18120c", "#241a12", "#32241a", "#423024"],
+    "orb":     {"ramp": ["#3a8a4a", "#4ea860", "#72c882", "#a8e4b0"], "glow": true}
+  },
+  "parts": [
+    {"shirt": {"mat": "cloth", "sleeves": "long", "add": 0.7}},
+    {"robe": {"mat": "cloth", "hem_r": 8.8}},
+    {"belt": {"mat": "bark"}},
+    {"gloves": {"mat": "bark", "add": 0.4}},
+    {"boots": {"mat": "bark", "top": 0.4, "add": 1.3}},
+    {"cape": {"mat": "moss_d", "lining": "leaf", "ragged": true}},
+    {"ellipsoid": {"joint": "chest", "at": [-5.4, 3.4, 2.0], "radii": [3.2, 1.4, 3.8], "mat": "leaf", "group": "leaves", "rot": [0, 20, -24]}, "mirror": true},
+    {"ellipsoid": {"joint": "chest", "at": [0, 4.6, 3.2], "radii": [4.4, 1.4, 2.4], "mat": "leaf", "group": "leaves", "rot": [-16, 0, 0]}},
+    {"clasp": {"mat": "antler"}},
+    {"spirit_hood": {"mat": "moss", "rim": "moss_d", "tip": 0.8}},
+    {"cone": {"joint": "head", "a": [-5.0, 9.0, -1.0], "b": [-8.4, 17.0, -2.0], "r1": 1.2, "r2": 0.8, "mat": "antler", "group": "antler"}, "mirror": true},
+    {"cone": {"joint": "head", "a": [-8.4, 17.0, -2.0], "b": [-12.4, 20.6, -2.6], "r1": 0.8, "r2": 0.4, "mat": "antler", "group": "antler"}, "mirror": true},
+    {"cone": {"joint": "head", "a": [-7.2, 14.4, -1.6], "b": [-6.4, 20.0, -1.0], "r1": 0.7, "r2": 0.3, "mat": "antler", "group": "antler"}, "mirror": true},
+
+    {"cone":   {"joint": "grip_R", "a": [0, -5.0, 0.4], "b": [0.8, 17.0, 0.4], "r1": 0.9, "r2": 1.1, "mat": "bark", "group": "weapon"}},
+    {"cone":   {"joint": "grip_R", "a": [0.8, 17.0, 0.4], "b": [-0.6, 24.0, 0.4], "r1": 1.1, "r2": 0.9, "mat": "bark", "group": "weapon"}},
+    {"cone":   {"joint": "grip_R", "a": [-0.6, 24.0, 0.4], "b": [2.6, 28.0, 0.4], "r1": 0.9, "r2": 0.7, "mat": "bark", "group": "weapon"}},
+    {"cone":   {"joint": "grip_R", "a": [2.6, 28.0, 0.4], "b": [4.6, 25.0, 0.4], "r1": 0.7, "r2": 0.45, "mat": "bark", "group": "weapon"}},
+    {"sphere": {"joint": "grip_R", "at": [1.6, 25.2, 0.4], "r": 1.8, "mat": "orb", "group": "weapon_g"}}
+  ]
+}

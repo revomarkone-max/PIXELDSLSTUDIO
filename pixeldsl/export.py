@@ -34,7 +34,7 @@ def _job(args):
     if m is None:
         m = _CACHE[data_json] = Model(json.loads(data_json))
     r = m.render_frame(view, anim, u, d, scale=scale, normals=normals)
-    return r["rgba"], r["normal"], r["origin"], r["anchors"]
+    return r["rgba"], r["normal"], r["origin"], r["anchors"], r["glow"], r["team"]
 
 
 def _src_hash():
@@ -98,7 +98,8 @@ def render_view(model, view, anims, scale=1.0, normals=False, progress=None):
             z = np.load(cp)
             raw[anim] = {"frames": [list(r) for r in z["frames"]],
                          "normals": [list(r) for r in z["normals"]] if normals else None,
-                         "points": json.loads(str(z["points"]))}
+                         "points": json.loads(str(z["points"])),
+                         "glow": [list(r) for r in z["glow"]], "team": [list(r) for r in z["team"]]}
             origin = tuple(z["origin"])
         else:
             todo.append((anim, cp))
@@ -120,10 +121,14 @@ def render_view(model, view, anims, scale=1.0, normals=False, progress=None):
         for anim, _ in todo:
             raw[anim] = {"frames": [[None] * model.frames(anim) for _ in dirs],
                          "normals": [[None] * model.frames(anim) for _ in dirs] if normals else None,
-                         "points": {}}
+                         "points": {},
+                         "glow": [[None] * model.frames(anim) for _ in dirs],
+                         "team": [[None] * model.frames(anim) for _ in dirs]}
         origin = results[0][2]
-        for (anim, di, f), (rgba, nrm, _, pts) in zip(keys, results):
+        for (anim, di, f), (rgba, nrm, _, pts, glw, tm) in zip(keys, results):
             raw[anim]["frames"][di][f] = rgba
+            raw[anim]["glow"][di][f] = glw
+            raw[anim]["team"][di][f] = tm
             if normals:
                 raw[anim]["normals"][di][f] = nrm
             for name, p in pts.items():
@@ -133,7 +138,8 @@ def render_view(model, view, anims, scale=1.0, normals=False, progress=None):
             if cp is not None:
                 np.savez_compressed(cp, frames=np.array(raw[anim]["frames"]), origin=np.array(origin),
                                     normals=np.array(raw[anim]["normals"]) if normals else np.zeros(1),
-                                    points=np.array(json.dumps(raw[anim]["points"])))
+                                    points=np.array(json.dumps(raw[anim]["points"])),
+                                    glow=np.array(raw[anim]["glow"]), team=np.array(raw[anim]["team"]))
     raw = {a: raw[a] for a in anims}
     # one crop box for the whole view
     mask = None
@@ -152,7 +158,7 @@ def render_view(model, view, anims, scale=1.0, normals=False, progress=None):
     x0, x1 = ox - half, ox + half
     box = (int(x0), int(y0), int(x1), int(max(y1, oy + 1)))
     for a in raw.values():
-        for key in ("frames", "normals"):
+        for key in ("frames", "normals", "glow", "team"):
             if a[key] is None:
                 continue
             a[key] = [[img[box[1]:box[3], box[0]:box[2]] for img in row] for row in a[key]]
@@ -186,6 +192,11 @@ def write_generic(model, view, raw, dirs, origin, size, out_dir, scale):
         Image.fromarray(sheet(a["frames"]), "RGBA").save(out_dir / fn)
         entry = {"file": fn, "frames": len(a["frames"][0]), "fps": model.fps(anim), "loop": model.loops(anim),
                  "points": a["points"]}
+        for layer in ("glow", "team"):
+            if any(img[:, :, 3].any() for row in a[layer] for img in row):
+                lfn = "%s_%s_%s_%s.png" % (model.name, view, anim, layer)
+                Image.fromarray(sheet(a[layer]), "RGBA").save(out_dir / lfn)
+                entry[layer] = lfn
         if a["normals"] is not None:
             nfn = "%s_%s_%s_n.png" % (model.name, view, anim)
             Image.fromarray(sheet(a["normals"]), "RGBA").save(out_dir / nfn)
@@ -239,12 +250,18 @@ def write_gamemaker(model, view, raw, origin, size, project, name_pattern="spr_{
     project = Path(project)
     yyp = next(project.glob("*.yyp"))
     names = []
+    jobs = []
     for anim, a in raw.items():
-        name = name_pattern.format(name=model.name, view=view, anim=anim)
+        base = name_pattern.format(name=model.name, view=view, anim=anim)
+        jobs.append((anim, base, a["frames"]))
+        for layer in ("glow", "team"):     # emissive layers as separate sprites (same frames/origin)
+            if a.get(layer) and any(img[:, :, 3].any() for row in a[layer] for img in row):
+                jobs.append((anim, base + "_" + layer, a[layer]))
+    for anim, name, frames in jobs:
         sdir = project / "sprites" / name
         layer = uid(name, "layer")
         ids = []
-        for d, row in enumerate(a["frames"]):
+        for d, row in enumerate(frames):
             for f, img in enumerate(row):
                 fid = uid(name, d, f)
                 ids.append(fid)

@@ -27,7 +27,7 @@ from pathlib import Path
 
 import numpy as np
 
-from . import builders, cloth, engine, human
+from . import builders, cloth, engine, human, quadruped
 
 # View presets: camera elevation and the directions rendered (GameMaker/screen degrees:
 # 0 = right, 90 = up, 270 = toward the camera).
@@ -109,6 +109,20 @@ def expand_parts(parts):
     return prims
 
 
+def _scale_prim(p, k):
+    q = dict(p)
+    for key in ("at", "a_off", "b_off", "radii", "half", "top"):
+        if key in q:
+            q[key] = tuple(v * k for v in q[key])
+    for key in ("a", "b"):
+        if key in q and not isinstance(q[key], str):
+            q[key] = tuple(v * k for v in q[key])
+    for key in ("r", "r1", "r2", "big", "small", "round", "length", "hem_r", "top_r", "clearance", "band_add", "hem_z"):
+        if key in q:
+            q[key] = q[key] * k
+    return q
+
+
 def _material(v):
     return {"ramp": list(v)} if isinstance(v, (list, tuple)) else dict(v)
 
@@ -120,19 +134,39 @@ class Model:
         self.name = data.get("name") or (Path(source).stem if source else "model")
         self.kind = data.get("type", "character")
         rigs = [builders.RIGS[r] for r in data.get("rigs", [])]
+        self.body = data.get("body", "adult")
+        self.cape_end = 12.0
         if self.kind == "character":
-            joints = list(human.JOINTS)
+            joints, dims = human.BODIES[self.body]
+            joints = list(joints)
+            self.dims = dims
+            builders.use_body(dims, joints)
             mats = {k: dict(v) for k, v in human.BASE_MATERIALS.items()}
             hide = set(data.get("hide", []))
-            prims = [p for p in human.body_primitives() if p.get("group") not in hide]
-            self.anims = dict(human.ANIMS)
+            prims = [p for p in human.body_primitives(dims) if p.get("group") not in hide]
+            self.anims = {k: (v[0], v[1], v[2], v[3]) for k, v in human.ANIMS.items()}
             group_k = dict(human.GROUP_K)
+        elif self.kind == "quadruped":
+            self.body = data.get("body", "feline")
+            joints, dims = quadruped.BODIES[self.body]
+            joints = list(joints)
+            self.dims = dims
+            mats = {k: dict(v) for k, v in quadruped.BASE_MATERIALS.items()}
+            hide = set(data.get("hide", []))
+            prims = [p for p in quadruped.body_primitives(dims) if p.get("group") not in hide]
+            self.anims = dict(quadruped.ANIMS)
+            group_k = dict(quadruped.GROUP_K)
         else:
             joints = [("root", None, (0.0, 0.0, 0.0))]
             mats, prims, group_k = {}, [], {}
+            self.dims = None
             self.anims = dict(PROP_ANIMS)
+        base_joints = list(joints)
         for r in rigs:
-            joints += r["joints"]
+            rj, end = r["joints"](base_joints) if callable(r["joints"]) else (r["joints"], 12.0)
+            joints += rj
+            if r.get("sim") == "cape":
+                self.cape_end = end
             group_k.update(r["group_k"])
         mats.update({k: _material(v) for k, v in data.get("materials", {}).items()})
         parts = expand_parts(data.get("parts", []))
@@ -140,6 +174,12 @@ class Model:
         hidden = {g for p in parts if p["kind"] == "hide" for g in p["groups"]}
         prims = [p for p in prims if p.get("group") not in hidden] + [p for p in parts if p["kind"] != "hide"]
         group_k.update(data.get("group_k", {}))
+        size = float(data.get("size", 1.0))
+        self.size = size
+        if size != 1.0:   # uniform scale of skeleton and every primitive
+            joints = [(n, p, tuple(v * size for v in pos)) for n, p, pos in joints]
+            prims = [_scale_prim(p, size) for p in prims]
+            self.cape_end *= size
         self.skel = engine.Skeleton(joints)
         names = list(mats)
         index = {n: i for i, n in enumerate(names)}
@@ -161,17 +201,21 @@ class Model:
         if self.kind == "character":
             self.anchor_defs.update({"hand_R": ("hand_R", (0, -1.0, 0.4)), "hand_L": ("hand_L", (0, -1.0, 0.4)),
                                      "head": ("head", (0, 7.5, 0))})
+        elif self.kind == "quadruped":
+            self.anchor_defs.update({"mouth": ("head", (0, -1.5, 7.0)), "paw_R": ("fpaw_R", (0, 0, 1.5)),
+                                     "head": ("head", (0, 5.0, 0))})
         for k, v in (data.get("anchors") or {}).items():
             self.anchor_defs[k] = (v["joint"], tuple(v.get("at", (0, 0, 0))))
         self.rig_anims = [r["anims"] for r in rigs]
         self._cape = None
         self._wants_cape_sim = any(r.get("sim") == "cape" for r in rigs) and not data.get("no_cloth_sim")
         if data.get("no_cloth_sim") and any(r.get("sim") == "cape" for r in rigs):
-            self.rig_anims.append(builders._cape_anims())
+            self.rig_anims.append(builders.cape_anim())
         self.outline = data.get("outline", "#16121d")
+        living = self.kind in ("character", "quadruped")
         self.default_anims = data.get("anims") or (["idle", "walk", "run", "attack", "cast", "jump", "hurt", "death"]
-                                                   if self.kind == "character" else ["idle"])
-        self.default_views = data.get("views") or (["topdown", "side"] if self.kind == "character" else ["topdown"])
+                                                   if living else ["idle"])
+        self.default_views = data.get("views") or (["topdown", "side"] if living else ["topdown"])
 
     @classmethod
     def load(cls, path):
@@ -195,7 +239,9 @@ class Model:
 
     def _pose(self, anim, u, direction):
         fn = self.anims[anim][0]
-        rots, root = fn(u)
+        rots, root = fn(u, self.dims) if self.dims is not None else fn(u)
+        if self.size != 1.0:
+            root = tuple(v * self.size for v in root)
         rots = dict(rots)
         for ra in self.rig_anims:
             extra = ra.get(anim) or ra.get("idle")
