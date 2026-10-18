@@ -1474,11 +1474,25 @@ def render_rig(spec, frame_index=0):
             continue
         bid = b["id"]
         (ax, ay), (bx, by), w_angle = fk_results.get(bid, ((0.0, 0.0), (0.0, 0.0), 0.0))
-        r1 = max(0.5, float(b.get("r1", 2.0) or 2.0))
-        r2 = max(0.5, float(b.get("r2", r1) or r1))
+        base_r1 = max(0.5, float(b.get("r1", 2.0) or 2.0))
+        base_r2 = max(0.5, float(b.get("r2", base_r1) or base_r1))
         z = float(b.get("z", 0.0) or 0.0)
+
+        # Perspective Depth Scaling: limbs in the background (z < 1.0) shrink naturally; foreground limbs (z > 1.0) scale up
+        depth_scale_factor = max(0.55, min(2.0, 1.0 + (z - 1.0) * 0.18))
+        r1 = max(0.5, base_r1 * depth_scale_factor)
+        r2 = max(0.5, base_r2 * depth_scale_factor)
+
         fill_key = b.get("fill", "b")
-        fill_rgba = palette_rgba.get(fill_key) or parse_color(fill_key)
+        base_fill_rgba = palette_rgba.get(fill_key) or parse_color(fill_key)
+        # Subtle ambient depth attenuation for background limbs (z < 0.95)
+        depth_brightness = max(0.80, min(1.0, 0.88 + 0.12 * min(1.0, z)))
+        fill_rgba = (
+            int(round(base_fill_rgba[0] * depth_brightness)),
+            int(round(base_fill_rgba[1] * depth_brightness)),
+            int(round(base_fill_rgba[2] * depth_brightness)),
+            base_fill_rgba[3] if len(base_fill_rgba) > 3 else 255
+        )
         shape = str(b.get("shape", "capsule")).lower()
 
         vax = bx - ax
@@ -1544,11 +1558,18 @@ def render_rig(spec, frame_index=0):
                                 ew = float(ef.get("w", 2.0) or 2.0)
                                 eh = float(ef.get("h", 3.0) or 3.0)
                                 head_len = float(b.get("length", 0.0) or 0.0)
-                                eye_center_x = (bx if head_len > 0 else ax) + edx
+                                cx_eye = bx if head_len > 0 else ax
                                 eye_center_y = (by if head_len > 0 else ay) + edy
-                                if abs(px - eye_center_x) <= ew * 0.5 and abs(py - eye_center_y) <= eh * 0.5:
-                                    eye_c = ef.get("color", "#4e221c")
-                                    col = palette_rgba.get(eye_c) or parse_color(eye_c)
+                                eye_c = ef.get("color", "#4e221c")
+
+                                if "spacing" in ef and ef["spacing"] is not None:
+                                    sp = float(ef["spacing"]) * 0.5
+                                    if (abs(px - (cx_eye - sp)) <= ew * 0.5 or abs(px - (cx_eye + sp)) <= ew * 0.5) and abs(py - eye_center_y) <= eh * 0.5:
+                                        col = palette_rgba.get(eye_c) or parse_color(eye_c)
+                                else:
+                                    eye_center_x = cx_eye + edx
+                                    if abs(px - eye_center_x) <= ew * 0.5 and abs(py - eye_center_y) <= eh * 0.5:
+                                        col = palette_rgba.get(eye_c) or parse_color(eye_c)
 
                         color_buf[idx] = col
                         symbol_buffer[idx] = fill_key if fill_key in palette_raw else "b"

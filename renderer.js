@@ -1550,11 +1550,25 @@ class PixelDSLRenderer {
       const bx = xf.end[0];
       const by = xf.end[1];
 
-      const r1 = Math.max(0.5, Number(b.r1 || 2.0));
-      const r2 = Math.max(0.5, Number(b.r2 || r1));
+      const baseR1 = Math.max(0.5, Number(b.r1 || 2.0));
+      const baseR2 = Math.max(0.5, Number(b.r2 || baseR1));
       const z = Number(b.z || 0);
+
+      // Perspective Depth Scaling: limbs in the background (z < 1.0) shrink naturally; foreground limbs (z > 1.0) scale up
+      const depthScaleFactor = Math.max(0.55, Math.min(2.0, 1.0 + (z - 1.0) * 0.18));
+      const r1 = Math.max(0.5, baseR1 * depthScaleFactor);
+      const r2 = Math.max(0.5, baseR2 * depthScaleFactor);
+
       const fillKey = b.fill || "b";
-      const fillRGBA = paletteRGBA[fillKey] || this.parseColor(fillKey);
+      const baseFillRGBA = paletteRGBA[fillKey] || this.parseColor(fillKey);
+      // Subtle ambient depth attenuation for background limbs (z < 0.95)
+      const depthBrightness = Math.max(0.80, Math.min(1.0, 0.88 + 0.12 * Math.min(1.0, z)));
+      const fillRGBA = [
+        Math.round(baseFillRGBA[0] * depthBrightness),
+        Math.round(baseFillRGBA[1] * depthBrightness),
+        Math.round(baseFillRGBA[2] * depthBrightness),
+        baseFillRGBA[3] !== undefined ? baseFillRGBA[3] : 255
+      ];
       const shape = String(b.shape || "capsule").toLowerCase();
 
       const vax = bx - ax;
@@ -1629,11 +1643,20 @@ class PixelDSLRenderer {
                   const ew = Number(ef.w || 2.0);
                   const eh = Number(ef.h || 3.0);
                   const hasLen = Number(b.length || 0) > 0;
-                  const eyeCenterX = (hasLen ? bx : ax) + edx;
+                  const cX = hasLen ? bx : ax;
                   const eyeCenterY = (hasLen ? by : ay) + edy;
-                  if (Math.abs(px - eyeCenterX) <= ew * 0.5 && Math.abs(py - eyeCenterY) <= eh * 0.5) {
-                    const eyeC = ef.color || "#4e221c";
-                    col = paletteRGBA[eyeC] || this.parseColor(eyeC);
+                  const eyeC = ef.color || "#4e221c";
+
+                  if (ef.spacing !== undefined && ef.spacing !== null) {
+                    const sp = Number(ef.spacing) * 0.5;
+                    if ((Math.abs(px - (cX - sp)) <= ew * 0.5 || Math.abs(px - (cX + sp)) <= ew * 0.5) && Math.abs(py - eyeCenterY) <= eh * 0.5) {
+                      col = paletteRGBA[eyeC] || this.parseColor(eyeC);
+                    }
+                  } else {
+                    const eyeCenterX = cX + edx;
+                    if (Math.abs(px - eyeCenterX) <= ew * 0.5 && Math.abs(py - eyeCenterY) <= eh * 0.5) {
+                      col = paletteRGBA[eyeC] || this.parseColor(eyeC);
+                    }
                   }
                 }
               }

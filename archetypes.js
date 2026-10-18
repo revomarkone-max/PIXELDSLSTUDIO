@@ -296,7 +296,7 @@ window.ARCHETYPE_REGISTRY = {
       {
         "id": "pelvis",
         "u": 0.48,
-        "v": 0.48,
+        "v": 0.52,
         "length_u": 0.05,
         "angle": -90,
         "r1_u": 0.075,
@@ -328,7 +328,7 @@ window.ARCHETYPE_REGISTRY = {
         "length_u": 0.08,
         "angle": 0,
         "r1_u": 0.085,
-        "r2_u": 0.09,
+        "r2_u": 0.08,
         "z": 1,
         "fill": "clothes"
       },
@@ -339,10 +339,10 @@ window.ARCHETYPE_REGISTRY = {
           0.0,
           0.0
         ],
-        "length_u": 0.035,
+        "length_u": 0.09,
         "angle": 0,
-        "r1_u": 0.04,
-        "r2_u": 0.04,
+        "r1_u": 0.045,
+        "r2_u": 0.045,
         "z": 1,
         "fill": "skin"
       },
@@ -355,7 +355,7 @@ window.ARCHETYPE_REGISTRY = {
         ],
         "length_u": 0.0,
         "shape": "head_oval",
-        "r1_u": 0.1,
+        "r1_u": 0.095,
         "r2_u": 0.085,
         "z": 1,
         "fill": "skin",

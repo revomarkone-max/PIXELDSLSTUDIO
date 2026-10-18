@@ -47,7 +47,12 @@
 
     <!-- Central Workspace Mode Navigation Tabs -->
     <nav class="nav-workspace-tabs" id="navWorkspaceTabs">
-      <button class="workspace-tab active" data-workspace="studio" title="Canvas Studio — Pose skeletal bones, paint pixels, and inspect layers">
+      <button class="workspace-tab active" data-workspace="artzone" title="Art Zone — Distraction-free drawing &amp; rigging studio with 128px T-Pose character">
+        <span class="tab-icon">🖌️</span>
+        <span class="tab-label">Art Zone</span>
+        <span class="tab-badge-live">Live</span>
+      </button>
+      <button class="workspace-tab" data-workspace="studio" title="Canvas Studio — Pose skeletal bones, paint pixels, and inspect layers">
         <span class="tab-icon">🎨</span>
         <span class="tab-label">Studio</span>
       </button>
@@ -102,12 +107,144 @@
   </header>
 
   <!-- Application Main Container with Workspace Switcher -->
-  <main class="app-main">
-    
+    <!-- ==========================================
+         WORKSPACE 0: ART ZONE (Distraction-Free Drawing & Rigging)
+         ========================================== -->
+    <div id="workspaceArtZone" class="workspace-view active">
+      <div class="artzone-container">
+        
+        <!-- Floating Top Control Bar -->
+        <header class="artzone-topbar">
+          <!-- Drawing Tools Group -->
+          <div class="artzone-tool-group" title="Drawing Tools">
+            <button class="artzone-tool-btn active" data-art-tool="pencil" id="artToolPencil" title="✏️ Pencil (B) — 1px Pixel Drawing">
+              ✏️ Pencil
+            </button>
+            <button class="artzone-tool-btn" data-art-tool="eraser" id="artToolEraser" title="🧹 Eraser (E) — Clear Pixels">
+              🧹 Eraser
+            </button>
+            <button class="artzone-tool-btn" data-art-tool="bucket" id="artToolBucket" title="🪣 Bucket (G) — Flood Fill">
+              🪣 Fill
+            </button>
+            <button class="artzone-tool-btn" data-art-tool="picker" id="artToolPicker" title="👁️ Eyedropper (I) — Pick Color">
+              👁️ Pick
+            </button>
+            <button class="artzone-tool-btn" data-art-tool="line" id="artToolLine" title="📏 Line (L) — Bresenham Straight Line">
+              📏 Line
+            </button>
+            <button class="artzone-tool-btn" data-art-tool="rect" id="artToolRect" title="⬜ Rect (U) — Rectangle Shape">
+              ⬜ Rect
+            </button>
+            <button class="artzone-tool-btn" data-art-tool="circle" id="artToolCircle" title="⭕ Circle (C) — Circle / Oval Shape">
+              ⭕ Circle
+            </button>
+          </div>
+
+          <div class="artzone-divider"></div>
+
+          <!-- Skeletal Rigging Tools Group -->
+          <div class="artzone-tool-group" title="Skeletal Rigging Tools">
+            <button class="artzone-tool-btn" data-art-tool="pose" id="artToolPose" title="🦴 Pose (V) — Drag Bone Tip to Rotate">
+              🦴 Pose
+            </button>
+            <button class="artzone-tool-btn" data-art-tool="move" id="artToolMove" title="✥ Move (M) — Drag Bone Origin to Translate Position">
+              ✥ Move
+            </button>
+            <button class="artzone-tool-btn" data-art-tool="add_bone" id="artToolAddBone" title="➕ New Bone (N) — Click &amp; Drag on Canvas to Create Bone">
+              ➕ Bone
+            </button>
+            <button class="artzone-tool-btn" data-art-tool="parent_bone" id="artToolParentBone" title="🔗 Parent (P) — Connect Selected Bone to Parent">
+              🔗 Parent
+            </button>
+          </div>
+
+          <div class="artzone-divider"></div>
+
+          <!-- View & Canvas Settings -->
+          <div class="artzone-tool-group">
+            <span class="artzone-res-badge">128×128 px</span>
+            <label class="artzone-chk-label" title="Toggle 1px Pixel Grid">
+              <input type="checkbox" id="chkArtZoneGrid" checked />
+              <span>Grid</span>
+            </label>
+            <label class="artzone-chk-label" title="Toggle Skeletal Bones Overlay">
+              <input type="checkbox" id="chkArtZoneBones" checked />
+              <span>Bones</span>
+            </label>
+            <label class="artzone-chk-label" title="Toggle 3D Tangent Normal Map Preview">
+              <input type="checkbox" id="chkArtZoneNormals" />
+              <span>Normals</span>
+            </label>
+            <select id="selArtZoneZoom" class="artzone-select" title="Canvas Zoom">
+              <option value="auto">Auto</option>
+              <option value="2">2x</option>
+              <option value="3">3x</option>
+              <option value="4" selected>4x</option>
+              <option value="5">5x</option>
+              <option value="6">6x</option>
+            </select>
+          </div>
+
+          <!-- Right Action Buttons -->
+          <div class="artzone-actions-right">
+            <button id="btnArtZoneResetTPose" class="btn btn-sm btn-subtle" title="Reset to Canonical 128px Front-View T-Pose Rig">
+              🔄 Reset T-Pose
+            </button>
+            <button id="btnArtZoneUndo" class="btn btn-sm" disabled title="Undo (Alt+Z)">
+              ↶
+            </button>
+            <button id="btnArtZoneRedo" class="btn btn-sm" disabled title="Redo (Alt+Y)">
+              ↷
+            </button>
+            <button id="btnArtZoneExportPng" class="btn btn-sm btn-primary" title="Download 128×128 PNG">
+              💾 PNG
+            </button>
+            <button id="btnArtZoneToStudio" class="btn btn-sm btn-accent-outline" title="Transfer current 128px sprite to Canvas Studio for advanced JSON editing">
+              ⟨⟩ Open in Studio
+            </button>
+          </div>
+        </header>
+
+        <!-- Main Canvas Viewport (Center) -->
+        <main class="artzone-viewport" id="artZoneViewport">
+          <div class="artzone-canvas-wrapper" id="artZoneCanvasWrapper">
+            <canvas id="artZoneCanvas" width="128" height="128"></canvas>
+            <canvas id="artZoneOverlay" width="128" height="128"></canvas>
+          </div>
+        </main>
+
+        <!-- Floating Left Mini-Inspector / Tool Options -->
+        <aside class="artzone-floating-inspector" id="artZoneInspector">
+          <div class="artzone-inspector-header">
+            <span id="artZoneInspectorTitle">✏️ Pencil Options</span>
+            <button id="btnArtZoneInspectorCollapse" class="btn-icon" title="Toggle Inspector">✕</button>
+          </div>
+          <div class="artzone-inspector-body" id="artZoneInspectorBody">
+            <!-- Dynamically populated depending on active tool -->
+          </div>
+        </aside>
+
+        <!-- Floating Bottom Palette Bar -->
+        <footer class="artzone-palette-bar">
+          <div class="artzone-active-colors">
+            <div id="artZoneColorPreview" class="artzone-color-swatch-current" title="Active Primary Color" style="background: #f6c49c;"></div>
+            <input type="color" id="artZoneNativeColorPicker" value="#f6c49c" title="Native Color Picker" />
+          </div>
+          <div class="artzone-swatches" id="artZonePaletteSwatches">
+            <!-- Rendered by JS -->
+          </div>
+          <div class="artzone-status-info" id="artZoneCursorInfo">
+            128×128 Canonical T-Pose | Tool: Pencil
+          </div>
+        </footer>
+
+      </div>
+    </div>
+
     <!-- ==========================================
          WORKSPACE 1: CANVAS STUDIO (Primary Editor)
          ========================================== -->
-    <div id="workspaceStudio" class="workspace-view active">
+    <div id="workspaceStudio" class="workspace-view">
       <div class="workspace">
         <!-- LEFT DRAWER: PixelDSL Specification Editor (Collapsible) -->
         <section id="panelLeft" class="panel panel-left">
@@ -147,7 +284,7 @@
             <div class="tool-group" style="border-right: 1px solid var(--border); padding-right: 8px;">
               <label for="presetSelect" style="color: var(--text-muted); font-size: 11.5px; font-weight: 500;">Sprite:</label>
               <select id="presetSelect" title="Select sprite from library (presets.js)" style="max-width: 220px;"></select>
-              <button id="btnNewSprite" class="btn btn-sm" title="Create clean blank sprite canvas">+ New</button>
+              <button id="btnOpenArtZone" class="btn btn-sm btn-accent" title="Open distraction-free Art Zone canvas with 128px T-Pose">🎨 Art Zone</button>
             </div>
 
             <!-- Pose / Inspect / Light Tools -->

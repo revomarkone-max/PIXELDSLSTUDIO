@@ -21,6 +21,7 @@
   let selectedBoneId = null;
   let hoveredBoneId = null;
   let isDraggingBone = false;
+  let boneDragMode = "rotate";
   let showSkeletonDebug = true;
 
   // Undo / Redo History Stack
@@ -554,6 +555,207 @@
       ctrlRow.appendChild(numInput);
       ctrlRow.appendChild(btnZero);
       item.appendChild(ctrlRow);
+
+      // Expanded Detail Inspector when selected: Z-Depth, Position/Offset, Radii tapering, Length, Parent
+      if (isSelected) {
+        const detailPanel = document.createElement("div");
+        detailPanel.className = "bone-detail-panel";
+        detailPanel.style.marginTop = "6px";
+        detailPanel.style.padding = "8px";
+        detailPanel.style.background = "rgba(15, 23, 42, 0.75)";
+        detailPanel.style.border = "1px solid var(--accent)";
+        detailPanel.style.borderRadius = "6px";
+        detailPanel.style.display = "flex";
+        detailPanel.style.flexDirection = "column";
+        detailPanel.style.gap = "6px";
+
+        // Helper to create slider rows
+        const createSliderRow = (labelText, min, max, step, curVal, onInput) => {
+          const row = document.createElement("div");
+          row.style.display = "flex";
+          row.style.alignItems = "center";
+          row.style.gap = "6px";
+
+          const lbl = document.createElement("span");
+          lbl.style.fontSize = "10.5px";
+          lbl.style.color = "var(--text-muted)";
+          lbl.style.minWidth = "58px";
+          lbl.textContent = labelText;
+
+          const slider = document.createElement("input");
+          slider.type = "range";
+          slider.min = String(min);
+          slider.max = String(max);
+          slider.step = String(step);
+          slider.value = String(curVal);
+          slider.style.flex = "1";
+          slider.style.accentColor = "var(--accent)";
+
+          const valBadge = document.createElement("span");
+          valBadge.style.fontFamily = "var(--font-mono)";
+          valBadge.style.fontSize = "10.5px";
+          valBadge.style.color = "var(--text-bright)";
+          valBadge.style.minWidth = "40px";
+          valBadge.style.textAlign = "right";
+          valBadge.textContent = String(curVal);
+
+          slider.addEventListener("input", () => {
+            const v = parseFloat(slider.value) || 0;
+            onInput(v, valBadge);
+          });
+
+          row.appendChild(lbl);
+          row.appendChild(slider);
+          row.appendChild(valBadge);
+          return { row, slider, valBadge };
+        };
+
+        // 1. Z-Depth Slider with Perspective Scale Percentage
+        const curZ = typeof bone.z === "number" ? bone.z : 1.0;
+        const zRowObj = createSliderRow("Z-Depth:", -2.0, 5.0, 0.1, curZ, (val, badge) => {
+          bone.z = val;
+          const zFactor = Math.max(0.55, Math.min(2.0, 1.0 + (val - 1.0) * 0.18));
+          badge.textContent = `${val.toFixed(1)} (${Math.round(zFactor * 100)}%)`;
+          syncEditorFromSpec();
+          renderAll();
+        });
+        const zInitFactor = Math.max(0.55, Math.min(2.0, 1.0 + (curZ - 1.0) * 0.18));
+        zRowObj.valBadge.textContent = `${curZ.toFixed(1)} (${Math.round(zInitFactor * 100)}%)`;
+        zRowObj.valBadge.title = "Z-depth layer with perspective scaling factor";
+        detailPanel.appendChild(zRowObj.row);
+
+        // 2. Position / Offset X, Y
+        const posRow = document.createElement("div");
+        posRow.style.display = "flex";
+        posRow.style.alignItems = "center";
+        posRow.style.gap = "6px";
+        const isRoot = !bone.parent;
+        const posLbl = document.createElement("span");
+        posLbl.style.fontSize = "10.5px";
+        posLbl.style.color = "var(--text-muted)";
+        posLbl.style.minWidth = "58px";
+        posLbl.textContent = isRoot ? "Pos X, Y:" : "Offset:";
+
+        const inpX = document.createElement("input");
+        inpX.type = "number";
+        inpX.step = "0.5";
+        inpX.style.width = "46px";
+        inpX.style.padding = "2px 4px";
+        inpX.style.fontSize = "10.5px";
+        inpX.style.textAlign = "center";
+        inpX.value = isRoot ? (bone.x ?? 0) : ((bone.offset && bone.offset[0]) ?? 0);
+
+        const inpY = document.createElement("input");
+        inpY.type = "number";
+        inpY.step = "0.5";
+        inpY.style.width = "46px";
+        inpY.style.padding = "2px 4px";
+        inpY.style.fontSize = "10.5px";
+        inpY.style.textAlign = "center";
+        inpY.value = isRoot ? (bone.y ?? 0) : ((bone.offset && bone.offset[1]) ?? 0);
+
+        const updatePos = () => {
+          pushUndoState();
+          const vx = parseFloat(inpX.value) || 0;
+          const vy = parseFloat(inpY.value) || 0;
+          if (isRoot) {
+            bone.x = vx;
+            bone.y = vy;
+          } else {
+            bone.offset = [vx, vy];
+          }
+          syncEditorFromSpec();
+          renderAll();
+        };
+        inpX.addEventListener("change", updatePos);
+        inpY.addEventListener("change", updatePos);
+
+        posRow.appendChild(posLbl);
+        posRow.appendChild(inpX);
+        posRow.appendChild(inpY);
+        detailPanel.appendChild(posRow);
+
+        // 3. Radius Base (r1) and Radius Tip (r2) - limb tapering
+        const curR1 = Number(bone.r1 ?? 2.0);
+        const curR2 = Number(bone.r2 ?? curR1);
+        const r1Row = createSliderRow("r1 (Base):", 0.5, 25.0, 0.5, curR1, (val, badge) => {
+          bone.r1 = val;
+          badge.textContent = val.toFixed(1);
+          syncEditorFromSpec();
+          renderAll();
+        });
+        detailPanel.appendChild(r1Row.row);
+
+        const r2Row = createSliderRow("r2 (Tip):", 0.5, 25.0, 0.5, curR2, (val, badge) => {
+          bone.r2 = val;
+          badge.textContent = val.toFixed(1);
+          syncEditorFromSpec();
+          renderAll();
+        });
+        detailPanel.appendChild(r2Row.row);
+
+        // 4. Length Slider
+        const curLen = Number(bone.length ?? 0);
+        const lenRow = createSliderRow("Length:", 0, 45, 0.5, curLen, (val, badge) => {
+          bone.length = val;
+          badge.textContent = val.toFixed(1);
+          syncEditorFromSpec();
+          renderAll();
+        });
+        detailPanel.appendChild(lenRow.row);
+
+        // 5. Parent Selector
+        const parentRow = document.createElement("div");
+        parentRow.style.display = "flex";
+        parentRow.style.alignItems = "center";
+        parentRow.style.gap = "6px";
+        const pLbl = document.createElement("span");
+        pLbl.style.fontSize = "10.5px";
+        pLbl.style.color = "var(--text-muted)";
+        pLbl.style.minWidth = "58px";
+        pLbl.textContent = "Parent:";
+
+        const pSel = document.createElement("select");
+        pSel.style.flex = "1";
+        pSel.style.fontSize = "11px";
+        pSel.style.padding = "2px 4px";
+        
+        const optNone = document.createElement("option");
+        optNone.value = "";
+        optNone.textContent = "None (Root Bone)";
+        pSel.appendChild(optNone);
+
+        bones.forEach((b) => {
+          if (b.id !== bone.id) {
+            const opt = document.createElement("option");
+            opt.value = b.id;
+            opt.textContent = b.id;
+            if (b.id === bone.parent) opt.selected = true;
+            pSel.appendChild(opt);
+          }
+        });
+        if (!bone.parent) optNone.selected = true;
+
+        pSel.addEventListener("change", () => {
+          pushUndoState();
+          if (pSel.value) {
+            bone.parent = pSel.value;
+            if (!Array.isArray(bone.offset)) bone.offset = [0, 0];
+          } else {
+            delete bone.parent;
+            if (typeof bone.x !== "number") bone.x = 24;
+            if (typeof bone.y !== "number") bone.y = 24;
+          }
+          syncEditorFromSpec();
+          renderBonesList();
+          renderAll();
+        });
+        parentRow.appendChild(pLbl);
+        parentRow.appendChild(pSel);
+        detailPanel.appendChild(parentRow);
+
+        item.appendChild(detailPanel);
+      }
 
       bonesList.appendChild(item);
     }
@@ -1563,31 +1765,44 @@
 
     if (currentSpec.type === "rig") {
       const fkMap = PixelDSLRenderer.solveFkRig(currentSpec, currentFrame);
-      let hitBoneId = null;
-      let minDist = 9999;
+      let hitStartId = null;
+      let minStartDist = 9999;
+      let hitEndId = null;
+      let minEndDist = 9999;
 
-      // 1. Check distance to bone end joint (rotation handle)
       for (const [bid, bState] of Object.entries(fkMap)) {
-        const dEnd = Math.hypot(pt.x - bState.end[0], pt.y - bState.end[1]);
-        if (dEnd < 6.0 && dEnd < minDist) {
-          minDist = dEnd;
-          hitBoneId = bid;
+        const dStart = Math.hypot(pt.x - bState.start[0], pt.y - bState.start[1]);
+        if (dStart < 7.0 && dStart < minStartDist) {
+          minStartDist = dStart;
+          hitStartId = bid;
         }
-      }
-      // 2. Check distance to bone root joint
-      if (!hitBoneId) {
-        for (const [bid, bState] of Object.entries(fkMap)) {
-          const dStart = Math.hypot(pt.x - bState.start[0], pt.y - bState.start[1]);
-          if (dStart < 5.0 && dStart < minDist) {
-            minDist = dStart;
-            hitBoneId = bid;
-          }
+        const dEnd = Math.hypot(pt.x - bState.end[0], pt.y - bState.end[1]);
+        if (dEnd < 7.0 && dEnd < minEndDist) {
+          minEndDist = dEnd;
+          hitEndId = bid;
         }
       }
 
-      if (hitBoneId) {
-        selectedBoneId = hitBoneId;
+      if (hitStartId && (!hitEndId || minStartDist < minEndDist * 0.95)) {
+        selectedBoneId = hitStartId;
         isDraggingBone = true;
+        boneDragMode = "translate";
+        pushUndoState();
+        renderBonesList();
+        renderAll();
+        return;
+      } else if (hitEndId) {
+        selectedBoneId = hitEndId;
+        isDraggingBone = true;
+        boneDragMode = "rotate";
+        pushUndoState();
+        renderBonesList();
+        renderAll();
+        return;
+      } else if (hitStartId) {
+        selectedBoneId = hitStartId;
+        isDraggingBone = true;
+        boneDragMode = "translate";
         pushUndoState();
         renderBonesList();
         renderAll();
@@ -1613,38 +1828,86 @@
     const pixelPt = getCanvasPixelCoords(evt);
     hoverCoord = pixelPt;
 
-    // Interactive Bone Drag Posing
+    // Interactive Bone Drag (Translation or Rotation)
     if (isDraggingBone && selectedBoneId && currentSpec.type === "rig") {
       const fkMap = PixelDSLRenderer.solveFkRig(currentSpec, currentFrame);
       const bState = fkMap[selectedBoneId];
-      if (bState) {
-        const startX = bState.start[0];
-        const startY = bState.start[1];
-        const mouseAngleDeg = (Math.atan2(pt.y - startY, pt.x - startX) * 180.0) / Math.PI;
-        const parentAngle = bState.parentAngle || 0;
-        let desiredRelAngle = mouseAngleDeg - parentAngle;
-        desiredRelAngle = Math.round(((desiredRelAngle + 180) % 360 + 360) % 360 - 180);
-
-        if (currentFrame > 0) {
-          if (!Array.isArray(currentSpec.frames)) currentSpec.frames = [];
-          while (currentSpec.frames.length < currentFrame) {
-            currentSpec.frames.push({ pose: {} });
+      if (bState && bState.bone) {
+        if (boneDragMode === "translate") {
+          // Translate bone position or offset
+          if (!bState.bone.parent) {
+            // Root bone translation
+            const newX = Math.round(pt.x * 10) / 10;
+            const newY = Math.round(pt.y * 10) / 10;
+            if (currentFrame > 0) {
+              if (!Array.isArray(currentSpec.frames)) currentSpec.frames = [];
+              while (currentSpec.frames.length < currentFrame) currentSpec.frames.push({ pose: {} });
+              const fDef = currentSpec.frames[currentFrame - 1];
+              if (!fDef.pose) fDef.pose = {};
+              fDef.pose[selectedBoneId] = fDef.pose[selectedBoneId] || {};
+              fDef.pose[selectedBoneId].dx = Math.round((newX - (bState.bone.x || 0)) * 10) / 10;
+              fDef.pose[selectedBoneId].dy = Math.round((newY - (bState.bone.y || 0)) * 10) / 10;
+            } else {
+              bState.bone.x = newX;
+              bState.bone.y = newY;
+            }
+            cursorInfo.textContent = `✥ Moving root '${selectedBoneId}' | X: ${newX}, Y: ${newY}`;
+          } else {
+            // Child bone offset translation
+            const parentId = bState.bone.parent;
+            const parentXform = fkMap[parentId] || { end: [0, 0], angle: 0 };
+            const prad = (parentXform.angle * Math.PI) / 180.0;
+            const pcos = Math.cos(prad);
+            const psin = Math.sin(prad);
+            const dxWorld = pt.x - parentXform.end[0];
+            const dyWorld = pt.y - parentXform.end[1];
+            const localDx = dxWorld * pcos + dyWorld * psin;
+            const localDy = -dxWorld * psin + dyWorld * pcos;
+            const finalDx = Math.round(localDx * 10) / 10;
+            const finalDy = Math.round(localDy * 10) / 10;
+            if (currentFrame > 0) {
+              if (!Array.isArray(currentSpec.frames)) currentSpec.frames = [];
+              while (currentSpec.frames.length < currentFrame) currentSpec.frames.push({ pose: {} });
+              const fDef = currentSpec.frames[currentFrame - 1];
+              if (!fDef.pose) fDef.pose = {};
+              fDef.pose[selectedBoneId] = fDef.pose[selectedBoneId] || {};
+              const baseOffset = Array.isArray(bState.bone.offset) ? bState.bone.offset : [0, 0];
+              fDef.pose[selectedBoneId].dx = Math.round((finalDx - baseOffset[0]) * 10) / 10;
+              fDef.pose[selectedBoneId].dy = Math.round((finalDy - baseOffset[1]) * 10) / 10;
+            } else {
+              bState.bone.offset = [finalDx, finalDy];
+            }
+            cursorInfo.textContent = `✥ Moving bone '${selectedBoneId}' offset | dx: ${finalDx}, dy: ${finalDy}`;
           }
-          const fDef = currentSpec.frames[currentFrame - 1];
-          if (!fDef.pose) fDef.pose = {};
-          const baseAngle = (bState.bone && typeof bState.bone.angle === "number") ? bState.bone.angle : 0;
-          fDef.pose[selectedBoneId] = fDef.pose[selectedBoneId] || {};
-          fDef.pose[selectedBoneId].dAngle = desiredRelAngle - baseAngle;
+          renderBonesList();
+          renderAll();
+          return;
         } else {
-          if (bState.bone) {
+          // Rotate bone angle
+          const startX = bState.start[0];
+          const startY = bState.start[1];
+          const mouseAngleDeg = (Math.atan2(pt.y - startY, pt.x - startX) * 180.0) / Math.PI;
+          const parentAngle = bState.parentAngle || 0;
+          let desiredRelAngle = mouseAngleDeg - parentAngle;
+          desiredRelAngle = Math.round(((desiredRelAngle + 180) % 360 + 360) % 360 - 180);
+
+          if (currentFrame > 0) {
+            if (!Array.isArray(currentSpec.frames)) currentSpec.frames = [];
+            while (currentSpec.frames.length < currentFrame) currentSpec.frames.push({ pose: {} });
+            const fDef = currentSpec.frames[currentFrame - 1];
+            if (!fDef.pose) fDef.pose = {};
+            const baseAngle = (bState.bone && typeof bState.bone.angle === "number") ? bState.bone.angle : 0;
+            fDef.pose[selectedBoneId] = fDef.pose[selectedBoneId] || {};
+            fDef.pose[selectedBoneId].dAngle = desiredRelAngle - baseAngle;
+          } else {
             bState.bone.angle = desiredRelAngle;
           }
-        }
 
-        renderBonesList();
-        renderAll();
-        cursorInfo.textContent = `🦴 Posing '${selectedBoneId}' | Angle: ${desiredRelAngle}° (Release mouse to set)`;
-        return;
+          renderBonesList();
+          renderAll();
+          cursorInfo.textContent = `🦴 Rotating '${selectedBoneId}' | Angle: ${desiredRelAngle}°`;
+          return;
+        }
       }
     }
 
@@ -1652,21 +1915,33 @@
     if (currentSpec.type === "rig") {
       const fkMap = PixelDSLRenderer.solveFkRig(currentSpec, currentFrame);
       let newHovered = null;
+      let hoverHandleType = "end";
       let minDist = 9999;
       for (const [bid, bState] of Object.entries(fkMap)) {
+        const dStart = Math.hypot(pt.x - bState.start[0], pt.y - bState.start[1]);
+        if (dStart < 6.0 && dStart < minDist) {
+          minDist = dStart;
+          newHovered = bid;
+          hoverHandleType = "start";
+        }
         const dEnd = Math.hypot(pt.x - bState.end[0], pt.y - bState.end[1]);
         if (dEnd < 6.0 && dEnd < minDist) {
           minDist = dEnd;
           newHovered = bid;
+          hoverHandleType = "end";
         }
       }
       if (newHovered !== hoveredBoneId) {
         hoveredBoneId = newHovered;
-        mainCanvas.style.cursor = hoveredBoneId ? "crosshair" : "default";
+        mainCanvas.style.cursor = hoveredBoneId ? (hoverHandleType === "start" ? "move" : "crosshair") : "default";
         renderAll();
       }
       if (hoveredBoneId) {
-        cursorInfo.textContent = `🦴 Joint: '${hoveredBoneId}' | Drag joint on canvas to rotate bone!`;
+        if (hoverHandleType === "start") {
+          cursorInfo.textContent = `✥ Joint '${hoveredBoneId}' (Origin) | Drag to TRANSLATE position`;
+        } else {
+          cursorInfo.textContent = `⟳ Joint '${hoveredBoneId}' (Tip) | Drag to ROTATE angle`;
+        }
         return;
       }
     }
@@ -2065,6 +2340,992 @@
   }
 
   // ==========================================
+  // Workspace 0: Art Zone Controller
+  // ==========================================
+  const CANONICAL_T_POSE_128 = {
+    type: "rig",
+    title: "128px Canonical Humanoid T-Pose",
+    width: 128,
+    height: 128,
+    outline: "o",
+    outlineWidth: 1.0,
+    palette: {
+      ".": "transparent",
+      "o": "#0f172a",
+      "skin": "#f6c49c",
+      "skin_hi": "#ffeedd",
+      "skin_dark": "#c88e66",
+      "skin_shadow": "#8c5638",
+      "eyes": "#1e293b",
+      "shirt": "#3b82f6",
+      "shirt_dark": "#1d4ed8",
+      "pants": "#334155",
+      "pants_dark": "#1e293b",
+      "boots": "#78350f",
+      "boots_dark": "#451a03",
+      "belt": "#ca8a04"
+    },
+    rig: {
+      bones: [
+        // Pelvis (Root bone, upright spine)
+        { id: "pelvis", x: 64, y: 70, length: 8, angle: -90, r1: 9.5, r2: 10.0, z: 1.0, fill: "pants" },
+        // Torso
+        { id: "torso", parent: "pelvis", offset: [0, 0], length: 14, angle: 0, r1: 10.0, r2: 11.5, z: 1.1, fill: "shirt" },
+        // Chest
+        { id: "chest", parent: "torso", offset: [0, 0], length: 14, angle: 0, r1: 11.5, r2: 11.0, z: 1.2, fill: "shirt" },
+        // Neck (Properly elevated above chest radius!)
+        { id: "neck", parent: "chest", offset: [0, 0], length: 10, angle: 0, r1: 5.5, r2: 5.5, z: 1.3, fill: "skin_dark" },
+        // Head (Oval with front-view centered dual eyes)
+        {
+          id: "head",
+          parent: "neck",
+          offset: [0, 0],
+          length: 0,
+          shape: "head_oval",
+          r1: 13.5,
+          r2: 12.0,
+          z: 1.5,
+          fill: "skin",
+          features: {
+            eyes: { spacing: 9.0, dy: -1.0, w: 2.5, h: 3.5, color: "eyes" }
+          }
+        },
+
+        // Left Arm (Horizontal T-Pose, extends to the left, world angle 180°)
+        { id: "clavicle_l", parent: "chest", offset: [-2, -12], length: 8, angle: -90, r1: 5.5, r2: 5.0, z: 1.25, fill: "shirt_dark" },
+        { id: "arm_l_upper", parent: "clavicle_l", offset: [0, 0], length: 16, angle: 0, r1: 5.0, r2: 4.4, z: 1.25, fill: "skin" },
+        { id: "arm_l_lower", parent: "arm_l_upper", offset: [0, 0], length: 15, angle: 0, r1: 4.4, r2: 3.8, z: 1.25, fill: "skin" },
+        { id: "hand_l", parent: "arm_l_lower", offset: [0, 0], length: 7, angle: 0, r1: 3.8, r2: 3.0, z: 1.25, fill: "skin" },
+
+        // Right Arm (Horizontal T-Pose, extends to the right, world angle 0°)
+        { id: "clavicle_r", parent: "chest", offset: [-2, 12], length: 8, angle: 90, r1: 5.5, r2: 5.0, z: 1.25, fill: "shirt_dark" },
+        { id: "arm_r_upper", parent: "clavicle_r", offset: [0, 0], length: 16, angle: 0, r1: 5.0, r2: 4.4, z: 1.25, fill: "skin" },
+        { id: "arm_r_lower", parent: "arm_r_upper", offset: [0, 0], length: 15, angle: 0, r1: 4.4, r2: 3.8, z: 1.25, fill: "skin" },
+        { id: "hand_r", parent: "arm_r_lower", offset: [0, 0], length: 7, angle: 0, r1: 3.8, r2: 3.0, z: 1.25, fill: "skin" },
+
+        // Left Leg (Standing vertical, extends downwards)
+        { id: "leg_l_thigh", parent: "pelvis", offset: [-8, -10], length: 21, angle: 180, r1: 7.2, r2: 5.8, z: 1.0, fill: "pants" },
+        { id: "leg_l_shin", parent: "leg_l_thigh", offset: [0, 0], length: 20, angle: 0, r1: 5.8, r2: 4.8, z: 1.0, fill: "pants" },
+        { id: "foot_l", parent: "leg_l_shin", offset: [0, 0], length: 7, angle: 25, r1: 4.8, r2: 3.4, z: 1.0, fill: "boots" },
+
+        // Right Leg (Standing vertical, extends downwards)
+        { id: "leg_r_thigh", parent: "pelvis", offset: [-8, 10], length: 21, angle: 180, r1: 7.2, r2: 5.8, z: 1.0, fill: "pants" },
+        { id: "leg_r_shin", parent: "leg_r_thigh", offset: [0, 0], length: 20, angle: 0, r1: 5.8, r2: 4.8, z: 1.0, fill: "pants" },
+        { id: "foot_r", parent: "leg_r_shin", offset: [0, 0], length: 7, angle: -25, r1: 4.8, r2: 3.4, z: 1.0, fill: "boots" }
+      ]
+    }
+  };
+
+  let artZoneSpec = JSON.parse(JSON.stringify(CANONICAL_T_POSE_128));
+  let artZonePaintBuffer = new Uint8ClampedArray(128 * 128 * 4);
+  let artZoneTool = "pencil";
+  let artZoneColor = "#f6c49c";
+  let artZoneBrushSize = 1;
+  let artZoneFillShape = true;
+  let artZoneSelectedBoneId = null;
+  let artZoneHoveredBoneId = null;
+  let artZoneDragMode = null;
+  let artZoneDragStart = null;
+  let artZoneLastPt = null;
+  let artZoneShowGrid = true;
+  let artZoneShowBones = true;
+  let artZoneShowNormals = false;
+  let artZoneZoom = 4;
+  let artZoneLastRender = null;
+  const artZoneUndoStack = [];
+  const artZoneRedoStack = [];
+
+  const ART_ZONE_PALETTE = [
+    "#f6c49c", "#ffeedd", "#c88e66", "#8c5638", "#4e2418",
+    "#3b82f6", "#1d4ed8", "#1e3a8a", "#0f172a",
+    "#334155", "#64748b", "#94a3b8", "#e2e8f0", "#ffffff",
+    "#ca8a04", "#eab308", "#ef4444", "#10b981", "#8b5cf6", "#06b6d4"
+  ];
+
+  function pushArtZoneUndo() {
+    if (artZoneUndoStack.length >= 40) artZoneUndoStack.shift();
+    artZoneUndoStack.push({
+      spec: JSON.parse(JSON.stringify(artZoneSpec)),
+      paint: new Uint8ClampedArray(artZonePaintBuffer)
+    });
+    artZoneRedoStack.length = 0;
+    updateArtZoneUndoRedoButtons();
+  }
+
+  function updateArtZoneUndoRedoButtons() {
+    const btnUndo = document.getElementById("btnArtZoneUndo");
+    const btnRedo = document.getElementById("btnArtZoneRedo");
+    if (btnUndo) btnUndo.disabled = artZoneUndoStack.length === 0;
+    if (btnRedo) btnRedo.disabled = artZoneRedoStack.length === 0;
+  }
+
+  function renderArtZone() {
+    const canvas = document.getElementById("artZoneCanvas");
+    const overlay = document.getElementById("artZoneOverlay");
+    const wrapper = document.getElementById("artZoneCanvasWrapper");
+    if (!canvas || !overlay) return;
+
+    const ctx = canvas.getContext("2d");
+    const octx = overlay.getContext("2d");
+    const w = 128;
+    const h = 128;
+
+    // Adjust canvas wrapper size based on zoom
+    const zoomScale = (artZoneZoom === "auto" || !artZoneZoom) ? 4 : parseInt(artZoneZoom, 10);
+    const displaySize = w * zoomScale;
+    if (wrapper) {
+      wrapper.style.width = `${displaySize}px`;
+      wrapper.style.height = `${displaySize}px`;
+    }
+
+    // 1. Render Base 128px Skeletal Rig
+    let rigRes;
+    try {
+      rigRes = PixelDSLRenderer.renderRig(artZoneSpec, 0);
+    } catch (err) {
+      console.error("ArtZone renderRig error:", err);
+      rigRes = {
+        width: 128,
+        height: 128,
+        buffer: new Uint8ClampedArray(128 * 128 * 4),
+        normalBuffer: new Uint8ClampedArray(128 * 128 * 4)
+      };
+    }
+    artZoneLastRender = rigRes;
+
+    // 2. Composite Painted Pixels onto Output Buffer
+    const compositeBuf = new Uint8ClampedArray(w * h * 4);
+    const baseBuf = artZoneShowNormals ? rigRes.normalBuffer : rigRes.buffer;
+    compositeBuf.set(baseBuf);
+
+    if (!artZoneShowNormals) {
+      for (let i = 0; i < w * h; i++) {
+        const bIdx = i * 4;
+        const pA = artZonePaintBuffer[bIdx + 3];
+        if (pA > 0) {
+          compositeBuf[bIdx] = artZonePaintBuffer[bIdx];
+          compositeBuf[bIdx + 1] = artZonePaintBuffer[bIdx + 1];
+          compositeBuf[bIdx + 2] = artZonePaintBuffer[bIdx + 2];
+          compositeBuf[bIdx + 3] = pA;
+        }
+      }
+    }
+
+    const imgData = new ImageData(compositeBuf, w, h);
+    ctx.putImageData(imgData, 0, 0);
+
+    // 3. Render Overlay: Grid, Skeleton Rig, Gizmos
+    octx.clearRect(0, 0, w, h);
+
+    if (artZoneShowGrid && zoomScale >= 2) {
+      octx.strokeStyle = "rgba(255, 255, 255, 0.08)";
+      octx.lineWidth = 0.5;
+      for (let x = 0; x <= w; x += 8) {
+        octx.beginPath();
+        octx.moveTo(x, 0);
+        octx.lineTo(x, h);
+        octx.stroke();
+      }
+      for (let y = 0; y <= h; y += 8) {
+        octx.beginPath();
+        octx.moveTo(0, y);
+        octx.lineTo(w, y);
+        octx.stroke();
+      }
+    }
+
+    if (artZoneShowBones && artZoneSpec.rig && Array.isArray(artZoneSpec.rig.bones)) {
+      const fkMap = PixelDSLRenderer.solveFkRig(artZoneSpec.rig.bones, {});
+      octx.save();
+      for (const [bid, bState] of Object.entries(fkMap)) {
+        const isSel = bid === artZoneSelectedBoneId;
+        const isHov = bid === artZoneHoveredBoneId;
+
+        const sx = bState.start[0];
+        const sy = bState.start[1];
+        const ex = bState.end[0];
+        const ey = bState.end[1];
+
+        // Bone segment line
+        octx.strokeStyle = isSel
+          ? "rgba(255, 215, 0, 0.95)"
+          : (isHov ? "rgba(0, 255, 255, 1.0)" : "rgba(0, 210, 240, 0.6)");
+        octx.lineWidth = isSel ? 2.5 : 1.2;
+        octx.beginPath();
+        octx.moveTo(sx, sy);
+        octx.lineTo(ex, ey);
+        octx.stroke();
+
+        // Start Joint (Move handle): diamond / square
+        octx.fillStyle = isSel ? "#ffffff" : "#ffe600";
+        octx.strokeStyle = "#000000";
+        octx.lineWidth = 0.8;
+        octx.beginPath();
+        octx.rect(sx - 2, sy - 2, 4, 4);
+        octx.fill();
+        octx.stroke();
+
+        // End Joint (Rotate handle): circle
+        const endRad = isSel || isHov ? 3.5 : 2.2;
+        octx.fillStyle = isSel ? "#ffd700" : (isHov ? "#00ffff" : "#ff4444");
+        octx.beginPath();
+        octx.arc(ex, ey, endRad, 0, Math.PI * 2);
+        octx.fill();
+        octx.stroke();
+
+        // Selected rotation guide
+        if (isSel) {
+          octx.strokeStyle = "rgba(255, 215, 0, 0.5)";
+          octx.lineWidth = 1;
+          octx.setLineDash([2, 2]);
+          octx.beginPath();
+          const dist = Math.hypot(ex - sx, ey - sy);
+          octx.arc(sx, sy, Math.max(6, dist), 0, Math.PI * 2);
+          octx.stroke();
+          octx.setLineDash([]);
+        }
+
+        // Label
+        if (isSel || isHov) {
+          octx.fillStyle = isSel ? "#ffd700" : "#ffffff";
+          octx.font = "bold 8px sans-serif";
+          octx.fillText(bid, (sx + ex) * 0.5 + 3, (sy + ey) * 0.5 - 2);
+        }
+      }
+      octx.restore();
+    }
+
+    updateArtZoneInspector();
+  }
+
+  function updateArtZoneInspector() {
+    const title = document.getElementById("artZoneInspectorTitle");
+    const body = document.getElementById("artZoneInspectorBody");
+    if (!title || !body) return;
+
+    const isRigTool = ["pose", "move", "add_bone", "parent_bone"].includes(artZoneTool) || Boolean(artZoneSelectedBoneId);
+
+    if (isRigTool) {
+      title.textContent = `🦴 Rig: ${artZoneSelectedBoneId || "No Bone Selected"}`;
+      body.innerHTML = "";
+
+      const bones = artZoneSpec.rig && Array.isArray(artZoneSpec.rig.bones) ? artZoneSpec.rig.bones : [];
+      const bone = bones.find(b => b.id === artZoneSelectedBoneId);
+
+      if (!bone) {
+        body.innerHTML = `
+          <div style="color: var(--text-muted); font-size: 11px; text-align: center; padding: 12px 6px;">
+            Click any bone joint on canvas to inspect, move, or rotate.
+          </div>
+        `;
+        return;
+      }
+
+      // Helper to create slider
+      const createRow = (labelText, min, max, step, curVal, onInput) => {
+        const row = document.createElement("div");
+        row.style.display = "flex";
+        row.style.alignItems = "center";
+        row.style.gap = "6px";
+
+        const lbl = document.createElement("span");
+        lbl.style.fontSize = "10.5px";
+        lbl.style.color = "var(--text-muted)";
+        lbl.style.minWidth = "60px";
+        lbl.textContent = labelText;
+
+        const slider = document.createElement("input");
+        slider.type = "range";
+        slider.min = String(min);
+        slider.max = String(max);
+        slider.step = String(step);
+        slider.value = String(curVal);
+        slider.style.flex = "1";
+        slider.style.accentColor = "var(--accent)";
+
+        const valBadge = document.createElement("span");
+        valBadge.style.fontFamily = "var(--font-mono)";
+        valBadge.style.fontSize = "10.5px";
+        valBadge.style.color = "var(--text-bright)";
+        valBadge.style.minWidth = "42px";
+        valBadge.style.textAlign = "right";
+        valBadge.textContent = String(curVal);
+
+        slider.addEventListener("input", () => {
+          const v = parseFloat(slider.value) || 0;
+          onInput(v, valBadge);
+        });
+
+        row.appendChild(lbl);
+        row.appendChild(slider);
+        row.appendChild(valBadge);
+        return { row, slider, valBadge };
+      };
+
+      // 1. Z-Depth Slider with Perspective Scale percentage
+      const curZ = typeof bone.z === "number" ? bone.z : 1.0;
+      const zRowObj = createRow("Z-Depth:", -2.0, 5.0, 0.1, curZ, (val, badge) => {
+        bone.z = val;
+        const zFactor = Math.max(0.55, Math.min(2.0, 1.0 + (val - 1.0) * 0.18));
+        badge.textContent = `${val.toFixed(1)} (${Math.round(zFactor * 100)}%)`;
+        renderArtZone();
+      });
+      const zInitFactor = Math.max(0.55, Math.min(2.0, 1.0 + (curZ - 1.0) * 0.18));
+      zRowObj.valBadge.textContent = `${curZ.toFixed(1)} (${Math.round(zInitFactor * 100)}%)`;
+      body.appendChild(zRowObj.row);
+
+      // 2. Position / Offset
+      const posRow = document.createElement("div");
+      posRow.style.display = "flex";
+      posRow.style.alignItems = "center";
+      posRow.style.gap = "6px";
+      const isRoot = !bone.parent;
+      const posLbl = document.createElement("span");
+      posLbl.style.fontSize = "10.5px";
+      posLbl.style.color = "var(--text-muted)";
+      posLbl.style.minWidth = "60px";
+      posLbl.textContent = isRoot ? "Pos X, Y:" : "Offset:";
+
+      const inpX = document.createElement("input");
+      inpX.type = "number";
+      inpX.step = "0.5";
+      inpX.style.width = "48px";
+      inpX.style.padding = "2px 4px";
+      inpX.style.fontSize = "10.5px";
+      inpX.style.textAlign = "center";
+      inpX.value = isRoot ? (bone.x ?? 64) : ((bone.offset && bone.offset[0]) ?? 0);
+
+      const inpY = document.createElement("input");
+      inpY.type = "number";
+      inpY.step = "0.5";
+      inpY.style.width = "48px";
+      inpY.style.padding = "2px 4px";
+      inpY.style.fontSize = "10.5px";
+      inpY.style.textAlign = "center";
+      inpY.value = isRoot ? (bone.y ?? 64) : ((bone.offset && bone.offset[1]) ?? 0);
+
+      const updatePos = () => {
+        pushArtZoneUndo();
+        const vx = parseFloat(inpX.value) || 0;
+        const vy = parseFloat(inpY.value) || 0;
+        if (isRoot) {
+          bone.x = vx;
+          bone.y = vy;
+        } else {
+          bone.offset = [vx, vy];
+        }
+        renderArtZone();
+      };
+      inpX.addEventListener("change", updatePos);
+      inpY.addEventListener("change", updatePos);
+      posRow.appendChild(posLbl);
+      posRow.appendChild(inpX);
+      posRow.appendChild(inpY);
+      body.appendChild(posRow);
+
+      // 3. Radii Tapering (r1 Base and r2 Tip)
+      const curR1 = Number(bone.r1 ?? 4.0);
+      const curR2 = Number(bone.r2 ?? curR1);
+      const r1Row = createRow("r1 (Base):", 0.5, 30.0, 0.5, curR1, (val, badge) => {
+        bone.r1 = val;
+        badge.textContent = val.toFixed(1);
+        renderArtZone();
+      });
+      body.appendChild(r1Row.row);
+
+      const r2Row = createRow("r2 (Tip):", 0.5, 30.0, 0.5, curR2, (val, badge) => {
+        bone.r2 = val;
+        badge.textContent = val.toFixed(1);
+        renderArtZone();
+      });
+      body.appendChild(r2Row.row);
+
+      // 4. Length Slider
+      const curLen = Number(bone.length ?? 0);
+      const lenRow = createRow("Length:", 0, 60, 0.5, curLen, (val, badge) => {
+        bone.length = val;
+        badge.textContent = val.toFixed(1);
+        renderArtZone();
+      });
+      body.appendChild(lenRow.row);
+
+      // 5. Angle Slider
+      const curAngle = Number(bone.angle ?? 0);
+      const angRow = createRow("Angle:", -180, 180, 1, curAngle, (val, badge) => {
+        bone.angle = val;
+        badge.textContent = `${Math.round(val)}°`;
+        renderArtZone();
+      });
+      angRow.valBadge.textContent = `${Math.round(curAngle)}°`;
+      body.appendChild(angRow.row);
+
+      // 6. Parent Selector
+      const pRow = document.createElement("div");
+      pRow.style.display = "flex";
+      pRow.style.alignItems = "center";
+      pRow.style.gap = "6px";
+      const pLbl = document.createElement("span");
+      pLbl.style.fontSize = "10.5px";
+      pLbl.style.color = "var(--text-muted)";
+      pLbl.style.minWidth = "60px";
+      pLbl.textContent = "Parent:";
+
+      const pSel = document.createElement("select");
+      pSel.className = "artzone-select";
+      pSel.style.flex = "1";
+      const optRoot = document.createElement("option");
+      optRoot.value = "";
+      optRoot.textContent = "None (Root Bone)";
+      pSel.appendChild(optRoot);
+
+      bones.forEach(b => {
+        if (b.id !== bone.id) {
+          const opt = document.createElement("option");
+          opt.value = b.id;
+          opt.textContent = b.id;
+          if (b.id === bone.parent) opt.selected = true;
+          pSel.appendChild(opt);
+        }
+      });
+      if (!bone.parent) optRoot.selected = true;
+
+      pSel.addEventListener("change", () => {
+        pushArtZoneUndo();
+        if (pSel.value) {
+          bone.parent = pSel.value;
+          if (!Array.isArray(bone.offset)) bone.offset = [0, 0];
+        } else {
+          delete bone.parent;
+          if (typeof bone.x !== "number") bone.x = 64;
+          if (typeof bone.y !== "number") bone.y = 64;
+        }
+        renderArtZone();
+      });
+      pRow.appendChild(pLbl);
+      pRow.appendChild(pSel);
+      body.appendChild(pRow);
+
+      // 7. Delete bone button
+      const btnDel = document.createElement("button");
+      btnDel.className = "btn btn-sm btn-danger";
+      btnDel.style.marginTop = "4px";
+      btnDel.textContent = `🗑️ Delete '${bone.id}'`;
+      btnDel.addEventListener("click", () => {
+        pushArtZoneUndo();
+        artZoneSpec.rig.bones = artZoneSpec.rig.bones.filter(b => b.id !== bone.id);
+        artZoneSelectedBoneId = null;
+        renderArtZone();
+      });
+      body.appendChild(btnDel);
+
+    } else {
+      title.textContent = `✏️ Tool: ${artZoneTool.toUpperCase()}`;
+      body.innerHTML = `
+        <div style="display: flex; flex-direction: column; gap: 8px;">
+          <div style="display: flex; align-items: center; justify-content: space-between;">
+            <span style="color: var(--text-muted); font-size: 11px;">Brush Size:</span>
+            <div style="display: flex; gap: 4px;">
+              ${[1, 2, 3, 4].map(sz => `
+                <button class="btn btn-sm ${artZoneBrushSize === sz ? "btn-primary" : ""}" style="padding: 2px 7px; font-size: 10px;" data-art-brush-size="${sz}">${sz}px</button>
+              `).join("")}
+            </div>
+          </div>
+          ${["rect", "circle"].includes(artZoneTool) ? `
+            <div style="display: flex; align-items: center; justify-content: space-between;">
+              <span style="color: var(--text-muted); font-size: 11px;">Fill Shape:</span>
+              <label style="display: inline-flex; align-items: center; gap: 4px; cursor: pointer; font-size: 11px;">
+                <input type="checkbox" id="chkArtZoneFillShape" ${artZoneFillShape ? "checked" : ""} />
+                <span>Solid</span>
+              </label>
+            </div>
+          ` : ""}
+          <div style="color: var(--text-muted); font-size: 10.5px; border-top: 1px solid rgba(255,255,255,0.08); padding-top: 6px;">
+            Click &amp; drag on canvas to paint. Switch to 🦴 Pose/Move above to adjust bone skeleton.
+          </div>
+        </div>
+      `;
+
+      body.querySelectorAll("[data-art-brush-size]").forEach(b => {
+        b.addEventListener("click", () => {
+          artZoneBrushSize = parseInt(b.dataset.artBrushSize, 10) || 1;
+          updateArtZoneInspector();
+        });
+      });
+      const chkFill = body.querySelector("#chkArtZoneFillShape");
+      if (chkFill) {
+        chkFill.addEventListener("change", () => {
+          artZoneFillShape = chkFill.checked;
+        });
+      }
+    }
+  }
+
+  function initArtZone() {
+    const overlay = document.getElementById("artZoneOverlay");
+    if (!overlay) return;
+
+    // 1. Tool Selection Buttons
+    document.querySelectorAll("[data-art-tool]").forEach(btn => {
+      btn.addEventListener("click", () => {
+        document.querySelectorAll("[data-art-tool]").forEach(b => b.classList.remove("active"));
+        btn.classList.add("active");
+        artZoneTool = btn.dataset.artTool;
+        const cursorInfo = document.getElementById("artZoneCursorInfo");
+        if (cursorInfo) {
+          cursorInfo.textContent = `128×128 Canonical T-Pose | Tool: ${artZoneTool.toUpperCase()}`;
+        }
+        renderArtZone();
+      });
+    });
+
+    // 2. Swatches & Color Picker
+    const swatchesContainer = document.getElementById("artZonePaletteSwatches");
+    if (swatchesContainer) {
+      swatchesContainer.innerHTML = "";
+      ART_ZONE_PALETTE.forEach(hex => {
+        const sw = document.createElement("div");
+        sw.className = "artzone-swatch-btn" + (hex === artZoneColor ? " active" : "");
+        sw.style.backgroundColor = hex;
+        sw.title = hex;
+        sw.addEventListener("click", () => {
+          artZoneColor = hex;
+          swatchesContainer.querySelectorAll(".artzone-swatch-btn").forEach(s => s.classList.remove("active"));
+          sw.classList.add("active");
+          const preview = document.getElementById("artZoneColorPreview");
+          if (preview) preview.style.background = hex;
+          const nativePick = document.getElementById("artZoneNativeColorPicker");
+          if (nativePick) nativePick.value = hex;
+        });
+        swatchesContainer.appendChild(sw);
+      });
+    }
+
+    const nativePicker = document.getElementById("artZoneNativeColorPicker");
+    if (nativePicker) {
+      nativePicker.addEventListener("input", () => {
+        artZoneColor = nativePicker.value;
+        const preview = document.getElementById("artZoneColorPreview");
+        if (preview) preview.style.background = artZoneColor;
+      });
+    }
+
+    // 3. Overlays & Zoom Checkboxes
+    const chkGrid = document.getElementById("chkArtZoneGrid");
+    if (chkGrid) chkGrid.addEventListener("change", () => { artZoneShowGrid = chkGrid.checked; renderArtZone(); });
+
+    const chkBones = document.getElementById("chkArtZoneBones");
+    if (chkBones) chkBones.addEventListener("change", () => { artZoneShowBones = chkBones.checked; renderArtZone(); });
+
+    const chkNormals = document.getElementById("chkArtZoneNormals");
+    if (chkNormals) chkNormals.addEventListener("change", () => { artZoneShowNormals = chkNormals.checked; renderArtZone(); });
+
+    const selZoom = document.getElementById("selArtZoneZoom");
+    if (selZoom) selZoom.addEventListener("change", () => { artZoneZoom = selZoom.value; renderArtZone(); });
+
+    // 4. Action Buttons
+    const btnReset = document.getElementById("btnArtZoneResetTPose");
+    if (btnReset) {
+      btnReset.addEventListener("click", () => {
+        if (confirm("Reset canvas to canonical 128px front-view T-pose skeleton?")) {
+          pushArtZoneUndo();
+          artZoneSpec = JSON.parse(JSON.stringify(CANONICAL_T_POSE_128));
+          artZonePaintBuffer.fill(0);
+          artZoneSelectedBoneId = null;
+          renderArtZone();
+          showToast("✓ Canvas reset to canonical 128px T-pose", "success");
+        }
+      });
+    }
+
+    const btnUndo = document.getElementById("btnArtZoneUndo");
+    if (btnUndo) {
+      btnUndo.addEventListener("click", () => {
+        if (artZoneUndoStack.length === 0) return;
+        artZoneRedoStack.push({
+          spec: JSON.parse(JSON.stringify(artZoneSpec)),
+          paint: new Uint8ClampedArray(artZonePaintBuffer)
+        });
+        const prev = artZoneUndoStack.pop();
+        artZoneSpec = prev.spec;
+        artZonePaintBuffer.set(prev.paint);
+        updateArtZoneUndoRedoButtons();
+        renderArtZone();
+      });
+    }
+
+    const btnRedo = document.getElementById("btnArtZoneRedo");
+    if (btnRedo) {
+      btnRedo.addEventListener("click", () => {
+        if (artZoneRedoStack.length === 0) return;
+        artZoneUndoStack.push({
+          spec: JSON.parse(JSON.stringify(artZoneSpec)),
+          paint: new Uint8ClampedArray(artZonePaintBuffer)
+        });
+        const next = artZoneRedoStack.pop();
+        artZoneSpec = next.spec;
+        artZonePaintBuffer.set(next.paint);
+        updateArtZoneUndoRedoButtons();
+        renderArtZone();
+      });
+    }
+
+    const btnExportPng = document.getElementById("btnArtZoneExportPng");
+    if (btnExportPng) {
+      btnExportPng.addEventListener("click", () => {
+        const off = document.createElement("canvas");
+        off.width = 128;
+        off.height = 128;
+        const octx = off.getContext("2d");
+        const rigRes = PixelDSLRenderer.renderRig(artZoneSpec, 0);
+        const comp = new Uint8ClampedArray(128 * 128 * 4);
+        comp.set(rigRes.buffer);
+        for (let i = 0; i < 128 * 128; i++) {
+          const idx = i * 4;
+          if (artZonePaintBuffer[idx + 3] > 0) {
+            comp[idx] = artZonePaintBuffer[idx];
+            comp[idx + 1] = artZonePaintBuffer[idx + 1];
+            comp[idx + 2] = artZonePaintBuffer[idx + 2];
+            comp[idx + 3] = artZonePaintBuffer[idx + 3];
+          }
+        }
+        octx.putImageData(new ImageData(comp, 128, 128), 0, 0);
+        const a = document.createElement("a");
+        a.download = "character_128px_tpose.png";
+        a.href = off.toDataURL("image/png");
+        a.click();
+        showToast("✓ Downloaded character_128px_tpose.png (128×128)", "success");
+      });
+    }
+
+    const btnToStudio = document.getElementById("btnArtZoneToStudio");
+    if (btnToStudio) {
+      btnToStudio.addEventListener("click", () => {
+        currentSpec = JSON.parse(JSON.stringify(artZoneSpec));
+        if (codeEditor) {
+          codeEditor.value = JSON.stringify(currentSpec, null, 2);
+        }
+        const studioTab = document.querySelector('.workspace-tab[data-workspace="studio"]');
+        if (studioTab) studioTab.click();
+        renderAll();
+        showToast("✓ Transferred 128px sprite to Canvas Studio!", "success");
+      });
+    }
+
+    const btnInspectorCollapse = document.getElementById("btnArtZoneInspectorCollapse");
+    const inspectorElem = document.getElementById("artZoneInspector");
+    if (btnInspectorCollapse && inspectorElem) {
+      btnInspectorCollapse.addEventListener("click", () => {
+        inspectorElem.classList.toggle("collapsed");
+        btnInspectorCollapse.textContent = inspectorElem.classList.contains("collapsed") ? "+" : "✕";
+      });
+    }
+
+    // 5. Canvas Drawing & Rigging Pointer Interaction
+    const getCoords = (evt) => {
+      const rect = overlay.getBoundingClientRect();
+      const x = Math.floor(((evt.clientX - rect.left) / rect.width) * 128);
+      const y = Math.floor(((evt.clientY - rect.top) / rect.height) * 128);
+      const fx = ((evt.clientX - rect.left) / rect.width) * 128;
+      const fy = ((evt.clientY - rect.top) / rect.height) * 128;
+      return { x: Math.max(0, Math.min(127, x)), y: Math.max(0, Math.min(127, y)), fx, fy };
+    };
+
+    const plotPixel = (px, py, colHex, isEraser = false) => {
+      if (px < 0 || px >= 128 || py < 0 || py >= 128) return;
+      const idx = (py * 128 + px) * 4;
+      if (isEraser) {
+        artZonePaintBuffer[idx] = 0;
+        artZonePaintBuffer[idx + 1] = 0;
+        artZonePaintBuffer[idx + 2] = 0;
+        artZonePaintBuffer[idx + 3] = 0;
+      } else {
+        const rgba = PixelDSLRenderer.parseColor(colHex);
+        artZonePaintBuffer[idx] = rgba[0];
+        artZonePaintBuffer[idx + 1] = rgba[1];
+        artZonePaintBuffer[idx + 2] = rgba[2];
+        artZonePaintBuffer[idx + 3] = 255;
+      }
+    };
+
+    const drawBrush = (cx, cy, colHex, isEraser = false) => {
+      const r = artZoneBrushSize - 1;
+      for (let dy = -r; dy <= r; dy++) {
+        for (let dx = -r; dx <= r; dx++) {
+          if (dx * dx + dy * dy <= r * r + 0.5) {
+            plotPixel(cx + dx, cy + dy, colHex, isEraser);
+          }
+        }
+      }
+    };
+
+    const drawLineBresenham = (x0, y0, x1, y1, colHex, isEraser = false) => {
+      const dx = Math.abs(x1 - x0);
+      const dy = Math.abs(y1 - y0);
+      const sx = (x0 < x1) ? 1 : -1;
+      const sy = (y0 < y1) ? 1 : -1;
+      let err = dx - dy;
+
+      while (true) {
+        drawBrush(x0, y0, colHex, isEraser);
+        if (x0 === x1 && y0 === y1) break;
+        const e2 = 2 * err;
+        if (e2 > -dy) { err -= dy; x0 += sx; }
+        if (e2 < dx) { err += dx; y0 += sy; }
+      }
+    };
+
+    overlay.addEventListener("pointerdown", (evt) => {
+      const pt = getCoords(evt);
+      artZoneDragStart = pt;
+      artZoneLastPt = pt;
+      pushArtZoneUndo();
+
+      if (["pencil", "eraser"].includes(artZoneTool)) {
+        artZoneDragMode = "draw";
+        drawBrush(pt.x, pt.y, artZoneColor, artZoneTool === "eraser");
+        renderArtZone();
+      } else if (artZoneTool === "picker") {
+        if (artZoneLastRender) {
+          const idx = (pt.y * 128 + pt.x) * 4;
+          const r = artZonePaintBuffer[idx + 3] > 0 ? artZonePaintBuffer[idx] : artZoneLastRender.buffer[idx];
+          const g = artZonePaintBuffer[idx + 3] > 0 ? artZonePaintBuffer[idx + 1] : artZoneLastRender.buffer[idx + 1];
+          const b = artZonePaintBuffer[idx + 3] > 0 ? artZonePaintBuffer[idx + 2] : artZoneLastRender.buffer[idx + 2];
+          artZoneColor = PixelDSLRenderer.rgbaToHex(r, g, b, 255);
+          const preview = document.getElementById("artZoneColorPreview");
+          if (preview) preview.style.background = artZoneColor;
+        }
+      } else if (artZoneTool === "bucket") {
+        // Flood Fill on paint buffer
+        const startIdx = (pt.y * 128 + pt.x) * 4;
+        const tr = artZonePaintBuffer[startIdx];
+        const tg = artZonePaintBuffer[startIdx + 1];
+        const tb = artZonePaintBuffer[startIdx + 2];
+        const ta = artZonePaintBuffer[startIdx + 3];
+        const fillRGBA = PixelDSLRenderer.parseColor(artZoneColor);
+
+        if (tr !== fillRGBA[0] || tg !== fillRGBA[1] || tb !== fillRGBA[2] || ta !== 255) {
+          const queue = [[pt.x, pt.y]];
+          const visited = new Uint8Array(128 * 128);
+          while (queue.length > 0) {
+            const [qx, qy] = queue.pop();
+            const qIdx = (qy * 128 + qx) * 4;
+            if (qx < 0 || qx >= 128 || qy < 0 || qy >= 128 || visited[qy * 128 + qx]) continue;
+            visited[qy * 128 + qx] = 1;
+
+            if (artZonePaintBuffer[qIdx] === tr && artZonePaintBuffer[qIdx + 1] === tg &&
+                artZonePaintBuffer[qIdx + 2] === tb && artZonePaintBuffer[qIdx + 3] === ta) {
+              artZonePaintBuffer[qIdx] = fillRGBA[0];
+              artZonePaintBuffer[qIdx + 1] = fillRGBA[1];
+              artZonePaintBuffer[qIdx + 2] = fillRGBA[2];
+              artZonePaintBuffer[qIdx + 3] = 255;
+              queue.push([qx + 1, qy], [qx - 1, qy], [qx, qy + 1], [qx, qy - 1]);
+            }
+          }
+          renderArtZone();
+        }
+      } else if (["line", "rect", "circle"].includes(artZoneTool)) {
+        artZoneDragMode = "shape";
+      } else if (["pose", "move", "add_bone", "parent_bone"].includes(artZoneTool)) {
+        const fkMap = PixelDSLRenderer.solveFkRig(artZoneSpec.rig.bones, {});
+        let hitStartId = null;
+        let minStartDist = 9999;
+        let hitEndId = null;
+        let minEndDist = 9999;
+
+        for (const [bid, bState] of Object.entries(fkMap)) {
+          const ds = Math.hypot(pt.fx - bState.start[0], pt.fy - bState.start[1]);
+          if (ds < 7.0 && ds < minStartDist) { minStartDist = ds; hitStartId = bid; }
+          const de = Math.hypot(pt.fx - bState.end[0], pt.fy - bState.end[1]);
+          if (de < 7.0 && de < minEndDist) { minEndDist = de; hitEndId = bid; }
+        }
+
+        if (artZoneTool === "parent_bone") {
+          const clickedBone = hitStartId || hitEndId;
+          if (clickedBone && artZoneSelectedBoneId && clickedBone !== artZoneSelectedBoneId) {
+            const b = artZoneSpec.rig.bones.find(x => x.id === artZoneSelectedBoneId);
+            if (b) {
+              b.parent = clickedBone;
+              showToast(`✓ Parented '${b.id}' to '${clickedBone}'`, "success");
+            }
+          }
+          renderArtZone();
+          return;
+        }
+
+        if (artZoneTool === "add_bone") {
+          artZoneDragMode = "add_bone";
+        } else if (artZoneTool === "move" || (hitStartId && minStartDist <= minEndDist)) {
+          artZoneSelectedBoneId = hitStartId || hitEndId;
+          artZoneDragMode = "move";
+        } else if (artZoneTool === "pose" || hitEndId) {
+          artZoneSelectedBoneId = hitEndId || hitStartId;
+          artZoneDragMode = "pose";
+        }
+        renderArtZone();
+      }
+    });
+
+    overlay.addEventListener("pointermove", (evt) => {
+      const pt = getCoords(evt);
+      const cursorInfo = document.getElementById("artZoneCursorInfo");
+      if (cursorInfo) {
+        cursorInfo.textContent = `X: ${pt.x}, Y: ${pt.y} | Tool: ${artZoneTool.toUpperCase()} | Color: ${artZoneColor}`;
+      }
+
+      if (!artZoneDragMode) {
+        // Hover detection for bones
+        if (["pose", "move", "parent_bone"].includes(artZoneTool)) {
+          const fkMap = PixelDSLRenderer.solveFkRig(artZoneSpec.rig.bones, {});
+          let hov = null;
+          let minDist = 9999;
+          for (const [bid, bState] of Object.entries(fkMap)) {
+            const d = Math.min(
+              Math.hypot(pt.fx - bState.start[0], pt.fy - bState.start[1]),
+              Math.hypot(pt.fx - bState.end[0], pt.fy - bState.end[1])
+            );
+            if (d < 6.0 && d < minDist) { minDist = d; hov = bid; }
+          }
+          if (hov !== artZoneHoveredBoneId) {
+            artZoneHoveredBoneId = hov;
+            renderArtZone();
+          }
+        }
+        return;
+      }
+
+      if (artZoneDragMode === "draw") {
+        drawLineBresenham(artZoneLastPt.x, artZoneLastPt.y, pt.x, pt.y, artZoneColor, artZoneTool === "eraser");
+        artZoneLastPt = pt;
+        renderArtZone();
+      } else if (artZoneDragMode === "shape") {
+        // Redraw preview overlay
+        renderArtZone();
+        const octx = overlay.getContext("2d");
+        octx.save();
+        octx.strokeStyle = artZoneColor;
+        octx.fillStyle = artZoneColor;
+        octx.lineWidth = 1;
+        if (artZoneTool === "line") {
+          octx.beginPath();
+          octx.moveTo(artZoneDragStart.x + 0.5, artZoneDragStart.y + 0.5);
+          octx.lineTo(pt.x + 0.5, pt.y + 0.5);
+          octx.stroke();
+        } else if (artZoneTool === "rect") {
+          const rx = Math.min(artZoneDragStart.x, pt.x);
+          const ry = Math.min(artZoneDragStart.y, pt.y);
+          const rw = Math.abs(pt.x - artZoneDragStart.x);
+          const rh = Math.abs(pt.y - artZoneDragStart.y);
+          if (artZoneFillShape) octx.fillRect(rx, ry, rw, rh);
+          else octx.strokeRect(rx + 0.5, ry + 0.5, rw, rh);
+        } else if (artZoneTool === "circle") {
+          const r = Math.hypot(pt.x - artZoneDragStart.x, pt.y - artZoneDragStart.y);
+          octx.beginPath();
+          octx.arc(artZoneDragStart.x, artZoneDragStart.y, r, 0, Math.PI * 2);
+          if (artZoneFillShape) octx.fill();
+          else octx.stroke();
+        }
+        octx.restore();
+      } else if (artZoneDragMode === "pose" && artZoneSelectedBoneId) {
+        const bones = artZoneSpec.rig.bones;
+        const b = bones.find(x => x.id === artZoneSelectedBoneId);
+        const fkMap = PixelDSLRenderer.solveFkRig(bones, {});
+        const bState = fkMap[artZoneSelectedBoneId];
+        if (b && bState) {
+          const startX = bState.start[0];
+          const startY = bState.start[1];
+          const mouseAngleDeg = (Math.atan2(pt.fy - startY, pt.fx - startX) * 180.0) / Math.PI;
+          const parentAngle = bState.parentAngle || 0;
+          let desiredRelAngle = mouseAngleDeg - parentAngle;
+          desiredRelAngle = Math.round(((desiredRelAngle + 180) % 360 + 360) % 360 - 180);
+          b.angle = desiredRelAngle;
+          renderArtZone();
+        }
+      } else if (artZoneDragMode === "move" && artZoneSelectedBoneId) {
+        const bones = artZoneSpec.rig.bones;
+        const b = bones.find(x => x.id === artZoneSelectedBoneId);
+        const fkMap = PixelDSLRenderer.solveFkRig(bones, {});
+        if (b) {
+          if (!b.parent) {
+            b.x = Math.round(pt.fx * 10) / 10;
+            b.y = Math.round(pt.fy * 10) / 10;
+          } else {
+            const pXform = fkMap[b.parent] || { end: [0, 0], angle: 0 };
+            const prad = (pXform.angle * Math.PI) / 180.0;
+            const pcos = Math.cos(prad);
+            const psin = Math.sin(prad);
+            const dxWorld = pt.fx - pXform.end[0];
+            const dyWorld = pt.fy - pXform.end[1];
+            const localDx = dxWorld * pcos + dyWorld * psin;
+            const localDy = -dxWorld * psin + dyWorld * pcos;
+            b.offset = [Math.round(localDx * 10) / 10, Math.round(localDy * 10) / 10];
+          }
+          renderArtZone();
+        }
+      }
+    });
+
+    window.addEventListener("pointerup", () => {
+      if (artZoneDragMode === "shape" && artZoneDragStart && artZoneLastPt) {
+        // Commit shape to paint buffer
+        if (artZoneTool === "line") {
+          drawLineBresenham(artZoneDragStart.x, artZoneDragStart.y, artZoneLastPt.x, artZoneLastPt.y, artZoneColor, false);
+        } else if (artZoneTool === "rect") {
+          const rx0 = Math.min(artZoneDragStart.x, artZoneLastPt.x);
+          const rx1 = Math.max(artZoneDragStart.x, artZoneLastPt.x);
+          const ry0 = Math.min(artZoneDragStart.y, artZoneLastPt.y);
+          const ry1 = Math.max(artZoneDragStart.y, artZoneLastPt.y);
+          for (let y = ry0; y <= ry1; y++) {
+            for (let x = rx0; x <= rx1; x++) {
+              if (artZoneFillShape || x === rx0 || x === rx1 || y === ry0 || y === ry1) {
+                plotPixel(x, y, artZoneColor, false);
+              }
+            }
+          }
+        } else if (artZoneTool === "circle") {
+          const r = Math.round(Math.hypot(artZoneLastPt.x - artZoneDragStart.x, artZoneLastPt.y - artZoneDragStart.y));
+          const cx = artZoneDragStart.x;
+          const cy = artZoneDragStart.y;
+          for (let dy = -r; dy <= r; dy++) {
+            for (let dx = -r; dx <= r; dx++) {
+              const d = Math.hypot(dx, dy);
+              if (artZoneFillShape ? (d <= r + 0.5) : (Math.abs(d - r) <= 0.75)) {
+                plotPixel(cx + dx, cy + dy, artZoneColor, false);
+              }
+            }
+          }
+        }
+      } else if (artZoneDragMode === "add_bone" && artZoneDragStart && artZoneLastPt) {
+        const dx = artZoneLastPt.fx - artZoneDragStart.fx;
+        const dy = artZoneLastPt.fy - artZoneDragStart.fy;
+        const len = Math.round(Math.hypot(dx, dy) * 10) / 10;
+        if (len >= 3) {
+          const ang = Math.round((Math.atan2(dy, dx) * 180.0) / Math.PI);
+          const newId = "bone_" + (artZoneSpec.rig.bones.length + 1);
+          artZoneSpec.rig.bones.push({
+            id: newId,
+            x: Math.round(artZoneDragStart.fx * 10) / 10,
+            y: Math.round(artZoneDragStart.fy * 10) / 10,
+            length: len,
+            angle: ang,
+            r1: 4.5,
+            r2: 4.0,
+            z: 1.2,
+            fill: "skin"
+          });
+          artZoneSelectedBoneId = newId;
+          showToast(`✓ Created new bone '${newId}'`, "success");
+        }
+      }
+
+      artZoneDragMode = null;
+      artZoneDragStart = null;
+      renderArtZone();
+    });
+
+    renderArtZone();
+  }
+
+  // ==========================================
   // Workspace Switcher
   // ==========================================
   function initWorkspaces() {
@@ -2074,6 +3335,7 @@
         const targetWs = tab.dataset.workspace;
         tabs.forEach(t => t.classList.toggle("active", t === tab));
         const wsMap = {
+          artzone: "workspaceArtZone",
           studio: "workspaceStudio",
           forge: "workspaceForge",
           paperdoll: "workspacePaperDoll",
@@ -2085,7 +3347,9 @@
           v.classList.toggle("active", isActive);
         });
 
-        if (targetWs === "studio") {
+        if (targetWs === "artzone") {
+          renderArtZone();
+        } else if (targetWs === "studio") {
           renderAll();
         } else if (targetWs === "forge") {
           compileAndRenderForge();
@@ -2096,6 +3360,14 @@
         }
       });
     });
+
+    const btnOpenArtZone = document.getElementById("btnOpenArtZone");
+    if (btnOpenArtZone) {
+      btnOpenArtZone.addEventListener("click", () => {
+        const tab = document.querySelector('.workspace-tab[data-workspace="artzone"]');
+        if (tab) tab.click();
+      });
+    }
   }
 
   // ==========================================
@@ -3265,6 +4537,7 @@ public class PixelDSLSprite : MonoBehaviour {
   syncInspectorFromSpec();
   renderAll();
   initWorkspaces();
+  initArtZone();
   initArchetypeForge();
   initPaperDoll();
   initCompass();
