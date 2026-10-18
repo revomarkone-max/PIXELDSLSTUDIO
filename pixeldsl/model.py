@@ -27,7 +27,7 @@ from pathlib import Path
 
 import numpy as np
 
-from . import builders, engine, human
+from . import builders, cloth, engine, human
 
 # View presets: camera elevation and the directions rendered (GameMaker/screen degrees:
 # 0 = right, 90 = up, 270 = toward the camera).
@@ -164,6 +164,10 @@ class Model:
         for k, v in (data.get("anchors") or {}).items():
             self.anchor_defs[k] = (v["joint"], tuple(v.get("at", (0, 0, 0))))
         self.rig_anims = [r["anims"] for r in rigs]
+        self._cape = None
+        self._wants_cape_sim = any(r.get("sim") == "cape" for r in rigs) and not data.get("no_cloth_sim")
+        if data.get("no_cloth_sim") and any(r.get("sim") == "cape" for r in rigs):
+            self.rig_anims.append(builders._cape_anims())
         self.outline = data.get("outline", "#16121d")
         self.default_anims = data.get("anims") or (["idle", "walk", "run", "attack", "cast", "jump", "hurt", "death"]
                                                    if self.kind == "character" else ["idle"])
@@ -174,7 +178,22 @@ class Model:
         path = Path(path)
         return cls(json.loads(path.read_text(encoding="utf-8")), source=str(path))
 
+    def raw_pose(self, anim, u, direction):
+        """Skeleton pose from the clip only (no weapon clearance, no cloth)."""
+        return self._pose(anim, u, direction)[0]
+
     def pose(self, anim, u, direction):
+        J, rots, root = self._pose(anim, u, direction)
+        if self.has_grip:
+            J = self._clear_weapon(rots, root, J)
+        if self._wants_cape_sim:
+            if self._cape is None:
+                self._cape = cloth.CapeSim(self)
+            yaw_R = engine.rot_y(yaw_for_direction(direction))
+            J = self._cape.apply(J, anim, u, yaw_R, J["root"][0])
+        return J
+
+    def _pose(self, anim, u, direction):
         fn = self.anims[anim][0]
         rots, root = fn(u)
         rots = dict(rots)
@@ -186,10 +205,7 @@ class Model:
                     rots[k] = (a[0] + v[0], a[1] + v[1], a[2] + v[2])
         r = rots.get("root", (0, 0, 0))
         rots["root"] = (r[0], r[1] + yaw_for_direction(direction), r[2])
-        J = self.skel.pose(rots, root)
-        if self.has_grip:
-            J = self._clear_weapon(rots, root, J)
-        return J
+        return self.skel.pose(rots, root), rots, root
 
     # ------------------------------------------------------------------ weapon handling
 

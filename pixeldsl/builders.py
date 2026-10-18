@@ -267,6 +267,7 @@ def _grip_anims():
 
 
 RIGS = {
-    "cape": {"joints": CAPE_JOINTS, "anims": _cape_anims(), "group_k": CAPE_K},
+    # the cape chain is driven by pixeldsl.cloth (simulation); _cape_anims() stays as a fallback
+    "cape": {"joints": CAPE_JOINTS, "anims": {}, "group_k": CAPE_K, "sim": "cape"},
     "grip": {"joints": GRIP_JOINTS, "anims": _grip_anims(), "group_k": {}},
 }

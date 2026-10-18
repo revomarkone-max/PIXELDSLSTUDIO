@@ -73,7 +73,9 @@ python -m pixeldsl gallery -o out/gallery.html
   `hood`, `cape`) or a raw primitive (`sphere`, `ellipsoid`, `cone`, `ccone`, `box`, `torus`, `seg`)
   attached to a joint. `"mirror": true` adds the left/right copy. Primitives in one `group`
   blend smoothly; `"cut": true` subtracts from its group.
-- **rigs**: `cape` (cape chain that sways), `grip` (`grip_R` weapon joint that follows attacks/casts).
+- **rigs**: `cape` (cape chain driven by a small cloth simulation: gravity, drag from the
+  motion of the clip, collision with the body; deterministic), `grip` (`grip_R` weapon joint;
+  weapons are automatically rolled out of the body). `robe` skirts follow the legs and hide them.
 - **joints** (human): root, pelvis, spine, chest, neck, head, shoulder/elbow/wrist/hand/hip/knee/ankle/toe `_R`/`_L`
   (character right = -x; the model faces +z). Props have a single `root` joint at the ground.
 - optional `views`, `anims`, `dirs` (per view) override what gets exported.
@@ -81,7 +83,8 @@ python -m pixeldsl gallery -o out/gallery.html
 ## Output layout
 
 `<name>_<view>_<anim>.png`: rows = directions, columns = frames. `<name>_<view>.json`
-holds frame size, origin (feet), direction order and fps/loop per animation. All
+holds frame size, origin (feet), direction order, fps/loop and per-frame anchor points
+(`weapon_tip`, `hand_R`, `hand_L`, `head`: `[x, y, in_front]`, e.g. to spawn projectiles). All
 animations of a view share one frame size and origin.
 
 | view | directions (row order) |

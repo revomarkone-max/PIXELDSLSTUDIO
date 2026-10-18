@@ -107,6 +107,20 @@ class ModelTests(unittest.TestCase):
                         pts, rad, _ = m._weapon_samples(J)
                         self.assertGreater(float((scene.distance(pts) - rad).min()), -1.0)
 
+    def test_cape_simulation_is_deterministic_and_stays_out_of_the_body(self):
+        from pixeldsl import engine
+        a = model.Model.load(ROOT / "models/characters/paladin.json")
+        b = model.Model.load(ROOT / "models/characters/paladin.json")
+        for anim in ("idle", "run"):
+            ra, rb = a.pose(anim, 0.25, 0), b.pose(anim, 0.25, 0)
+            self.assertTrue(np.allclose(ra["cape_low"][0], rb["cape_low"][0]))
+            sim = a._cape
+            scene = sim._body(a.raw_pose(anim, 0.25, 270))
+            pts = np.array(sim.simulate(anim)[2][1:])
+            self.assertGreater(float(scene.distance(pts).min()), 0.5)
+        # running pushes the cape further back than standing
+        self.assertLess(a._cape.simulate("run")[0][-1][2], a._cape.simulate("idle")[0][-1][2] - 3)
+
     def test_unknown_builder_is_a_clear_error(self):
         with self.assertRaisesRegex(ValueError, "unknown builder"):
             model.Model({"name": "x", "parts": [{"hat_of_doom": {}}]})
