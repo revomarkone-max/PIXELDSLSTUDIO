@@ -1,6 +1,6 @@
 # PixelDSL
 
-[![tests](https://github.com/revomarkone-max/PIXELDSLSTUDIO/actions/workflows/tests.yml/badge.svg)](https://github.com/revomarkone-max/PIXELDSLSTUDIO/actions/workflows/tests.yml)
+[![tests](https://github.com/slowpoke-flex/PIXELDSLSTUDIO/actions/workflows/tests.yml/badge.svg)](https://github.com/slowpoke-flex/PIXELDSLSTUDIO/actions/workflows/tests.yml)
 [![Code: MIT](https://img.shields.io/badge/code-MIT-blue.svg)](./LICENSE)
 [![Assets: CC0](https://img.shields.io/badge/generated_assets-CC0-brightgreen.svg)](https://creativecommons.org/publicdomain/zero/1.0/)
 
