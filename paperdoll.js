@@ -825,6 +825,115 @@
   };
 
   // ==========================================================================
+  // 6. ANALYTICAL IK & DIRECTIONAL KINEMATICS
+  // ==========================================================================
+  function solveIk2Bone(root, target, l1, l2, flip) {
+    const ax = Number(root[0]), ay = Number(root[1]);
+    const bx = Number(target[0]), by = Number(target[1]);
+    const len1 = Math.max(0.5, Number(l1));
+    const len2 = Math.max(0.5, Number(l2));
+    const dx = bx - ax;
+    const dy = by - ay;
+    const dist = Math.hypot(dx, dy);
+    const minD = Math.abs(len1 - len2) + 1e-4;
+    const maxD = (len1 + len2) - 1e-4;
+    const dClamped = Math.max(minD, Math.min(maxD, dist));
+    const cosA = Math.max(-1.0, Math.min(1.0, (len1 * len1 + dClamped * dClamped - len2 * len2) / (2.0 * len1 * dClamped)));
+    const alpha = Math.acos(cosA);
+    const baseAng = Math.atan2(dy, dx);
+    const jointAng = flip ? baseAng - alpha : baseAng + alpha;
+    const jx = ax + len1 * Math.cos(jointAng);
+    const jy = ay + len1 * Math.sin(jointAng);
+    const scale = dist > 1e-5 ? dClamped / dist : 0.0;
+    const ex = ax + dx * scale;
+    const ey = ay + dy * scale;
+    return [[ax, ay], [jx, jy], [ex, ey]];
+  }
+
+  function getIkLegDeltas(hip, ankle, l1, l2, flip) {
+    const [root, knee, eff] = solveIk2Bone(hip, ankle, l1, l2, flip);
+    const angThigh = Math.atan2(knee[1] - root[1], knee[0] - root[0]) * (180.0 / Math.PI);
+    const angShin = Math.atan2(eff[1] - knee[1], eff[0] - knee[0]) * (180.0 / Math.PI);
+    const dThigh = ((angThigh - 90.0 + 180.0) % 360.0 + 360.0) % 360.0 - 180.0;
+    const dShin = ((angShin - angThigh + 180.0) % 360.0 + 360.0) % 360.0 - 180.0;
+    return [Math.round(dThigh * 100) / 100, Math.round(dShin * 100) / 100];
+  }
+
+  function adaptBonesForDirection(bones, direction) {
+    const dir = direction || "right";
+    const adapted = [];
+
+    for (const b of bones) {
+      const nb = JSON.parse(JSON.stringify(b));
+      const bid = nb.id || "";
+
+      if (dir === "down" || dir === "up") {
+        if (bid === "arm_far_upper") {
+          nb.offset = [-1.0, -4.5];
+          nb.angle = 180;
+          nb.z = 1.22;
+        } else if (bid === "arm_near_upper") {
+          nb.offset = [-1.0, 4.5];
+          nb.angle = 180;
+          nb.z = 1.24;
+        } else if (bid === "arm_far_lower") {
+          nb.angle = 0;
+          nb.z = 1.22;
+        } else if (bid === "arm_near_lower") {
+          nb.angle = 0;
+          nb.z = 1.24;
+        } else if (bid === "leg_far_thigh") {
+          nb.offset = [0, -2.5];
+          nb.angle = 180;
+          nb.z = 1.02;
+        } else if (bid === "leg_near_thigh") {
+          nb.offset = [0, 2.5];
+          nb.angle = 180;
+          nb.z = 1.04;
+        } else if (bid === "foot_far" || bid === "foot_near") {
+          nb.angle = 0;
+        } else if (bid === "head") {
+          if (dir === "down") {
+            nb.features = { eyes: { spacing: 4.5, dy: -0.5, w: 1.2, h: 1.8, color: "eyes" } };
+          } else {
+            nb.features = null;
+          }
+        }
+
+        // Equipment Z-ordering & resting angle in front/back view
+        if (bid.includes("cape")) {
+          nb.z = dir === "down" ? 0.4 : 2.5;
+        }
+        if (bid.includes("shd")) {
+          nb.z = dir === "down" ? 1.4 : 1.1;
+          if (bid.includes("body")) {
+            nb.angle = 10;
+            nb.offset = [0, 0];
+          } else if (bid.includes("cross")) {
+            nb.angle = 10;
+            nb.offset = [0, 2];
+          } else if (bid.includes("boss")) {
+            nb.offset = [0, 2];
+          }
+        }
+        if (bid.startsWith("sw_") || bid.startsWith("axe_") || bid.startsWith("stf_") || bid.startsWith("dgr_") || bid.startsWith("spear_")) {
+          nb.z = dir === "down" ? 1.4 : 1.1;
+          if (bid.includes("blade") || bid.includes("shaft") || bid.includes("head") || bid.includes("spear_tip")) {
+            nb.angle = 20;
+          } else if (bid.includes("guard")) {
+            nb.angle = 110;
+          } else if (bid.includes("pommel")) {
+            nb.angle = -160;
+          }
+        }
+      }
+
+      adapted.append ? adapted.append(nb) : adapted.push(nb);
+    }
+    return adapted;
+  }
+
+  // ==========================================================================
   // 6. PROCEDURAL KINEMATIC ACTIONS & MOTIONS
   // ==========================================================================
   const ACTIONS = {
@@ -833,41 +942,155 @@
       name: "Walk Cycle",
       frames: 8,
       fps: 8,
-      computePose: function (frameIndex, totalFrames) {
+      computePose: function (frameIndex, totalFrames, direction, useIk) {
         const t = frameIndex / totalFrames;
         const phase = t * 2.0 * Math.PI;
+        const dir = direction || "right";
+        const enableIk = useIk !== undefined ? Boolean(useIk) : true;
 
-        const bob = -1.5 * Math.abs(Math.sin(phase));
-        const torsoTilt = 2.0 * Math.sin(phase);
+        if (dir === "right" || dir === "left") {
+          if (!enableIk) {
+            const bob = -1.5 * Math.abs(Math.sin(phase));
+            const torsoTilt = 2.0 * Math.sin(phase);
+            const legStride = 24.0 * Math.sin(phase);
+            const nearKneeBend = Math.max(0.0, -32.0 * Math.cos(phase));
+            const farKneeBend = Math.max(0.0, 32.0 * Math.cos(phase));
+            const armSwing = -22.0 * Math.sin(phase);
+            const nearElbowBend = Math.max(0.0, 16.0 * Math.sin(phase));
+            const farElbowBend = Math.max(0.0, -16.0 * Math.sin(phase));
+            const capeWave = 14.0 * Math.sin(phase - 0.8);
 
-        const legStride = 24.0 * Math.sin(phase);
-        const nearKneeBend = Math.max(0.0, -32.0 * Math.cos(phase));
-        const farKneeBend = Math.max(0.0, 32.0 * Math.cos(phase));
+            return {
+              pelvis: { dy: bob },
+              torso: { dAngle: torsoTilt },
+              chest: { dAngle: torsoTilt * 0.5 },
+              head: { dAngle: -torsoTilt * 0.5 },
+              leg_near_thigh: { dAngle: legStride },
+              leg_near_shin: { dAngle: nearKneeBend },
+              foot_near: { dAngle: -nearKneeBend * 0.5 },
+              leg_far_thigh: { dAngle: -legStride },
+              leg_far_shin: { dAngle: farKneeBend },
+              foot_far: { dAngle: -farKneeBend * 0.5 },
+              arm_near_upper: { dAngle: armSwing },
+              arm_near_lower: { dAngle: nearElbowBend },
+              arm_far_upper: { dAngle: -armSwing },
+              arm_far_lower: { dAngle: farElbowBend },
+              eq_cape_mid: { dAngle: capeWave },
+              eq_cape_tail: { dAngle: capeWave * 1.5 }
+            };
+          }
 
-        const armSwing = -22.0 * Math.sin(phase);
-        const nearElbowBend = Math.max(0.0, 16.0 * Math.sin(phase));
-        const farElbowBend = Math.max(0.0, -16.0 * Math.sin(phase));
+          // Zero Foot-Sliding Ground Contact Analytical IK
+          const bob = -1.2 * Math.abs(Math.sin(phase));
+          const hipX = 24.0;
+          const hipY = 26.0 + bob;
+          const stride = 10.0;
+          const hLift = 3.2;
+          const yGround = 41.5;
+          const l1 = 7.5, l2 = 7.0;
 
-        const capeWave = 14.0 * Math.sin(phase - 0.8);
+          // Near leg (phase 0 to 1)
+          const tNear = t % 1.0;
+          let ankleNearX, ankleNearY, footNearDang;
+          if (tNear < 0.5) {
+            const prog = tNear / 0.5;
+            ankleNearX = (hipX + stride * 0.5) - stride * prog;
+            ankleNearY = yGround;
+            footNearDang = 0.0;
+          } else {
+            const u = (tNear - 0.5) / 0.5;
+            ankleNearX = (hipX - stride * 0.5) + stride * (u * u * (3.0 - 2.0 * u));
+            ankleNearY = yGround - hLift * Math.sin(Math.PI * u);
+            footNearDang = -12.0 * Math.sin(Math.PI * u);
+          }
+          const [dtNear, dsNear] = getIkLegDeltas([hipX, hipY], [ankleNearX, ankleNearY], l1, l2);
 
-        return {
-          pelvis: { dy: bob },
-          torso: { dAngle: torsoTilt },
-          chest: { dAngle: torsoTilt * 0.5 },
-          head: { dAngle: -torsoTilt * 0.5 },
-          leg_near_thigh: { dAngle: legStride },
-          leg_near_shin: { dAngle: nearKneeBend },
-          foot_near: { dAngle: -nearKneeBend * 0.5 },
-          leg_far_thigh: { dAngle: -legStride },
-          leg_far_shin: { dAngle: farKneeBend },
-          foot_far: { dAngle: -farKneeBend * 0.5 },
-          arm_near_upper: { dAngle: armSwing },
-          arm_near_lower: { dAngle: nearElbowBend },
-          arm_far_upper: { dAngle: -armSwing },
-          arm_far_lower: { dAngle: farElbowBend },
-          eq_cape_mid: { dAngle: capeWave },
-          eq_cape_tail: { dAngle: capeWave * 1.5 }
-        };
+          // Far leg (phase shifted by 0.5 / 180 degrees)
+          const tFar = (t + 0.5) % 1.0;
+          let ankleFarX, ankleFarY, footFarDang;
+          if (tFar < 0.5) {
+            const prog = tFar / 0.5;
+            ankleFarX = (hipX + stride * 0.5) - stride * prog;
+            ankleFarY = yGround;
+            footFarDang = 0.0;
+          } else {
+            const u = (tFar - 0.5) / 0.5;
+            ankleFarX = (hipX - stride * 0.5) + stride * (u * u * (3.0 - 2.0 * u));
+            ankleFarY = yGround - hLift * Math.sin(Math.PI * u);
+            footFarDang = -12.0 * Math.sin(Math.PI * u);
+          }
+          const [dtFar, dsFar] = getIkLegDeltas([hipX, hipY], [ankleFarX, ankleFarY], l1, l2);
+
+          const armSwing = -24.0 * Math.sin(phase);
+          const nearElbow = Math.max(0.0, 18.0 * Math.sin(phase));
+          const farElbow = Math.max(0.0, -18.0 * Math.sin(phase));
+          const torsoTilt = 2.0 * Math.sin(phase);
+          const capeWave = 14.0 * Math.sin(phase - 0.8);
+
+          return {
+            pelvis: { dy: bob },
+            torso: { dAngle: torsoTilt },
+            chest: { dAngle: torsoTilt * 0.5 },
+            head: { dAngle: -torsoTilt * 0.5 },
+            leg_near_thigh: { dAngle: dtNear },
+            leg_near_shin: { dAngle: dsNear },
+            foot_near: { dAngle: footNearDang },
+            leg_far_thigh: { dAngle: dtFar },
+            leg_far_shin: { dAngle: dsFar },
+            foot_far: { dAngle: footFarDang },
+            arm_near_upper: { dAngle: armSwing },
+            arm_near_lower: { dAngle: nearElbow },
+            arm_far_upper: { dAngle: -armSwing },
+            arm_far_lower: { dAngle: farElbow },
+            eq_cape_mid: { dAngle: capeWave },
+            eq_cape_tail: { dAngle: capeWave * 1.5 }
+          };
+        } else if (dir === "down" || dir === "up") {
+          // Top-Down Front/Back walk kinematics with lateral weight shift
+          const swayX = 0.8 * Math.sin(phase);
+          const bobY = -1.2 * Math.abs(Math.sin(phase));
+          const torsoTilt = -1.5 * Math.sin(phase);
+
+          const tLeft = t % 1.0;
+          const tRight = (t + 0.5) % 1.0;
+          const dirMult = dir === "down" ? 1.0 : -1.0;
+
+          let legLThighAng = 0.0, legLShinAng = 0.0, legLDz = 0.0;
+          if (tLeft >= 0.5) {
+            const u = (tLeft - 0.5) / 0.5;
+            legLThighAng = -14.0 * Math.sin(Math.PI * u) * dirMult;
+            legLShinAng = 18.0 * Math.sin(Math.PI * u) * dirMult;
+            legLDz = 0.22 * Math.sin(Math.PI * u) * dirMult;
+          }
+
+          let legRThighAng = 0.0, legRShinAng = 0.0, legRDz = 0.0;
+          if (tRight >= 0.5) {
+            const u = (tRight - 0.5) / 0.5;
+            legRThighAng = -14.0 * Math.sin(Math.PI * u) * dirMult;
+            legRShinAng = 18.0 * Math.sin(Math.PI * u) * dirMult;
+            legRDz = 0.22 * Math.sin(Math.PI * u) * dirMult;
+          }
+
+          const armSwingL = 15.0 * Math.sin(phase);
+          const armSwingR = -15.0 * Math.sin(phase);
+          const armLDz = -0.15 * Math.sin(phase);
+          const armRDz = 0.15 * Math.sin(phase);
+          const capeSway = 6.0 * Math.sin(phase);
+
+          return {
+            pelvis: { dx: swayX, dy: bobY },
+            torso: { dAngle: torsoTilt },
+            chest: { dAngle: torsoTilt * 0.5 },
+            head: { dAngle: -torsoTilt * 0.5 },
+            leg_far_thigh: { dAngle: legLThighAng, dz: legLDz },
+            leg_far_shin: { dAngle: legLShinAng, dz: legLDz },
+            leg_near_thigh: { dAngle: legRThighAng, dz: legRDz },
+            leg_near_shin: { dAngle: legRShinAng, dz: legRDz },
+            arm_far_upper: { dAngle: armSwingL, dz: armLDz },
+            arm_near_upper: { dAngle: armSwingR, dz: armRDz },
+            eq_cape_mid: { dAngle: capeSway }
+          };
+        }
       }
     },
 
@@ -1158,29 +1381,36 @@
       }
     }
 
+    // Adapt bones for Top-Down direction ('down', 'up', 'right', 'left')
+    const direction = opts.direction || "down";
+    const useIK = opts.useIK !== undefined ? opts.useIK : true;
+    const renderDir = direction === "left" ? "right" : direction;
+    const adaptedBones = adaptBonesForDirection(compositeBones, renderDir);
+
     // 4. Build animation frames using action kinematics
     const numFrames = parseInt(opts.frames, 10) || actionDef.frames || 8;
     const framesList = [];
     for (let fi = 0; fi < numFrames; fi++) {
-      const poseDeltas = actionDef.computePose(fi, numFrames);
+      const poseDeltas = actionDef.computePose(fi, numFrames, renderDir, useIK);
       framesList.push({ pose: poseDeltas });
     }
 
-    const loadoutName = opts.loadoutName || `${manDef.name} (${actionDef.name})`;
+    const loadoutName = opts.loadoutName || `${manDef.name} (${actionDef.name} - ${direction.toUpperCase()})`;
 
     // 5. Build final valid PixelDSL v3.0 rig spec
     return {
       type: "rig",
-      name: `paperdoll_${manDef.id}_${actionDef.id}`,
+      name: `paperdoll_${manDef.id}_${actionDef.id}_${direction}`,
       label: `Paper Doll: ${loadoutName}`,
       width: width,
       height: height,
+      direction: direction,
       palette: fullPalette,
       rig: {
         outline: opts.outline !== undefined ? opts.outline : "o",
         outlineWidth: opts.outlineWidth !== undefined ? opts.outlineWidth : 1,
         crease: true,
-        bones: compositeBones
+        bones: adaptedBones
       },
       postProcess: {
         autoOutline: true,
@@ -1239,7 +1469,10 @@
     LOADOUTS: LOADOUTS,
     ACTIONS: ACTIONS,
     assembleSpec: assembleSpec,
-    calculateLoadoutSummary: calculateLoadoutSummary
+    calculateLoadoutSummary: calculateLoadoutSummary,
+    adaptBonesForDirection: adaptBonesForDirection,
+    solveIk2Bone: solveIk2Bone,
+    getIkLegDeltas: getIkLegDeltas
   };
 
   if (typeof module !== "undefined" && module.exports) {

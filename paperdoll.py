@@ -680,41 +680,286 @@ LOADOUTS = {
 }
 
 # ==============================================================================
-# 6. ACTIONS & FORWARD KINEMATICS
+# 6. ANALYTICAL IK & DIRECTIONAL KINEMATICS
 # ==============================================================================
-def compute_pose(action_id, frame_index, total_frames):
+def solve_ik_2bone(root, target, l1, l2, flip=False):
+    """Analytical Law-of-Cosines 2-Bone Inverse Kinematics solver."""
+    ax, ay = float(root[0]), float(root[1])
+    bx, by = float(target[0]), float(target[1])
+    l1 = max(0.5, float(l1))
+    l2 = max(0.5, float(l2))
+    dx = bx - ax
+    dy = by - ay
+    dist = math.hypot(dx, dy)
+    min_d = abs(l1 - l2) + 1e-4
+    max_d = (l1 + l2) - 1e-4
+    d_clamped = max(min_d, min(max_d, dist))
+    cos_a = max(-1.0, min(1.0, (l1 * l1 + d_clamped * d_clamped - l2 * l2) / (2.0 * l1 * d_clamped)))
+    alpha = math.acos(cos_a)
+    base_ang = math.atan2(dy, dx)
+    joint_ang = base_ang - alpha if flip else base_ang + alpha
+    jx = ax + l1 * math.cos(joint_ang)
+    jy = ay + l1 * math.sin(joint_ang)
+    scale = (d_clamped / dist) if dist > 1e-5 else 0.0
+    ex = ax + dx * scale
+    ey = ay + dy * scale
+    return (ax, ay), (jx, jy), (ex, ey)
+
+
+def get_ik_leg_deltas(hip, ankle, l1, l2, flip=False):
+    """Compute local delta angles for thigh and shin from IK target."""
+    root, knee, eff = solve_ik_2bone(hip, ankle, l1, l2, flip=flip)
+    ang_thigh = math.degrees(math.atan2(knee[1] - root[1], knee[0] - root[0]))
+    ang_shin = math.degrees(math.atan2(eff[1] - knee[1], eff[0] - knee[0]))
+    d_thigh = (ang_thigh - 90.0 + 180.0) % 360.0 - 180.0
+    d_shin = (ang_shin - ang_thigh + 180.0) % 360.0 - 180.0
+    return round(d_thigh, 2), round(d_shin, 2)
+
+
+def adapt_bones_for_direction(bones, direction="right"):
+    """
+    Transforms bone coordinates, parent offsets, and Z-depth layers
+    to match Top-Down 4 directions: 'down' (South), 'left' (West), 'right' (East), 'up' (North).
+    """
+    adapted = []
+    for b in bones:
+        nb = json.loads(json.dumps(b))
+        bid = nb.get("id", "")
+
+        if direction in ("down", "up"):
+            # Symmetrical front / back placement
+            if bid == "arm_far_upper":
+                nb["offset"] = [-1.0, -4.5]
+                nb["angle"] = 180
+                nb["z"] = 1.22
+            elif bid == "arm_near_upper":
+                nb["offset"] = [-1.0, 4.5]
+                nb["angle"] = 180
+                nb["z"] = 1.24
+            elif bid == "arm_far_lower":
+                nb["angle"] = 0
+                nb["z"] = 1.22
+            elif bid == "arm_near_lower":
+                nb["angle"] = 0
+                nb["z"] = 1.24
+            elif bid == "leg_far_thigh":
+                nb["offset"] = [0, -2.5]
+                nb["angle"] = 180
+                nb["z"] = 1.02
+            elif bid == "leg_near_thigh":
+                nb["offset"] = [0, 2.5]
+                nb["angle"] = 180
+                nb["z"] = 1.04
+            elif bid in ("foot_far", "foot_near"):
+                nb["angle"] = 0
+            elif bid == "head":
+                if direction == "down":
+                    nb["features"] = {"eyes": {"spacing": 4.5, "dy": -0.5, "w": 1.2, "h": 1.8, "color": "eyes"}}
+                else:
+                    nb["features"] = None
+
+            # Equipment Z-ordering & resting angle in front/back view
+            if "cape" in bid:
+                nb["z"] = 0.4 if direction == "down" else 2.5
+            if "shd" in bid:
+                nb["z"] = 1.4 if direction == "down" else 1.1
+                if "body" in bid:
+                    nb["angle"] = 10
+                    nb["offset"] = [0, 0]
+                elif "cross" in bid:
+                    nb["angle"] = 10
+                    nb["offset"] = [0, 2]
+                elif "boss" in bid:
+                    nb["offset"] = [0, 2]
+            if "sw_" in bid or "axe_" in bid or "stf_" in bid or "dgr_" in bid or "spear_" in bid:
+                nb["z"] = 1.4 if direction == "down" else 1.1
+                if "blade" in bid or "shaft" in bid or "head" in bid or "spear_tip" in bid:
+                    nb["angle"] = 20
+                elif "guard" in bid:
+                    nb["angle"] = 110
+                elif "pommel" in bid:
+                    nb["angle"] = -160
+
+        adapted.append(nb)
+    return adapted
+
+
+def flip_buffer_h(width, height, buf, is_normal=False):
+    """Horizontally mirror a raw RGBA buffer, flipping X normal component if is_normal=True."""
+    out = bytearray(len(buf))
+    for y in range(height):
+        for x in range(width):
+            src_x = width - 1 - x
+            src_idx = (y * width + src_x) * 4
+            dst_idx = (y * width + x) * 4
+            if is_normal:
+                r = buf[src_idx]
+                out[dst_idx] = 255 - r
+                out[dst_idx + 1] = buf[src_idx + 1]
+                out[dst_idx + 2] = buf[src_idx + 2]
+                out[dst_idx + 3] = buf[src_idx + 3]
+            else:
+                out[dst_idx:dst_idx + 4] = buf[src_idx:src_idx + 4]
+    return out
+
+
+def compute_pose(action_id, frame_index, total_frames, direction="right", use_ik=True):
     t = frame_index / float(total_frames)
     phase = t * 2.0 * math.pi
 
     if action_id == "walk":
-        bob = -1.5 * abs(math.sin(phase))
-        torso_tilt = 2.0 * math.sin(phase)
-        leg_stride = 24.0 * math.sin(phase)
-        near_knee = max(0.0, -32.0 * math.cos(phase))
-        far_knee = max(0.0, 32.0 * math.cos(phase))
-        arm_swing = -22.0 * math.sin(phase)
-        near_elbow = max(0.0, 16.0 * math.sin(phase))
-        far_elbow = max(0.0, -16.0 * math.sin(phase))
-        cape_wave = 14.0 * math.sin(phase - 0.8)
+        if direction in ("right", "left"):
+            if not use_ik:
+                # Fallback to classical trigonometric FK
+                bob = -1.5 * abs(math.sin(phase))
+                torso_tilt = 2.0 * math.sin(phase)
+                leg_stride = 24.0 * math.sin(phase)
+                near_knee = max(0.0, -32.0 * math.cos(phase))
+                far_knee = max(0.0, 32.0 * math.cos(phase))
+                arm_swing = -22.0 * math.sin(phase)
+                near_elbow = max(0.0, 16.0 * math.sin(phase))
+                far_elbow = max(0.0, -16.0 * math.sin(phase))
+                cape_wave = 14.0 * math.sin(phase - 0.8)
 
-        return {
-            "pelvis": {"dy": bob},
-            "torso": {"dAngle": torso_tilt},
-            "chest": {"dAngle": torso_tilt * 0.5},
-            "head": {"dAngle": -torso_tilt * 0.5},
-            "leg_near_thigh": {"dAngle": leg_stride},
-            "leg_near_shin": {"dAngle": near_knee},
-            "foot_near": {"dAngle": -near_knee * 0.5},
-            "leg_far_thigh": {"dAngle": -leg_stride},
-            "leg_far_shin": {"dAngle": far_knee},
-            "foot_far": {"dAngle": -far_knee * 0.5},
-            "arm_near_upper": {"dAngle": arm_swing},
-            "arm_near_lower": {"dAngle": near_elbow},
-            "arm_far_upper": {"dAngle": -arm_swing},
-            "arm_far_lower": {"dAngle": far_elbow},
-            "eq_cape_mid": {"dAngle": cape_wave},
-            "eq_cape_tail": {"dAngle": cape_wave * 1.5}
-        }
+                return {
+                    "pelvis": {"dy": bob},
+                    "torso": {"dAngle": torso_tilt},
+                    "chest": {"dAngle": torso_tilt * 0.5},
+                    "head": {"dAngle": -torso_tilt * 0.5},
+                    "leg_near_thigh": {"dAngle": leg_stride},
+                    "leg_near_shin": {"dAngle": near_knee},
+                    "foot_near": {"dAngle": -near_knee * 0.5},
+                    "leg_far_thigh": {"dAngle": -leg_stride},
+                    "leg_far_shin": {"dAngle": far_knee},
+                    "foot_far": {"dAngle": -far_knee * 0.5},
+                    "arm_near_upper": {"dAngle": arm_swing},
+                    "arm_near_lower": {"dAngle": near_elbow},
+                    "arm_far_upper": {"dAngle": -arm_swing},
+                    "arm_far_lower": {"dAngle": far_elbow},
+                    "eq_cape_mid": {"dAngle": cape_wave},
+                    "eq_cape_tail": {"dAngle": cape_wave * 1.5}
+                }
+
+            # -------------------------------------------------------------
+            # ZERO FOOT-SLIDING GROUND CONTACT ANALYTICAL IK
+            # -------------------------------------------------------------
+            bob = -1.2 * abs(math.sin(phase))
+            hip_x = 24.0
+            hip_y = 26.0 + bob
+            stride = 10.0
+            h_lift = 3.2
+            y_ground = 41.5
+            l1, l2 = 7.5, 7.0
+
+            # Near leg (phase 0 to 1)
+            t_near = t % 1.0
+            if t_near < 0.5:
+                # Stance Phase: ankle locked on ground, travels linearly backward
+                prog = t_near / 0.5
+                ankle_near_x = (hip_x + stride * 0.5) - stride * prog
+                ankle_near_y = y_ground
+                foot_near_dang = 0.0
+            else:
+                # Swing Phase: smoothstep forward + parabolic foot lift
+                u = (t_near - 0.5) / 0.5
+                ankle_near_x = (hip_x - stride * 0.5) + stride * (u * u * (3.0 - 2.0 * u))
+                ankle_near_y = y_ground - h_lift * math.sin(math.pi * u)
+                foot_near_dang = -12.0 * math.sin(math.pi * u)
+
+            dt_near, ds_near = get_ik_leg_deltas((hip_x, hip_y), (ankle_near_x, ankle_near_y), l1, l2)
+
+            # Far leg (phase shifted by 0.5 / 180 degrees)
+            t_far = (t + 0.5) % 1.0
+            if t_far < 0.5:
+                prog = t_far / 0.5
+                ankle_far_x = (hip_x + stride * 0.5) - stride * prog
+                ankle_far_y = y_ground
+                foot_far_dang = 0.0
+            else:
+                u = (t_far - 0.5) / 0.5
+                ankle_far_x = (hip_x - stride * 0.5) + stride * (u * u * (3.0 - 2.0 * u))
+                ankle_far_y = y_ground - h_lift * math.sin(math.pi * u)
+                foot_far_dang = -12.0 * math.sin(math.pi * u)
+
+            dt_far, ds_far = get_ik_leg_deltas((hip_x, hip_y), (ankle_far_x, ankle_far_y), l1, l2)
+
+            arm_swing = -24.0 * math.sin(phase)
+            near_elbow = max(0.0, 18.0 * math.sin(phase))
+            far_elbow = max(0.0, -18.0 * math.sin(phase))
+            torso_tilt = 2.0 * math.sin(phase)
+            cape_wave = 14.0 * math.sin(phase - 0.8)
+
+            return {
+                "pelvis": {"dy": bob},
+                "torso": {"dAngle": torso_tilt},
+                "chest": {"dAngle": torso_tilt * 0.5},
+                "head": {"dAngle": -torso_tilt * 0.5},
+                "leg_near_thigh": {"dAngle": dt_near},
+                "leg_near_shin": {"dAngle": ds_near},
+                "foot_near": {"dAngle": foot_near_dang},
+                "leg_far_thigh": {"dAngle": dt_far},
+                "leg_far_shin": {"dAngle": ds_far},
+                "foot_far": {"dAngle": foot_far_dang},
+                "arm_near_upper": {"dAngle": arm_swing},
+                "arm_near_lower": {"dAngle": near_elbow},
+                "arm_far_upper": {"dAngle": -arm_swing},
+                "arm_far_lower": {"dAngle": far_elbow},
+                "eq_cape_mid": {"dAngle": cape_wave},
+                "eq_cape_tail": {"dAngle": cape_wave * 1.5}
+            }
+
+        elif direction in ("down", "up"):
+            # Top-Down Front/Back walk kinematics with lateral weight shift
+            sway_x = 0.8 * math.sin(phase)
+            bob_y = -1.2 * abs(math.sin(phase))
+            torso_tilt = -1.5 * math.sin(phase)
+
+            t_left = t % 1.0
+            t_right = (t + 0.5) % 1.0
+            dir_mult = 1.0 if direction == "down" else -1.0
+
+            if t_left < 0.5:
+                # Stance leg
+                leg_l_thigh_ang = 0.0
+                leg_l_shin_ang = 0.0
+                leg_l_dz = 0.0
+            else:
+                # Swing leg stepping forward towards camera (down) or away (up)
+                u = (t_left - 0.5) / 0.5
+                leg_l_thigh_ang = -14.0 * math.sin(math.pi * u) * dir_mult
+                leg_l_shin_ang = 18.0 * math.sin(math.pi * u) * dir_mult
+                leg_l_dz = 0.22 * math.sin(math.pi * u) * dir_mult
+
+            if t_right < 0.5:
+                # Stance leg
+                leg_r_thigh_ang = 0.0
+                leg_r_shin_ang = 0.0
+                leg_r_dz = 0.0
+            else:
+                u = (t_right - 0.5) / 0.5
+                leg_r_thigh_ang = -14.0 * math.sin(math.pi * u) * dir_mult
+                leg_r_shin_ang = 18.0 * math.sin(math.pi * u) * dir_mult
+                leg_r_dz = 0.22 * math.sin(math.pi * u) * dir_mult
+
+            arm_swing_l = 15.0 * math.sin(phase)
+            arm_swing_r = -15.0 * math.sin(phase)
+            arm_l_dz = -0.15 * math.sin(phase)
+            arm_r_dz = 0.15 * math.sin(phase)
+            cape_sway = 6.0 * math.sin(phase)
+
+            return {
+                "pelvis": {"dx": sway_x, "dy": bob_y},
+                "torso": {"dAngle": torso_tilt},
+                "chest": {"dAngle": torso_tilt * 0.5},
+                "head": {"dAngle": -torso_tilt * 0.5},
+                "leg_far_thigh": {"dAngle": leg_l_thigh_ang, "dz": leg_l_dz},
+                "leg_far_shin": {"dAngle": leg_l_shin_ang, "dz": leg_l_dz},
+                "leg_near_thigh": {"dAngle": leg_r_thigh_ang, "dz": leg_r_dz},
+                "leg_near_shin": {"dAngle": leg_r_shin_ang, "dz": leg_r_dz},
+                "arm_far_upper": {"dAngle": arm_swing_l, "dz": arm_l_dz},
+                "arm_near_upper": {"dAngle": arm_swing_r, "dz": arm_r_dz},
+                "eq_cape_mid": {"dAngle": cape_sway}
+            }
 
     elif action_id == "attack":
         keyframes = [
@@ -778,7 +1023,7 @@ def compute_pose(action_id, frame_index, total_frames):
 # ==============================================================================
 # 7. ASSEMBLE SPEC
 # ==============================================================================
-def assemble_spec(mannequin_id="humanoid", equipped_slots=None, action_id="walk", theme_id="steel", num_frames=None):
+def assemble_spec(mannequin_id="humanoid", equipped_slots=None, action_id="walk", theme_id="steel", num_frames=None, direction="down", use_ik=True):
     man_def = MANNEQUINS.get(mannequin_id, MANNEQUINS["humanoid"])
     theme_def = THEMES.get(theme_id, THEMES["steel"])
     equipped = equipped_slots or {}
@@ -822,20 +1067,25 @@ def assemble_spec(mannequin_id="humanoid", equipped_slots=None, action_id="walk"
                 b_copy["parent"] = "chest"
             composite_bones.append(b_copy)
 
+    # Adapt bones for Top-Down direction ('down', 'up', 'right', 'left')
+    render_dir = "right" if direction == "left" else direction
+    composite_bones = adapt_bones_for_direction(composite_bones, render_dir)
+
     default_frames = {"walk": 8, "attack": 6, "idle": 6, "hurt": 4, "run": 6}.get(action_id, 8)
     frames_count = num_frames if (num_frames and num_frames > 0) else default_frames
 
     frames_list = []
     for fi in range(frames_count):
-        pose = compute_pose(action_id, fi, frames_count)
+        pose = compute_pose(action_id, fi, frames_count, direction=render_dir, use_ik=use_ik)
         frames_list.append({"pose": pose})
 
     return {
         "type": "rig",
-        "name": f"paperdoll_{mannequin_id}_{action_id}",
-        "label": f"Paper Doll: {man_def['name']} ({action_id})",
+        "name": f"paperdoll_{mannequin_id}_{action_id}_{direction}",
+        "label": f"Paper Doll: {man_def['name']} ({action_id} - {direction.upper()})",
         "width": width,
         "height": height,
+        "direction": direction,
         "palette": palette,
         "rig": {
             "outline": "o",
@@ -853,6 +1103,73 @@ def assemble_spec(mannequin_id="humanoid", equipped_slots=None, action_id="walk"
     }
 
 
+def render_4way_sheet(mannequin_id="humanoid", equipped_slots=None, action_id="walk", theme_id="steel", num_frames=None, use_ik=True):
+    """
+    Renders a unified 4-direction RPG Spritesheet:
+    Row 0: Down (South / Front View)
+    Row 1: Left (West)
+    Row 2: Right (East)
+    Row 3: Up (North / Back View)
+    Returns: dict(width, height, sheet_buffer, normal_buffer, frames_count)
+    """
+    directions = ["down", "left", "right", "up"]
+    default_frames = {"walk": 8, "attack": 6, "idle": 6, "hurt": 4, "run": 6}.get(action_id, 8)
+    frames_count = num_frames if (num_frames and num_frames > 0) else default_frames
+
+    specs = {}
+    for d in ["down", "right", "up"]:
+        specs[d] = assemble_spec(
+            mannequin_id=mannequin_id,
+            equipped_slots=equipped_slots,
+            action_id=action_id,
+            theme_id=theme_id,
+            num_frames=frames_count,
+            direction=d,
+            use_ik=use_ik
+        )
+
+    w = specs["down"]["width"]
+    h = specs["down"]["height"]
+    sheet_w = w * frames_count
+    sheet_h = h * 4
+    sheet_buf = bytearray(sheet_w * sheet_h * 4)
+    norm_buf = bytearray(sheet_w * sheet_h * 4)
+
+    for row_idx, direction in enumerate(directions):
+        spec_to_render = specs["right"] if direction == "left" else specs[direction]
+
+        for fi in range(1, frames_count + 1):
+            rf = pixeldsl.render_rig(spec_to_render, fi)
+            f_buf = rf["buffer"]
+            f_norm = rf.get("normal_buffer") or rf.get("normalBuffer")
+
+            if direction == "left":
+                f_buf = flip_buffer_h(w, h, f_buf, is_normal=False)
+                if f_norm:
+                    f_norm = flip_buffer_h(w, h, f_norm, is_normal=True)
+
+            dst_col = fi - 1
+            for y in range(h):
+                sheet_y = row_idx * h + y
+                for x in range(w):
+                    sheet_x = dst_col * w + x
+                    src_i = (y * w + x) * 4
+                    dst_i = (sheet_y * sheet_w + sheet_x) * 4
+                    sheet_buf[dst_i:dst_i + 4] = f_buf[src_i:src_i + 4]
+                    if f_norm:
+                        norm_buf[dst_i:dst_i + 4] = f_norm[src_i:src_i + 4]
+
+    return {
+        "width": sheet_w,
+        "height": sheet_h,
+        "frame_width": w,
+        "frame_height": h,
+        "frames_count": frames_count,
+        "sheet_buffer": sheet_buf,
+        "normal_buffer": norm_buf
+    }
+
+
 # ==============================================================================
 # 8. MAIN CLI DISPATCH
 # ==============================================================================
@@ -865,6 +1182,10 @@ def main():
     parser.add_argument("--theme", choices=list(THEMES.keys()), default="steel", help="Equipment material color theme")
     parser.add_argument("--equip", type=str, help="Comma-separated slot:item pairs, e.g. 'head:iron_helm,weapon:battle_axe'")
     parser.add_argument("--action", choices=["walk", "attack", "idle", "hurt", "run"], default="walk", help="Kinematic animation action")
+    parser.add_argument("--direction", choices=["down", "left", "right", "up", "4way"], default="down", help="Directional view angle")
+    parser.add_argument("--4way", dest="is_4way", action="store_true", help="Generate full 4-direction RPG Spritesheet (Down, Left, Right, Up rows)")
+    parser.add_argument("--ik", dest="use_ik", action="store_true", default=True, help="Enable Ground Contact Analytical IK (default)")
+    parser.add_argument("--no-ik", dest="use_ik", action="store_false", help="Disable IK and fallback to trigonometric FK")
     parser.add_argument("--frames", type=int, help="Override animation frame count")
     parser.add_argument("-o", "--out", type=str, help="Output PNG path (defaults to game_ready/<name>.png)")
     parser.add_argument("--normal", action="store_true", help="Also generate 3D normal map PNG")
@@ -924,42 +1245,75 @@ def main():
                 s, it = pair.strip().split(":", 1)
                 equipped[s.strip()] = it.strip()
 
-    # Build spec
+    is_4way = args.is_4way or (args.direction == "4way")
+    direction = "down" if is_4way else args.direction
+
+    if is_4way:
+        out_name = args.out or f"paperdoll_{mannequin}_{args.action}_4way.png"
+        os.makedirs(os.path.dirname(out_name) if os.path.dirname(out_name) else ".", exist_ok=True)
+        print(f"\n[+] Rendering 4-Way RPG Spritesheet: {mannequin} ({args.action}) [IK={args.use_ik}]...")
+
+        res_4way = render_4way_sheet(
+            mannequin_id=mannequin,
+            equipped_slots=equipped,
+            action_id=args.action,
+            theme_id=theme,
+            num_frames=args.frames,
+            use_ik=args.use_ik
+        )
+        sheet_w = res_4way["width"]
+        sheet_h = res_4way["height"]
+        pixeldsl.write_png(out_name, sheet_w, sheet_h, res_4way["sheet_buffer"])
+        print(f"    Saved 4-Way Spritesheet: {out_name} ({sheet_w}x{sheet_h}) [Down, Left, Right, Up]")
+
+        if args.normal:
+            norm_name = out_name.rsplit(".", 1)[0] + "_normal.png"
+            pixeldsl.write_png(norm_name, sheet_w, sheet_h, res_4way["normal_buffer"])
+            print(f"    Saved 4-Way Normal Map:   {norm_name}")
+        return
+
+    # Single-direction build
     spec = assemble_spec(
         mannequin_id=mannequin,
         equipped_slots=equipped,
         action_id=args.action,
         theme_id=theme,
-        num_frames=args.frames
+        num_frames=args.frames,
+        direction=direction,
+        use_ik=args.use_ik
     )
 
     if args.spec:
         print(json.dumps(spec, indent=2))
         return
 
-    # If pixeldsl module is available, render!
     if pixeldsl is None:
         print("[!] pixeldsl compiler not found in PYTHONPATH. Outputting JSON spec only.")
         print(json.dumps(spec, indent=2))
         return
 
-    out_name = args.out or f"paperdoll_{mannequin}_{args.action}.png"
+    out_name = args.out or f"paperdoll_{mannequin}_{args.action}_{direction}.png"
     os.makedirs(os.path.dirname(out_name) if os.path.dirname(out_name) else ".", exist_ok=True)
 
-    print(f"\n[+] Assembling Paper Doll: {mannequin} ({args.action}) with theme '{theme}'...")
+    print(f"\n[+] Assembling Paper Doll: {mannequin} ({args.action} - {direction.upper()}) with theme '{theme}' [IK={args.use_ik}]...")
     num_frames = len(spec.get("frames", []))
     print(f"    Active Bones: {len(spec['rig']['bones'])} | Frames: {num_frames} | Dimensions: {spec['width']}x{spec['height']}")
 
-    # Render frame 1 (or loop for all frames)
+    render_dir = "right" if direction == "left" else direction
     res_f1 = pixeldsl.render_rig(spec, 1)
+    f1_buf = res_f1["buffer"]
+    if direction == "left":
+        f1_buf = flip_buffer_h(res_f1["width"], res_f1["height"], f1_buf, is_normal=False)
 
-    pixeldsl.write_png(out_name, res_f1["width"], res_f1["height"], res_f1["buffer"])
+    pixeldsl.write_png(out_name, res_f1["width"], res_f1["height"], f1_buf)
     print(f"    Saved Native 1:1 Sprite: {out_name}")
 
     if args.normal:
         norm_name = out_name.rsplit(".", 1)[0] + "_normal.png"
         norm_buf = res_f1.get("normal_buffer") or res_f1.get("normalBuffer")
         if norm_buf:
+            if direction == "left":
+                norm_buf = flip_buffer_h(res_f1["width"], res_f1["height"], norm_buf, is_normal=True)
             pixeldsl.write_png(norm_name, res_f1["width"], res_f1["height"], norm_buf)
             print(f"    Saved 3D Normal Map:     {norm_name}")
 
@@ -974,18 +1328,20 @@ def main():
             f_buf = rf["buffer"]
             fw = rf["width"]
             fh = rf["height"]
+            if direction == "left":
+                f_buf = flip_buffer_h(fw, fh, f_buf, is_normal=False)
             for y in range(fh):
                 for x in range(fw):
                     src_idx = (y * fw + x) * 4
                     dst_x = (fi - 1) * fw + x
                     dst_idx = (y * sheet_w + dst_x) * 4
-                    sheet_buf[dst_idx:dst_idx+4] = f_buf[src_idx:src_idx+4]
+                    sheet_buf[dst_idx:dst_idx + 4] = f_buf[src_idx:src_idx + 4]
 
         pixeldsl.write_png(sheet_name, sheet_w, sheet_h, sheet_buf)
         print(f"    Saved Sprite Sheet:      {sheet_name} ({sheet_w}x{sheet_h})")
 
     try:
-        ansi_str = pixeldsl.render_ansi_preview(res_f1["width"], res_f1["height"], res_f1["buffer"])
+        ansi_str = pixeldsl.render_ansi_preview(res_f1["width"], res_f1["height"], f1_buf)
         sys.stdout.buffer.write((ansi_str + "\n").encode("utf-8", errors="replace"))
         sys.stdout.buffer.flush()
     except Exception:

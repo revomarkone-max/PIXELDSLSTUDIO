@@ -3925,6 +3925,9 @@
     shield: "kite_shield",
     back: "red_cape"
   };
+  let paperDollActiveDirection = "down";
+  let paperDollUseIK = true;
+  let compiled4WaySpecs = null;
   let paperDollFrameIndex = 0;
   let paperDollIsPlaying = true;
   let paperDollAnimTimer = null;
@@ -3945,7 +3948,31 @@
       });
     });
 
-    // 2. Loadout Selector
+    // 2. Direction Buttons (4-Way Top-Down / Profile)
+    const directionBtns = document.querySelectorAll("#paperDollDirectionBtns button[data-direction]");
+    directionBtns.forEach(btn => {
+      btn.addEventListener("click", () => {
+        paperDollActiveDirection = btn.dataset.direction;
+        directionBtns.forEach(b => b.classList.toggle("active", b === btn));
+        const is4Way = paperDollActiveDirection === "4way";
+        const wSingle = document.getElementById("paperDollCanvasWrapper");
+        const w4Way = document.getElementById("paperDoll4WayContainer");
+        if (wSingle) wSingle.style.display = is4Way ? "none" : "inline-flex";
+        if (w4Way) w4Way.style.display = is4Way ? "grid" : "none";
+        compileAndRenderPaperDoll();
+      });
+    });
+
+    // 2b. Ground Contact Analytical IK Toggle
+    const chkIK = document.getElementById("chkPaperDollIK");
+    if (chkIK) {
+      chkIK.addEventListener("change", () => {
+        paperDollUseIK = chkIK.checked;
+        compileAndRenderPaperDoll();
+      });
+    }
+
+    // 3. Loadout Selector
     const selLoadout = document.getElementById("selPaperDollLoadout");
     if (selLoadout) {
       selLoadout.addEventListener("change", () => {
@@ -3968,7 +3995,7 @@
       });
     }
 
-    // 3. Theme Selector
+    // 4. Theme Selector
     const selTheme = document.getElementById("selPaperDollTheme");
     if (selTheme) {
       selTheme.addEventListener("change", () => {
@@ -3977,7 +4004,7 @@
       });
     }
 
-    // 4. Action Pills
+    // 5. Action Pills
     const actionPills = document.querySelectorAll("#paperDollActionPills button[data-action]");
     actionPills.forEach(pill => {
       pill.addEventListener("click", () => {
@@ -3989,7 +4016,7 @@
       });
     });
 
-    // 5. Playback Controls
+    // 6. Playback Controls
     const btnPlay = document.getElementById("btnPaperDollPlayAnim");
     if (btnPlay) {
       btnPlay.addEventListener("click", () => {
@@ -4005,7 +4032,7 @@
       });
     }
 
-    // 6. Viewport Overlays
+    // 7. Viewport Overlays
     const chkBones = document.getElementById("chkPaperDollBones");
     const chkNormals = document.getElementById("chkPaperDollNormals");
     const chkZTiers = document.getElementById("chkPaperDollZTiers");
@@ -4015,7 +4042,7 @@
       if (el) el.addEventListener("change", () => drawPaperDollFrame());
     });
 
-    // 7. Action Card Buttons
+    // 8. Action Card Buttons
     const btnStudio = document.getElementById("btnPaperDollOpenInStudio");
     if (btnStudio) {
       btnStudio.addEventListener("click", () => {
@@ -4041,6 +4068,13 @@
     if (btnSheet) {
       btnSheet.addEventListener("click", () => {
         exportPaperDollSheet();
+      });
+    }
+
+    const btn4Way = document.getElementById("btnPaperDollExport4Way");
+    if (btn4Way) {
+      btn4Way.addEventListener("click", () => {
+        exportPaperDoll4WaySheet();
       });
     }
 
@@ -4134,9 +4168,37 @@
     });
   }
 
+  function flipImageDataH(ctx, imgData, isNormal) {
+    const w = imgData.width, h = imgData.height;
+    const src = imgData.data;
+    const out = ctx.createImageData(w, h);
+    const dst = out.data;
+    for (let y = 0; y < h; y++) {
+      for (let x = 0; x < w; x++) {
+        const srcX = w - 1 - x;
+        const srcI = (y * w + srcX) * 4;
+        const dstI = (y * w + x) * 4;
+        if (isNormal) {
+          dst[dstI] = 255 - src[srcI]; // Flip normal X component
+          dst[dstI + 1] = src[srcI + 1];
+          dst[dstI + 2] = src[srcI + 2];
+          dst[dstI + 3] = src[srcI + 3];
+        } else {
+          dst[dstI] = src[srcI];
+          dst[dstI + 1] = src[srcI + 1];
+          dst[dstI + 2] = src[srcI + 2];
+          dst[dstI + 3] = src[srcI + 3];
+        }
+      }
+    }
+    return out;
+  }
+
   function compileAndRenderPaperDoll() {
     if (!window.PaperDollEngine) return;
     const PDE = window.PaperDollEngine;
+    const is4Way = paperDollActiveDirection === "4way";
+    const dirToAssemble = is4Way ? "down" : paperDollActiveDirection;
 
     compiledPaperDollSpec = PDE.assembleSpec(
       paperDollActiveMannequin,
@@ -4146,15 +4208,34 @@
         theme: paperDollActiveTheme,
         outline: "o",
         outlineWidth: 1,
-        selOut: true
+        selOut: true,
+        direction: dirToAssemble,
+        useIK: paperDollUseIK
       }
     );
+
+    if (is4Way) {
+      compiled4WaySpecs = {
+        down: compiledPaperDollSpec,
+        left: PDE.assembleSpec(paperDollActiveMannequin, paperDollEquippedSlots, paperDollActiveAction, {
+          theme: paperDollActiveTheme, outline: "o", outlineWidth: 1, selOut: true, direction: "left", useIK: paperDollUseIK
+        }),
+        right: PDE.assembleSpec(paperDollActiveMannequin, paperDollEquippedSlots, paperDollActiveAction, {
+          theme: paperDollActiveTheme, outline: "o", outlineWidth: 1, selOut: true, direction: "right", useIK: paperDollUseIK
+        }),
+        up: PDE.assembleSpec(paperDollActiveMannequin, paperDollEquippedSlots, paperDollActiveAction, {
+          theme: paperDollActiveTheme, outline: "o", outlineWidth: 1, selOut: true, direction: "up", useIK: paperDollUseIK
+        })
+      };
+    } else {
+      compiled4WaySpecs = null;
+    }
 
     // Update Bone Count Badge
     const badgeCount = document.getElementById("badgePaperDollBoneCount");
     const totalBones = (compiledPaperDollSpec.rig && compiledPaperDollSpec.rig.bones) ? compiledPaperDollSpec.rig.bones.length : 0;
     if (badgeCount) {
-      badgeCount.textContent = `${totalBones} Active Bones`;
+      badgeCount.textContent = `${totalBones} Active Bones [${paperDollActiveDirection.toUpperCase()}]`;
     }
 
     // Update Combat Stats
@@ -4220,8 +4301,11 @@
       off.width = fRes.width;
       off.height = fRes.height;
       const offCtx = off.getContext("2d");
-      const imgData = offCtx.createImageData(fRes.width, fRes.height);
+      let imgData = offCtx.createImageData(fRes.width, fRes.height);
       imgData.data.set(fRes.buffer);
+      if (paperDollActiveDirection === "left") {
+        imgData = flipImageDataH(offCtx, imgData, false);
+      }
       offCtx.putImageData(imgData, 0, 0);
 
       tCtx.drawImage(off, 0, 0, 36, 36);
@@ -4243,8 +4327,7 @@
   }
 
   function drawPaperDollFrame() {
-    const canvas = document.getElementById("paperDollCanvas");
-    if (!canvas || !compiledPaperDollSpec) return;
+    if (!compiledPaperDollSpec) return;
 
     const numFrames = Math.max(1, compiledPaperDollSpec.frames ? compiledPaperDollSpec.frames.length : 1);
     paperDollFrameIndex = paperDollFrameIndex % numFrames;
@@ -4262,7 +4345,58 @@
       });
     }
 
-    const renderRes = PixelDSLRenderer.renderRig(compiledPaperDollSpec, paperDollFrameIndex + 1);
+    const showNormals = Boolean(document.getElementById("chkPaperDollNormals") && document.getElementById("chkPaperDollNormals").checked);
+    const showBones = Boolean(document.getElementById("chkPaperDollBones") && document.getElementById("chkPaperDollBones").checked);
+
+    // -------------------------------------------------------------
+    // A. 4-WAY SYNCHRONIZED GRID VIEW
+    // -------------------------------------------------------------
+    if (paperDollActiveDirection === "4way" && compiled4WaySpecs) {
+      const quadConfigs = [
+        { id: "canvas4WayDown", spec: compiled4WaySpecs.down, flip: false },
+        { id: "canvas4WayLeft", spec: compiled4WaySpecs.right, flip: true },
+        { id: "canvas4WayRight", spec: compiled4WaySpecs.right, flip: false },
+        { id: "canvas4WayUp", spec: compiled4WaySpecs.up, flip: false }
+      ];
+
+      quadConfigs.forEach(cfg => {
+        const qCanvas = document.getElementById(cfg.id);
+        if (!qCanvas) return;
+        const qCtx = qCanvas.getContext("2d");
+        qCtx.imageSmoothingEnabled = false;
+
+        const rf = PixelDSLRenderer.renderRig(cfg.spec, paperDollFrameIndex + 1);
+        const qw = rf.width, qh = rf.height;
+        const off = document.createElement("canvas");
+        off.width = qw;
+        off.height = qh;
+        const offCtx = off.getContext("2d");
+        let imgData = offCtx.createImageData(qw, qh);
+
+        if (showNormals && rf.normalBuffer) {
+          imgData.data.set(rf.normalBuffer);
+          if (cfg.flip) imgData = flipImageDataH(offCtx, imgData, true);
+        } else {
+          imgData.data.set(rf.buffer);
+          if (cfg.flip) imgData = flipImageDataH(offCtx, imgData, false);
+        }
+        offCtx.putImageData(imgData, 0, 0);
+
+        qCtx.clearRect(0, 0, qCanvas.width, qCanvas.height);
+        qCtx.drawImage(off, 0, 0, qCanvas.width, qCanvas.height);
+      });
+      return;
+    }
+
+    // -------------------------------------------------------------
+    // B. SINGLE DIRECTION VIEW
+    // -------------------------------------------------------------
+    const canvas = document.getElementById("paperDollCanvas");
+    if (!canvas) return;
+
+    const isLeft = paperDollActiveDirection === "left";
+    const specToRender = isLeft ? (compiled4WaySpecs ? compiled4WaySpecs.right : compiledPaperDollSpec) : compiledPaperDollSpec;
+    const renderRes = PixelDSLRenderer.renderRig(specToRender, paperDollFrameIndex + 1);
     const w = renderRes.width;
     const h = renderRes.height;
 
@@ -4274,19 +4408,18 @@
     const ctx = canvas.getContext("2d");
     ctx.imageSmoothingEnabled = false;
 
-    const showNormals = Boolean(document.getElementById("chkPaperDollNormals") && document.getElementById("chkPaperDollNormals").checked);
-    const showBones = Boolean(document.getElementById("chkPaperDollBones") && document.getElementById("chkPaperDollBones").checked);
-
     const off = document.createElement("canvas");
     off.width = w;
     off.height = h;
     const offCtx = off.getContext("2d");
-    const imgData = offCtx.createImageData(w, h);
+    let imgData = offCtx.createImageData(w, h);
 
     if (showNormals && renderRes.normalBuffer) {
       imgData.data.set(renderRes.normalBuffer);
+      if (isLeft) imgData = flipImageDataH(offCtx, imgData, true);
     } else {
       imgData.data.set(renderRes.buffer);
+      if (isLeft) imgData = flipImageDataH(offCtx, imgData, false);
     }
     offCtx.putImageData(imgData, 0, 0);
 
@@ -4302,10 +4435,14 @@
       ctx.scale(scale, scale);
 
       for (const [bid, xf] of Object.entries(fk)) {
-        const ax = xf.start[0];
-        const ay = xf.start[1];
-        const bx = xf.end[0];
-        const by = xf.end[1];
+        let ax = xf.start[0];
+        let ay = xf.start[1];
+        let bx = xf.end[0];
+        let by = xf.end[1];
+        if (isLeft) {
+          ax = w - 1 - ax;
+          bx = w - 1 - bx;
+        }
         const isEq = bid.startsWith("eq_");
 
         ctx.strokeStyle = isEq ? "rgba(234, 179, 8, 0.85)" : "rgba(99, 102, 241, 0.85)";
@@ -4349,13 +4486,15 @@
 
   function exportPaperDollPng() {
     if (!compiledPaperDollSpec) return;
+    const isLeft = paperDollActiveDirection === "left";
     const res = PixelDSLRenderer.renderRig(compiledPaperDollSpec, paperDollFrameIndex + 1);
     const canvas = document.createElement("canvas");
     canvas.width = res.width;
     canvas.height = res.height;
     const ctx = canvas.getContext("2d");
-    const imgData = ctx.createImageData(res.width, res.height);
+    let imgData = ctx.createImageData(res.width, res.height);
     imgData.data.set(res.buffer);
+    if (isLeft) imgData = flipImageDataH(ctx, imgData, false);
     ctx.putImageData(imgData, 0, 0);
 
     const a = document.createElement("a");
@@ -4367,14 +4506,16 @@
 
   function exportPaperDollNormal() {
     if (!compiledPaperDollSpec) return;
+    const isLeft = paperDollActiveDirection === "left";
     const res = PixelDSLRenderer.renderRig(compiledPaperDollSpec, paperDollFrameIndex + 1);
     if (!res.normalBuffer) return;
     const canvas = document.createElement("canvas");
     canvas.width = res.width;
     canvas.height = res.height;
     const ctx = canvas.getContext("2d");
-    const imgData = ctx.createImageData(res.width, res.height);
+    let imgData = ctx.createImageData(res.width, res.height);
     imgData.data.set(res.normalBuffer);
+    if (isLeft) imgData = flipImageDataH(ctx, imgData, true);
     ctx.putImageData(imgData, 0, 0);
 
     const a = document.createElement("a");
@@ -4382,6 +4523,88 @@
     a.href = canvas.toDataURL("image/png");
     a.click();
     showToast(`💡 Exported Normal Map: ${a.download}`, "success");
+  }
+
+  function exportPaperDoll4WaySheet() {
+    if (!window.PaperDollEngine) return;
+    const PDE = window.PaperDollEngine;
+
+    const directions = ["down", "left", "right", "up"];
+    const actionDef = PDE.ACTIONS[paperDollActiveAction] || PDE.ACTIONS.walk;
+    const numFrames = actionDef.frames || 8;
+
+    const specs = {
+      down: PDE.assembleSpec(paperDollActiveMannequin, paperDollEquippedSlots, paperDollActiveAction, {
+        theme: paperDollActiveTheme, outline: "o", outlineWidth: 1, selOut: true, direction: "down", useIK: paperDollUseIK
+      }),
+      right: PDE.assembleSpec(paperDollActiveMannequin, paperDollEquippedSlots, paperDollActiveAction, {
+        theme: paperDollActiveTheme, outline: "o", outlineWidth: 1, selOut: true, direction: "right", useIK: paperDollUseIK
+      }),
+      up: PDE.assembleSpec(paperDollActiveMannequin, paperDollEquippedSlots, paperDollActiveAction, {
+        theme: paperDollActiveTheme, outline: "o", outlineWidth: 1, selOut: true, direction: "up", useIK: paperDollUseIK
+      })
+    };
+
+    const w = specs.down.width;
+    const h = specs.down.height;
+
+    const sheetCanvas = document.createElement("canvas");
+    sheetCanvas.width = w * numFrames;
+    sheetCanvas.height = h * 4;
+    const sCtx = sheetCanvas.getContext("2d");
+    sCtx.imageSmoothingEnabled = false;
+
+    const normCanvas = document.createElement("canvas");
+    normCanvas.width = w * numFrames;
+    normCanvas.height = h * 4;
+    const nCtx = normCanvas.getContext("2d");
+    nCtx.imageSmoothingEnabled = false;
+
+    for (let rowIdx = 0; rowIdx < directions.length; rowIdx++) {
+      const dir = directions[rowIdx];
+      const isLeft = dir === "left";
+      const specToUse = isLeft ? specs.right : specs[dir];
+
+      for (let fi = 0; fi < numFrames; fi++) {
+        const rf = PixelDSLRenderer.renderRig(specToUse, fi + 1);
+
+        const fCanvas = document.createElement("canvas");
+        fCanvas.width = w;
+        fCanvas.height = h;
+        const fCtx = fCanvas.getContext("2d");
+
+        let imgData = fCtx.createImageData(w, h);
+        imgData.data.set(rf.buffer);
+        if (isLeft) imgData = flipImageDataH(fCtx, imgData, false);
+        fCtx.putImageData(imgData, 0, 0);
+        sCtx.drawImage(fCanvas, fi * w, rowIdx * h);
+
+        if (rf.normalBuffer) {
+          const fnCanvas = document.createElement("canvas");
+          fnCanvas.width = w;
+          fnCanvas.height = h;
+          const fnCtx = fnCanvas.getContext("2d");
+
+          let normData = fnCtx.createImageData(w, h);
+          normData.data.set(rf.normalBuffer);
+          if (isLeft) normData = flipImageDataH(fnCtx, normData, true);
+          fnCtx.putImageData(normData, 0, 0);
+          nCtx.drawImage(fnCanvas, fi * w, rowIdx * h);
+        }
+      }
+    }
+
+    const a = document.createElement("a");
+    a.download = `paperdoll_${paperDollActiveMannequin}_${paperDollActiveAction}_4way_sheet.png`;
+    a.href = sheetCanvas.toDataURL("image/png");
+    a.click();
+
+    const aNorm = document.createElement("a");
+    aNorm.download = `paperdoll_${paperDollActiveMannequin}_${paperDollActiveAction}_4way_normal.png`;
+    aNorm.href = normCanvas.toDataURL("image/png");
+    aNorm.click();
+
+    showToast(`🎮 Exported 4-Way Spritesheet & Normal Map (${sheetCanvas.width}×${sheetCanvas.height})!`, "success");
   }
 
   function exportPaperDollSheet() {

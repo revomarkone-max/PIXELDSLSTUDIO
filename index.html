@@ -854,6 +854,7 @@
               <button id="btnPaperDollExportPng" class="btn btn-sm">💾 PNG (1:1)</button>
               <button id="btnPaperDollExportSheet" class="btn btn-sm">🎞️ Sprite Sheet</button>
               <button id="btnPaperDollExportNormal" class="btn btn-sm">💡 Normal Map</button>
+              <button id="btnPaperDollExport4Way" class="btn btn-sm btn-primary" title="Export complete 4-direction RPG Spritesheet PNG (Down, Left, Right, Up rows)">🎮 4-Way Sheet</button>
               <button id="btnPaperDollCopyJson" class="btn btn-sm">📋 Copy JSON</button>
             </div>
           </div>
@@ -905,9 +906,37 @@
             </div>
           </div>
 
+          <!-- Secondary Toolbar: 4-Way Direction & Ground Contact IK -->
+          <div class="paperdoll-subtoolbar">
+            <div class="paperdoll-subtoolbar-left">
+              <span class="subtoolbar-tag">Direction:</span>
+              <div class="segmented-control" id="paperDollDirectionBtns">
+                <button class="seg-btn active" data-direction="down" title="Facing Down (South / Front View)">⬇️ Down (Front)</button>
+                <button class="seg-btn" data-direction="left" title="Facing Left (West)">⬅️ Left</button>
+                <button class="seg-btn" data-direction="right" title="Facing Right (East)">➡️ Right</button>
+                <button class="seg-btn" data-direction="up" title="Facing Up (North / Back View)">⬆️ Up (Back)</button>
+                <button class="seg-btn" data-direction="4way" title="Preview All 4 Directions Simultaneously in 2×2 Grid">🎮 4-Way Grid</button>
+              </div>
+            </div>
+
+            <div class="paperdoll-subtoolbar-right">
+              <label class="toggle-pill" title="Prevent foot-sliding with Law-of-Cosines 2-Bone Analytical IK and ground contact locking">
+                <input type="checkbox" id="chkPaperDollIK" checked />
+                <span>🦶 Ground Contact IK</span>
+              </label>
+            </div>
+          </div>
+
           <div class="paperdoll-canvas-container">
             <div id="paperDollCanvasWrapper" class="paperdoll-canvas-wrapper bg-checker">
               <canvas id="paperDollCanvas" width="384" height="384"></canvas>
+            </div>
+            <!-- 4-Way Synchronized Grid View -->
+            <div id="paperDoll4WayContainer" class="paperdoll-4way-grid bg-checker" style="display: none;">
+              <div class="quad-cell"><span class="quad-label">⬇️ Down (South / Front)</span><canvas id="canvas4WayDown" width="180" height="180"></canvas></div>
+              <div class="quad-cell"><span class="quad-label">⬅️ Left (West)</span><canvas id="canvas4WayLeft" width="180" height="180"></canvas></div>
+              <div class="quad-cell"><span class="quad-label">➡️ Right (East)</span><canvas id="canvas4WayRight" width="180" height="180"></canvas></div>
+              <div class="quad-cell"><span class="quad-label">⬆️ Up (North / Back)</span><canvas id="canvas4WayUp" width="180" height="180"></canvas></div>
             </div>
           </div>
 
