@@ -158,6 +158,17 @@ class PaperDollTests(unittest.TestCase):
                                 filled += 1
                     self.assertGreater(filled, fw * fh * 0.08)
 
+    def test_tall_hat_gets_headroom_and_is_not_clipped(self):
+        slots = paperdoll.LOADOUTS["wanderer"]["slots"]
+        for d in ("down", "right", "up"):
+            with self.subTest(direction=d):
+                spec = paperdoll.assemble_spec("humanoid", slots, "walk", "amethyst", 8, d, True)
+                self.assertEqual(spec["height"], 56)
+                for f in range(1, 9):
+                    buf = pixeldsl.render_rig(spec, f)["buffer"]
+                    top_row = buf[3:spec["width"] * 4:4]
+                    self.assertTrue(all(a == 0 for a in top_row), f"hat clipped at frame {f}")
+
     def test_cape_is_cloth_not_metal(self):
         spec = paperdoll.assemble_spec("humanoid", paperdoll.LOADOUTS["paladin"]["slots"], "walk", "steel", 8, "up", True)
         fills = {b["id"]: b["fill"] for b in spec["rig"]["bones"]}

@@ -22,7 +22,7 @@ Two front-ends share the same specs:
 | --- | --- |
 | Seamless tiles: grass, dirt, sand, stone, water (8-frame loop) | ✅ tested for seams, bit-identical in Py and JS |
 | Items & simple props: swords, staffs, bows, potions, gems, flowers | ✅ readable at 32 px |
-| Paper doll: humanoid + loadouts, 4-way walk, Godot `.tres`, Unity atlas | ✅ paladin reads well; other loadouts still need art passes |
+| Paper doll: humanoid + loadouts, 4-way walk, Godot `.tres`, Unity atlas | ✅ `paladin` and `wanderer` read well; other loadouts still need art passes |
 | Creatures from SDF primitives (dragon, snake, golem…) | ⚠️ often not recognisable — use as a base, not final art |
 | 3D rigs rendered to 32 px | ⚠️ experimental |
 

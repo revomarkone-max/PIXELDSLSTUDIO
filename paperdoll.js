@@ -83,6 +83,16 @@
       trim: "#ca8a04",
       trim_hi: "#fef08a"
     },
+    amethyst: {
+      id: "amethyst",
+      name: "Wandering Amethyst",
+      gear_base: "#6b3fa0",
+      gear_hi: "#9d72d4",
+      gear_shadow: "#4a2b72",
+      gear_dark: "#2b1a47",
+      trim: "#d6a23f",
+      trim_hi: "#f6dd8c"
+    },
     obsidian: {
       id: "obsidian",
       name: "Volcanic Obsidian & Flame",
@@ -651,6 +661,50 @@
       ]
     },
 
+    // Wanderer set. Silhouette-first wizard set: tall bent hat (needs 8px headroom), A-line robe with sleeves, staff angled outward so it breaks the body outline in every view.
+    pointed_hat: {
+      id: "pointed_hat",
+      slot: "head",
+      name: "Wanderer's Pointed Hat",
+      headroom: 8,
+      palette: { hair: "#5a3b2a" },
+      bones: [
+        { id: "eq_hat_hair", parent: "head", offset: [-0.4, 0], length: 0, shape: "head_oval", r1: 4.2, r2: 4.1, z: -5.0, z_up: 1.6, fill: "hair" },
+        { id: "eq_hat_cone", parent: "head", offset: [2.0, 0], length: 7.0, angle: 0, r1: 4.6, r2: 1.6, z: 1.45, fill: "gear_dark" },
+        { id: "eq_hat_tip", parent: "eq_hat_cone", offset: [0, 0], length: 5.0, angle: -75, r1: 1.6, r2: 0.6, z: 1.45, fill: "gear_dark" },
+        { id: "eq_hat_crown", parent: "head", offset: [3.6, 0], length: 0, shape: "head_oval", r1: 2.2, r2: 4.7, z: 1.89, fill: "gear_dark" },
+        { id: "eq_hat_band", parent: "head", offset: [4.4, -4.2], length: 8.4, angle: 90, r1: 0.7, r2: 0.7, z: 1.91, fill: "trim" },
+        { id: "eq_hat_brim", parent: "head", offset: [2.6, -6.8], length: 13.6, angle: 90, r1: 1.1, r2: 1.1, z: 1.92, fill: "gear_dark" }
+      ]
+    },
+    wanderer_robe: {
+      id: "wanderer_robe",
+      slot: "torso",
+      name: "Wanderer's Robe",
+      bones: [
+        { id: "eq_wrobe_body", parent: "pelvis", offset: [0, 0], length: 8.5, angle: 0, r1: 4.3, r2: 4.3, z: 1.35, fill: "gear_base" },
+        { id: "eq_wrobe_skirt", parent: "pelvis", offset: [-3.0, 0], length: 10.5, angle: 180, r1: 4.4, r2: 6.6, z: 2.4, z_down: 1.1, z_up: 1.1, fill: "gear_base" },
+        { id: "eq_wrobe_hem", parent: "eq_wrobe_skirt", offset: [0.5, -7.0], length: 14.0, angle: 90, r1: 1.0, r2: 1.0, z: 2.42, z_down: 1.12, z_up: 1.12, fill: "gear_shadow" },
+        { id: "eq_wrobe_sash", parent: "pelvis", offset: [-2.6, -4.6], length: 9.2, angle: 90, r1: 1.0, r2: 1.0, z: 2.45, z_down: 1.4, z_up: 1.4, fill: "trim" },
+        { id: "eq_wrobe_sleeve_near", parent: "arm_near_upper", offset: [-6.5, 0], length: 6.5, angle: 0, r1: 2.3, r2: 2.6, z: 2.65, z_down: 1.5, z_up: 1.5, fill: "gear_base" },
+        { id: "eq_wrobe_cuff_near", parent: "arm_near_lower", offset: [-5.5, 0], length: 3.0, angle: 0, r1: 2.6, r2: 2.9, z: 2.66, z_down: 1.51, z_up: 1.51, fill: "gear_shadow" },
+        { id: "eq_wrobe_sleeve_far", parent: "arm_far_upper", offset: [-6.5, 0], length: 6.5, angle: 0, r1: 2.1, r2: 2.4, z: 0.12, z_down: 1.45, z_up: 1.45, fill: "gear_shadow" },
+        { id: "eq_wrobe_cuff_far", parent: "arm_far_lower", offset: [-5.5, 0], length: 3.0, angle: 0, r1: 2.4, r2: 2.7, z: 0.16, z_down: 1.46, z_up: 1.46, fill: "gear_dark" }
+      ]
+    },
+    gnarled_staff: {
+      id: "gnarled_staff",
+      slot: "weapon",
+      name: "Gnarled Wanderer Staff",
+      palette: { wood: "#8a5a34", wood_dark: "#5a3a22", orb: "#5fe0a0", orb_hi: "#d4ffe8" },
+      bones: [
+        { id: "eq_rod_low", parent: "arm_near_lower", offset: [0, 0], length: 5.0, angle: 12, r1: 1.0, r2: 0.9, z: 3.1, z_down: 2.9, z_up: 0.9, fill: "wood_dark", angle_down: 18, angle_up: 18 },
+        { id: "eq_rod_up", parent: "arm_near_lower", offset: [0, 0], length: 17.0, angle: 192, r1: 1.0, r2: 1.1, z: 3.1, z_down: 2.9, z_up: 0.9, fill: "wood", angle_down: 198, angle_up: 198 },
+        { id: "eq_rod_crook", parent: "eq_rod_up", offset: [0, 0], length: 3.2, angle: -70, r1: 1.1, r2: 0.8, z: 3.1, z_down: 2.9, z_up: 0.9, fill: "wood" },
+        { id: "eq_rod_orb", parent: "eq_rod_up", offset: [-1.0, 0.9], length: 0, shape: "head_oval", r1: 1.9, r2: 1.9, z: 3.15, z_down: 2.95, z_up: 0.95, fill: "orb" }
+      ]
+    },
+
     // ------------------------------------------------------------------------
     // BACK / CAPE (slot: back, attached to chest)
     // ------------------------------------------------------------------------
@@ -806,6 +860,22 @@
         back: "red_cape"
       }
     },
+    wanderer: {
+      id: "wanderer",
+      name: "🧙 Wandering Mage",
+      mannequin: "humanoid",
+      theme: "amethyst",
+      slots: {
+        head: "pointed_hat",
+        torso: "wanderer_robe",
+        hands: "none",
+        legs: "none",
+        feet: "leather_boots",
+        weapon: "gnarled_staff",
+        shield: "none",
+        back: "none"
+      }
+    },
     unarmored: {
       id: "unarmored",
       name: "🥋 Bare Mannequin",
@@ -890,8 +960,14 @@
           nb.offset = [0, 2.5];
           nb.angle = 180;
           nb.z = 1.04;
-        } else if (bid === "foot_far" || bid === "foot_near") {
-          nb.angle = 0;
+        } else if (bid === "leg_far_shin" || bid === "foot_far") {
+          // Keep the whole leg on the thigh's depth tier in front/back views
+          // (the profile tiers 0.25 / 2.2 put shins behind the body or over the arms).
+          nb.z = 1.02;
+          if (bid === "foot_far") nb.angle = 0;
+        } else if (bid === "leg_near_shin" || bid === "foot_near") {
+          nb.z = 1.04;
+          if (bid === "foot_near") nb.angle = 0;
         } else if (bid === "head") {
           if (dir === "down") {
             nb.features = { eyes: { spacing: 4.5, dy: -0.5, w: 1.2, h: 1.8, color: "eyes" } };
@@ -952,6 +1028,11 @@
           } else if (bid.includes("pommel")) {
             nb.angle = 155;
           }
+        }
+
+        // Per-bone overrides for front/back views, e.g. "z_down", "angle_up".
+        for (const key of ["z", "angle", "offset", "length"]) {
+          if ((key + "_" + dir) in nb) nb[key] = nb[key + "_" + dir];
         }
       }
 
@@ -1358,7 +1439,7 @@
     const themeDef = THEMES[themeKey] || THEMES.steel;
 
     const width = manDef.width || 48;
-    const height = manDef.height || 48;
+    let height = manDef.height || 48;
 
     // 1. Build composite palette
     const fullPalette = Object.assign(
@@ -1400,6 +1481,8 @@
 
       const itemDef = ITEMS[itemId];
       if (!itemDef || !Array.isArray(itemDef.bones)) continue;
+      // Items may bring their own colours (wood, gems...) independent of the theme.
+      Object.assign(fullPalette, itemDef.palette || {});
 
       for (const eqBone of itemDef.bones) {
         const cloned = Object.assign({}, eqBone);
@@ -1409,6 +1492,20 @@
           cloned.parent = "chest";
         }
         compositeBones.push(cloned);
+      }
+    }
+
+    // Tall headgear declares "headroom": grow the canvas at the top and shift the rig
+    // down (mirrors paperdoll.py; IK targets are hip-relative so poses are unchanged).
+    let headroom = 0;
+    for (const slotDef of SLOTS) {
+      const it = ITEMS[activeSlots[slotDef.id] || "none"] || {};
+      headroom = Math.max(headroom, parseInt(it.headroom || 0, 10));
+    }
+    if (headroom) {
+      height += headroom;
+      for (const b of compositeBones) {
+        if (!b.parent) b.y = Number(b.y || 0) + headroom;
       }
     }
 
