@@ -3369,6 +3369,7 @@
           studio: "workspaceStudio",
           forge: "workspaceForge",
           paperdoll: "workspacePaperDoll",
+          three3d: "workspaceThree3D",
           compass: "workspaceCompass",
           exporter: "workspaceExporter"
         };
@@ -3385,6 +3386,9 @@
           compileAndRenderForge();
         } else if (targetWs === "paperdoll") {
           compileAndRenderPaperDoll();
+        } else if (targetWs === "three3d") {
+          if (studio3D) studio3D.resizeOrbitView();
+          start3DStudioLoop();
         } else if (targetWs === "compass") {
           renderCompassDemo();
         }
@@ -5038,6 +5042,479 @@ public class PixelDSLSprite : MonoBehaviour {
     }
   }
 
+  // ==========================================
+  // Workspace 6: Three.js 3D Primitive Studio
+  // ==========================================
+  let studio3D = null;
+  let anim3DPlaying = true;
+  let anim3DFps = 8;
+  let anim3DLastTime = 0;
+  let anim3DTime = 0;
+  let anim3DCurrentFrame = 0;
+  let isOrbitDragging = false;
+  let orbitStartX = 0;
+  let orbitStartY = 0;
+  let orbitStartYaw = 0;
+  let orbitStartPitch = 0;
+  let anim3DLoopId = null;
+
+  function init3DStudio() {
+    if (typeof Pixel3DStudio === "undefined" || typeof THREE === "undefined") {
+      console.warn("[3D Studio] Pixel3DStudio or THREE is not available.");
+      return;
+    }
+
+    const orbitCanvas = document.getElementById("threeOrbitCanvas");
+    const pixelCanvas = document.getElementById("threePixelCanvas");
+    if (!orbitCanvas || !pixelCanvas) return;
+
+    studio3D = new Pixel3DStudio({
+      width: 32,
+      height: 32,
+      model: "humanoid",
+      action: "walk",
+      yaw: 25,
+      pitch: 18,
+      celSteps: 3,
+      useOutlines: true,
+      outlineThickness: 0.045
+    });
+
+    studio3D.initOrbitView(orbitCanvas);
+
+    // Orbit Drag Controls on orbitCanvas
+    orbitCanvas.addEventListener("pointerdown", (e) => {
+      isOrbitDragging = true;
+      orbitStartX = e.clientX;
+      orbitStartY = e.clientY;
+      orbitStartYaw = studio3D.yaw;
+      orbitStartPitch = studio3D.pitch;
+      orbitCanvas.setPointerCapture(e.pointerId);
+    });
+
+    orbitCanvas.addEventListener("pointermove", (e) => {
+      if (!isOrbitDragging) return;
+      const dx = e.clientX - orbitStartX;
+      const dy = e.clientY - orbitStartY;
+      studio3D.yaw = Math.round((orbitStartYaw + dx * 0.55 + 360) % 360);
+      studio3D.pitch = Math.round(Math.max(-60, Math.min(85, orbitStartPitch - dy * 0.55)));
+
+      const sliderYaw = document.getElementById("sliderThreeYaw");
+      const lblYaw = document.getElementById("lblThreeYaw");
+      if (sliderYaw) sliderYaw.value = studio3D.yaw;
+      if (lblYaw) lblYaw.textContent = `${studio3D.yaw}°`;
+
+      const sliderPitch = document.getElementById("sliderThreePitch");
+      const lblPitch = document.getElementById("lblThreePitch");
+      if (sliderPitch) sliderPitch.value = studio3D.pitch;
+      if (lblPitch) lblPitch.textContent = `${studio3D.pitch}°`;
+    });
+
+    const stopDrag = (e) => {
+      if (isOrbitDragging) {
+        isOrbitDragging = false;
+        try { orbitCanvas.releasePointerCapture(e.pointerId); } catch (_) {}
+      }
+    };
+    orbitCanvas.addEventListener("pointerup", stopDrag);
+    orbitCanvas.addEventListener("pointercancel", stopDrag);
+
+    orbitCanvas.addEventListener("wheel", (e) => {
+      e.preventDefault();
+      studio3D.cameraDistance = Math.max(3.0, Math.min(12.0, studio3D.cameraDistance + e.deltaY * 0.005));
+      const sliderDist = document.getElementById("sliderThreeDist");
+      const lblDist = document.getElementById("lblThreeDist");
+      if (sliderDist) sliderDist.value = studio3D.cameraDistance.toFixed(1);
+      if (lblDist) lblDist.textContent = studio3D.cameraDistance.toFixed(1);
+    }, { passive: false });
+
+    // Window resize
+    window.addEventListener("resize", () => {
+      if (studio3D) studio3D.resizeOrbitView();
+    });
+
+    // Model Selector
+    const modelBtns = document.querySelectorAll("#threeModelBtns [data-three-model]");
+    modelBtns.forEach(btn => {
+      btn.addEventListener("click", () => {
+        modelBtns.forEach(b => b.classList.toggle("active", b === btn));
+        const model = btn.dataset.threeModel;
+        studio3D.buildModel(model);
+
+        // Show/hide equipment section (only humanoid & chibi have full equipment)
+        const equipGroup = document.getElementById("groupThreeEquipment");
+        if (equipGroup) {
+          equipGroup.style.display = (model === "humanoid" || model === "chibi") ? "block" : "none";
+        }
+        // Show/hide open action pill (only for chest)
+        const pillOpen = document.getElementById("pillActionOpen");
+        if (pillOpen) {
+          pillOpen.style.display = (model === "chest") ? "inline-flex" : "none";
+        }
+      });
+    });
+
+    // Camera Projection
+    const camBtns = document.querySelectorAll("#threeCamProjBtns [data-three-cam]");
+    camBtns.forEach(btn => {
+      btn.addEventListener("click", () => {
+        camBtns.forEach(b => b.classList.toggle("active", b === btn));
+        studio3D.cameraMode = btn.dataset.threeCam;
+        const fovGroup = document.getElementById("groupThreeFov");
+        if (fovGroup) {
+          fovGroup.style.display = studio3D.cameraMode === "perspective" ? "block" : "none";
+        }
+      });
+    });
+
+    // Quick Presets
+    const presetAngles = {
+      iso: { yaw: 45, pitch: 30 },
+      front: { yaw: 0, pitch: 0 },
+      side_r: { yaw: 90, pitch: 0 },
+      back: { yaw: 180, pitch: 0 },
+      side_l: { yaw: 270, pitch: 0 },
+      top: { yaw: 0, pitch: 85 }
+    };
+    const presetBtns = document.querySelectorAll(".three-preset-grid [data-preset-angle]");
+    presetBtns.forEach(btn => {
+      btn.addEventListener("click", () => {
+        presetBtns.forEach(b => b.classList.toggle("active", b === btn));
+        const p = presetAngles[btn.dataset.presetAngle];
+        if (p) {
+          studio3D.yaw = p.yaw;
+          studio3D.pitch = p.pitch;
+          const sY = document.getElementById("sliderThreeYaw");
+          const lY = document.getElementById("lblThreeYaw");
+          if (sY) sY.value = p.yaw;
+          if (lY) lY.textContent = `${p.yaw}°`;
+          const sP = document.getElementById("sliderThreePitch");
+          const lP = document.getElementById("lblThreePitch");
+          if (sP) sP.value = p.pitch;
+          if (lP) lP.textContent = `${p.pitch}°`;
+        }
+      });
+    });
+
+    // Sliders
+    const setupSlider = (sliderId, labelId, suffix, callback) => {
+      const slider = document.getElementById(sliderId);
+      const label = document.getElementById(labelId);
+      if (slider) {
+        slider.addEventListener("input", () => {
+          const val = parseFloat(slider.value);
+          if (label) label.textContent = `${slider.value}${suffix}`;
+          callback(val);
+        });
+      }
+    };
+
+    setupSlider("sliderThreeYaw", "lblThreeYaw", "°", (v) => { studio3D.yaw = v; });
+    setupSlider("sliderThreePitch", "lblThreePitch", "°", (v) => { studio3D.pitch = v; });
+    setupSlider("sliderThreeDist", "lblThreeDist", "", (v) => { studio3D.cameraDistance = v; });
+    setupSlider("sliderThreeFov", "lblThreeFov", "°", (v) => { studio3D.fov = v; });
+    setupSlider("sliderThreeOutlineThick", "lblThreeOutlineThick", "", (v) => {
+      studio3D.outlineThickness = v;
+      studio3D.buildModel(studio3D.activeModel);
+    });
+    setupSlider("sliderThreeSunIntensity", "lblThreeSunIntensity", "", (v) => {
+      if (studio3D.dirLight) studio3D.dirLight.intensity = v;
+    });
+    setupSlider("sliderThreeAmbIntensity", "lblThreeAmbIntensity", "", (v) => {
+      if (studio3D.ambLight) studio3D.ambLight.intensity = v;
+    });
+    setupSlider("sliderThreeRimIntensity", "lblThreeRimIntensity", "", (v) => {
+      if (studio3D.rimLight) studio3D.rimLight.intensity = v;
+    });
+
+    // Equipment controls
+    const selWeapon = document.getElementById("selThreeWeapon");
+    if (selWeapon) {
+      selWeapon.addEventListener("change", () => {
+        studio3D.equipment.weapon = selWeapon.value;
+        studio3D.buildModel(studio3D.activeModel);
+      });
+    }
+
+    const chkShield = document.getElementById("chkThreeShield");
+    if (chkShield) {
+      chkShield.addEventListener("change", () => {
+        studio3D.equipment.shield = chkShield.checked;
+        studio3D.buildModel(studio3D.activeModel);
+      });
+    }
+
+    const chkHelmet = document.getElementById("chkThreeHelmet");
+    if (chkHelmet) {
+      chkHelmet.addEventListener("change", () => {
+        studio3D.equipment.helmet = chkHelmet.checked;
+        studio3D.buildModel(studio3D.activeModel);
+      });
+    }
+
+    // Resolution pills
+    const resBtns = document.querySelectorAll("#threeResBtns [data-three-res]");
+    resBtns.forEach(btn => {
+      btn.addEventListener("click", () => {
+        resBtns.forEach(b => b.classList.toggle("active", b === btn));
+        const res = parseInt(btn.dataset.threeRes, 10);
+        studio3D.width = res;
+        studio3D.height = res;
+        const badge = document.getElementById("lblThreeResBadge");
+        if (badge) badge.textContent = `${res}×${res} px`;
+      });
+    });
+
+    // Cel steps
+    const celBtns = document.querySelectorAll("#threeCelBtns [data-three-cel]");
+    celBtns.forEach(btn => {
+      btn.addEventListener("click", () => {
+        celBtns.forEach(b => b.classList.toggle("active", b === btn));
+        studio3D.celSteps = parseInt(btn.dataset.threeCel, 10);
+      });
+    });
+
+    // Outlines
+    const chkOutlines = document.getElementById("chkThreeOutlines");
+    if (chkOutlines) {
+      chkOutlines.addEventListener("change", () => {
+        studio3D.useOutlines = chkOutlines.checked;
+        studio3D.buildModel(studio3D.activeModel);
+      });
+    }
+
+    const selOutlineColor = document.getElementById("selThreeOutlineColor");
+    if (selOutlineColor) {
+      selOutlineColor.addEventListener("change", () => {
+        studio3D.outlineColor = parseInt(selOutlineColor.value, 16);
+        studio3D.buildModel(studio3D.activeModel);
+      });
+    }
+
+    // Palette snapping
+    const selPalette = document.getElementById("selThreePalette");
+    if (selPalette) {
+      selPalette.addEventListener("change", () => {
+        studio3D.snapPalette = selPalette.value;
+      });
+    }
+
+    // Action pills
+    const actionPills = document.querySelectorAll("#threeActionPills [data-three-action]");
+    actionPills.forEach(pill => {
+      pill.addEventListener("click", () => {
+        actionPills.forEach(p => p.classList.toggle("active", p === pill));
+        studio3D.activeAction = pill.dataset.threeAction;
+      });
+    });
+
+    // Playback
+    const btnPlay = document.getElementById("btnThreePlayAnim");
+    if (btnPlay) {
+      btnPlay.addEventListener("click", () => {
+        anim3DPlaying = !anim3DPlaying;
+        btnPlay.textContent = anim3DPlaying ? "⏸ Pause" : "▶ Play";
+      });
+    }
+
+    const selFps = document.getElementById("selThreeFps");
+    if (selFps) {
+      selFps.addEventListener("change", () => {
+        anim3DFps = parseInt(selFps.value, 10);
+      });
+    }
+
+    const selZoom = document.getElementById("selThreeZoom");
+    if (selZoom) {
+      selZoom.addEventListener("change", () => {
+        const zoom = parseInt(selZoom.value, 10);
+        const sz = Math.min(512, Math.max(128, studio3D.width * zoom));
+        pixelCanvas.style.width = `${sz}px`;
+        pixelCanvas.style.height = `${sz}px`;
+      });
+    }
+
+    // Action Buttons
+    // 1. Bake 3D to Canvas Studio
+    const btnBake = document.getElementById("btnThreeBakeStudio");
+    if (btnBake) {
+      btnBake.addEventListener("click", () => {
+        const numFrames = studio3D.activeAction === "t_pose" ? 1 : 6;
+        const spec = studio3D.exportToPixelDSLSpec(numFrames);
+        if (spec) {
+          currentSpec = spec;
+          currentFrame = 0;
+          pickDefaultActiveSymbol();
+          syncEditorFromSpec();
+          syncInspectorFromSpec();
+          renderAll();
+
+          // Switch to Studio workspace
+          const studioTab = document.querySelector('.workspace-tab[data-workspace="studio"]');
+          if (studioTab) studioTab.click();
+          showToast(`🔥 Baked 3D ${studio3D.activeModel} into Canvas Studio!`, "success");
+        }
+      });
+    }
+
+    // 2. Export 1:1 PNG
+    const btnPng = document.getElementById("btnThreeExportPng");
+    if (btnPng) {
+      btnPng.addEventListener("click", () => {
+        const pixelRes = studio3D.renderToPixelBuffer();
+        if (!pixelRes) return;
+        const tempCanvas = document.createElement("canvas");
+        tempCanvas.width = pixelRes.width;
+        tempCanvas.height = pixelRes.height;
+        const ctx = tempCanvas.getContext("2d");
+        const imgData = ctx.createImageData(pixelRes.width, pixelRes.height);
+        imgData.data.set(pixelRes.buffer);
+        ctx.putImageData(imgData, 0, 0);
+
+        downloadCanvasPng(tempCanvas, `3d_${studio3D.activeModel}_${studio3D.activeAction}_${pixelRes.width}x${pixelRes.height}.png`);
+        showToast("💾 Exported 1:1 Pixel PNG!", "success");
+      });
+    }
+
+    // 3. Export Sprite Sheet
+    const btnSheet = document.getElementById("btnThreeExportSheet");
+    if (btnSheet) {
+      btnSheet.addEventListener("click", () => {
+        const numFrames = 6;
+        const w = studio3D.width;
+        const h = studio3D.height;
+        const sheetCanvas = document.createElement("canvas");
+        sheetCanvas.width = w * numFrames;
+        sheetCanvas.height = h;
+        const ctx = sheetCanvas.getContext("2d");
+        ctx.imageSmoothingEnabled = false;
+
+        const tempCanvas = document.createElement("canvas");
+        tempCanvas.width = w;
+        tempCanvas.height = h;
+        const tempCtx = tempCanvas.getContext("2d");
+
+        const curT = studio3D.frameTime;
+        for (let f = 0; f < numFrames; f++) {
+          studio3D.updatePose(f / numFrames, studio3D.activeAction);
+          const pixelRes = studio3D.renderToPixelBuffer(w, h);
+          const imgData = tempCtx.createImageData(w, h);
+          imgData.data.set(pixelRes.buffer);
+          tempCtx.putImageData(imgData, 0, 0);
+          ctx.drawImage(tempCanvas, f * w, 0);
+        }
+        studio3D.updatePose(curT, studio3D.activeAction);
+
+        downloadCanvasPng(sheetCanvas, `3d_${studio3D.activeModel}_${studio3D.activeAction}_sheet_${w * numFrames}x${h}.png`);
+        showToast("🎞️ Exported Animated Sprite Sheet!", "success");
+      });
+    }
+
+    // 4. Export 3D Normal Map
+    const btnNormal = document.getElementById("btnThreeExportNormal");
+    if (btnNormal) {
+      btnNormal.addEventListener("click", () => {
+        const normRes = studio3D.renderNormalMapToPixelBuffer();
+        if (!normRes) return;
+        const tempCanvas = document.createElement("canvas");
+        tempCanvas.width = normRes.width;
+        tempCanvas.height = normRes.height;
+        const ctx = tempCanvas.getContext("2d");
+        const imgData = ctx.createImageData(normRes.width, normRes.height);
+        imgData.data.set(normRes.buffer);
+        ctx.putImageData(imgData, 0, 0);
+
+        downloadCanvasPng(tempCanvas, `3d_${studio3D.activeModel}_${normRes.width}x${normRes.height}_normal.png`);
+        showToast("💡 Exported 3D Tangent Normal Map!", "success");
+      });
+    }
+
+    // 5. Export 4-Way RPG Spritesheet
+    const btn4Way = document.getElementById("btnThreeExport4Way");
+    if (btn4Way) {
+      btn4Way.addEventListener("click", () => {
+        const sheetCanvas = studio3D.generate4WaySheet(studio3D.activeAction, 6);
+        downloadCanvasPng(sheetCanvas, `3d_${studio3D.activeModel}_${studio3D.activeAction}_4way_${sheetCanvas.width}x${sheetCanvas.height}.png`);
+        showToast("🎮 Exported 4-Way RPG Directional Spritesheet!", "success");
+      });
+    }
+
+    // 6. Copy JSON Spec
+    const btnCopyJson = document.getElementById("btnThreeCopyJson");
+    if (btnCopyJson) {
+      btnCopyJson.addEventListener("click", () => {
+        const spec = studio3D.exportToPixelDSLSpec(1);
+        if (spec) {
+          navigator.clipboard.writeText(JSON.stringify(spec, null, 2)).then(() => {
+            showToast("📋 Copied 3D PixelDSL JSON to clipboard!", "success");
+          });
+        }
+      });
+    }
+
+    start3DStudioLoop();
+  }
+
+  function start3DStudioLoop() {
+    if (anim3DLoopId) cancelAnimationFrame(anim3DLoopId);
+
+    function tick(now) {
+      anim3DLoopId = requestAnimationFrame(tick);
+      if (!studio3D) return;
+
+      const ws3D = document.getElementById("workspaceThree3D");
+      if (!ws3D || !ws3D.classList.contains("active")) {
+        return;
+      }
+
+      if (!anim3DLastTime) anim3DLastTime = now;
+      const dt = (now - anim3DLastTime) / 1000;
+      anim3DLastTime = now;
+
+      // Turntable Auto-spin
+      const chkTurntable = document.getElementById("chkThreeTurntable");
+      if (chkTurntable && chkTurntable.checked) {
+        studio3D.yaw = (studio3D.yaw + dt * 35) % 360;
+        const sY = document.getElementById("sliderThreeYaw");
+        const lY = document.getElementById("lblThreeYaw");
+        if (sY) sY.value = Math.round(studio3D.yaw);
+        if (lY) lY.textContent = `${Math.round(studio3D.yaw)}°`;
+      }
+
+      // Animation playback
+      if (anim3DPlaying && studio3D.activeAction !== "t_pose") {
+        anim3DTime += dt;
+        studio3D.frameTime = anim3DTime;
+        studio3D.updatePose(anim3DTime, studio3D.activeAction);
+
+        const totalFrames = 8;
+        anim3DCurrentFrame = Math.floor((anim3DTime * anim3DFps) % totalFrames);
+        const lblFrame = document.getElementById("lblThreeFrameIndicator");
+        if (lblFrame) lblFrame.textContent = `Frame ${anim3DCurrentFrame + 1} / ${totalFrames}`;
+      } else if (studio3D.activeAction === "t_pose") {
+        studio3D.updatePose(0, "t_pose");
+        const lblFrame = document.getElementById("lblThreeFrameIndicator");
+        if (lblFrame) lblFrame.textContent = `T-Pose`;
+      }
+
+      // Render 3D orbit viewport
+      studio3D.renderOrbitView();
+
+      // Render pixel-art preview
+      const pixelCanvas = document.getElementById("threePixelCanvas");
+      const chkShowNormals = document.getElementById("chkThreeShowNormals");
+      if (chkShowNormals && chkShowNormals.checked) {
+        const normRes = studio3D.renderNormalMapToPixelBuffer();
+        if (normRes) studio3D.drawToCanvas(pixelCanvas, normRes);
+      } else {
+        const pixelRes = studio3D.renderToPixelBuffer();
+        if (pixelRes) studio3D.drawToCanvas(pixelCanvas, pixelRes);
+      }
+    }
+
+    anim3DLoopId = requestAnimationFrame(tick);
+  }
+
   // Boot
   initPresets();
   pickDefaultActiveSymbol();
@@ -5050,4 +5527,5 @@ public class PixelDSLSprite : MonoBehaviour {
   initPaperDoll();
   initCompass();
   initExporter();
+  init3DStudio();
 })();

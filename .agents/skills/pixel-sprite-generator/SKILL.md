@@ -39,6 +39,13 @@ python pixeldsl.py sprites/my_sprite.json
 
 # Mode 5: Modular Paper Doll 4-Way RPG Spritesheet & Game Engine Exporters (Godot 4 & Unity 2D)
 python paperdoll.py --mannequin humanoid --loadout paladin --action walk --4way --normal --export-godot --export-unity -o game_ready/paladin_walk_4way.png
+
+# Mode 6: 3D Volumetric Primitive Rig & Perspective Engine (Three.js WebGL & Pure-Python Analytical Raycaster)
+# Models: humanoid, chibi, dragon, golem, spider, chest, staff, arms
+# Projections: perspective (FOV foreshortening), orthographic (isometric 2:1)
+python pixeldsl.py --render-3d humanoid --yaw 25 --pitch 18 --size 32x32 --ansi
+python pixeldsl.py --render-3d dragon --yaw 45 --pitch 30 --cam-mode orthographic --size 48x48
+python pixeldsl.py --render-3d golem --yaw 90 --pitch 0 --size 32x32
 ```
 
 ### What `pixeldsl.py` Outputs Automatically:
@@ -49,7 +56,7 @@ python paperdoll.py --mannequin humanoid --loadout paladin --action walk --4way 
 
 ---
 
-## 2. The 6 Mathematical Pillars of PixelDSL v3.0
+## 2. The 7 Mathematical Pillars of PixelDSL v3.0
 
 1. **2.5D Quilez SDF & CSG Engine + Internal Creases + Normal Maps**:
    - Universal 2D inverse affine rotation (`angle`, `dAngle`) before evaluating any primitive (`ellipse`, `rect`, `polygon`, `capsule`, `uneven_capsule`, `vesica`, `moon`, `bezier_sdf`, `star`, `ngon`).
@@ -72,6 +79,11 @@ python paperdoll.py --mannequin humanoid --loadout paladin --action walk --4way 
    - 12 procedural archetypes + `"rules"` cellular rewrite pass (`top_coat`, `bottom_drip`, `highlight_glint`) + interactive **`🎲 Generate / Mutate (3×3)`** modal in Web Studio.
 6. **Chroma-Key Strip Importer & SLIC Superpixel Pixelizer**:
    - Pure-Python RFC-2083 PNG decoder, perimeter BFS flood-fill + `#FF00FF` chroma-key despilling, connected-component strip auto-slicer, and SLIC superpixel downsampler.
+7. **Three.js 3D Primitive Rigs & True Camera Perspective Engine**:
+   - 3D volumetric primitives (spheres, capsules, tapered cylinders, and beveled boxes) with true depth testing (Z-buffer occlusion) and dual camera projection: `Perspective` (with natural foreshortening where receding limbs visually diminish in size, solving the flat/mushy overlapping limb problem) and `Orthographic` (for true 2:1 isometric RPG angles).
+   - 3-point lighting rig (Warm Sun Key Light, Cool Ambient Fill, Rim Contour Light) with discrete cel-shading stepping (2, 3, 4, 6 tones) and inverted-hull backface mesh outlines (`THREE.BackSide`).
+   - Interactive Web Studio workspace (`🎲 3D Studio`) with real-time orbit controls, dual viewports (high-res 3D WebGL orbit viewport + nearest-neighbor quantized pixel-art preview), 1-click `🔥 Bake 3D to Canvas Studio`, 4-way RPG spritesheet generator, and 3D tangent-space normal map exporter.
+   - Zero external runtime dependencies: Three.js is vendored locally in `vendor/three.min.js`, and `pixeldsl.py` features a built-in pure Python analytical 3D primitive ray-caster for full offline/CLI parity.
 
 ---
 

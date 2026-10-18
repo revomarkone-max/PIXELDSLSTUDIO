@@ -65,6 +65,11 @@
         <span class="tab-label">Paper Doll</span>
         <span class="tab-badge-live">Live</span>
       </button>
+      <button class="workspace-tab" data-workspace="three3d" title="3D Primitives &amp; Perspective Engine (Three.js) — 3D rigs, true camera perspective, cel-shading &amp; pixel baking">
+        <span class="tab-icon">🎲</span>
+        <span class="tab-label">3D Studio</span>
+        <span class="tab-badge-live">Live</span>
+      </button>
       <button class="workspace-tab" data-workspace="compass" title="4-Way &amp; 8-Way Directional Compass (WIP)">
         <span class="tab-icon">🧭</span>
         <span class="tab-label">4-Way Compass</span>
@@ -1165,6 +1170,298 @@ litMat.SetTexture("_NormalMap", normalTexture);</code></pre>
       </div>
     </div>
 
+    <!-- ==========================================
+         WORKSPACE 6: 3D PRIMITIVES & PERSPECTIVE STUDIO (Three.js)
+         ========================================== -->
+    <div id="workspaceThree3D" class="workspace-view">
+      <div class="three3d-layout">
+        <!-- LEFT: 3D RIG & CAMERA CONTROLS -->
+        <aside class="three3d-sidebar-left">
+          <div class="forge-panel-title">
+            <span>🎲 3D Primitive Rigs</span>
+            <span class="badge-type">Three.js WebGL</span>
+          </div>
+
+          <!-- Model / Archetype Selector -->
+          <div class="forge-section">
+            <label class="forge-label">3D Volumetric Rig</label>
+            <div class="segmented-control" id="threeModelBtns" style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 4px;">
+              <button class="seg-btn active" data-three-model="humanoid">🧍 Knight</button>
+              <button class="seg-btn" data-three-model="chibi">👶 Chibi</button>
+              <button class="seg-btn" data-three-model="dragon">🐉 Dragon</button>
+              <button class="seg-btn" data-three-model="golem">🗿 Golem</button>
+              <button class="seg-btn" data-three-model="spider">🕷️ Spider</button>
+              <button class="seg-btn" data-three-model="chest">📦 Chest</button>
+              <button class="seg-btn" data-three-model="staff">🧙 Staff</button>
+              <button class="seg-btn" data-three-model="sword_shield">⚔️ Arms</button>
+            </div>
+          </div>
+
+          <!-- Camera Projection -->
+          <div class="forge-section">
+            <label class="forge-label">Camera Projection &amp; Optics</label>
+            <div class="segmented-control" id="threeCamProjBtns">
+              <button class="seg-btn active" data-three-cam="perspective">🎥 Perspective (FOV)</button>
+              <button class="seg-btn" data-three-cam="orthographic">📐 Orthographic (Iso)</button>
+            </div>
+          </div>
+
+          <!-- Quick Camera Angle Presets -->
+          <div class="forge-section">
+            <label class="forge-label">Quick Camera Presets</label>
+            <div class="three-preset-grid">
+              <button class="btn btn-xs" data-preset-angle="iso">Iso 45°</button>
+              <button class="btn btn-xs active" data-preset-angle="front">Front (0°)</button>
+              <button class="btn btn-xs" data-preset-angle="side_r">Right (90°)</button>
+              <button class="btn btn-xs" data-preset-angle="back">Back (180°)</button>
+              <button class="btn btn-xs" data-preset-angle="side_l">Left (270°)</button>
+              <button class="btn btn-xs" data-preset-angle="top">Top (85°)</button>
+            </div>
+          </div>
+
+          <!-- Camera Sliders -->
+          <div class="forge-section">
+            <label class="forge-label">Turntable Orbit Angles</label>
+            <div class="slider-control-group">
+              <div class="slider-label-row">
+                <span>Yaw (Horizontal):</span>
+                <span id="lblThreeYaw">25°</span>
+              </div>
+              <input type="range" id="sliderThreeYaw" min="0" max="360" value="25" />
+            </div>
+
+            <div class="slider-control-group">
+              <div class="slider-label-row">
+                <span>Pitch (Elevation):</span>
+                <span id="lblThreePitch">18°</span>
+              </div>
+              <input type="range" id="sliderThreePitch" min="-60" max="85" value="18" />
+            </div>
+
+            <div class="slider-control-group">
+              <div class="slider-label-row">
+                <span>Distance / Zoom:</span>
+                <span id="lblThreeDist">6.2</span>
+              </div>
+              <input type="range" id="sliderThreeDist" min="3.0" max="12.0" step="0.1" value="6.2" />
+            </div>
+
+            <div class="slider-control-group" id="groupThreeFov">
+              <div class="slider-label-row">
+                <span>Field of View (FOV):</span>
+                <span id="lblThreeFov">42°</span>
+              </div>
+              <input type="range" id="sliderThreeFov" min="15" max="85" value="42" />
+            </div>
+          </div>
+
+          <!-- Modular Equipment (for Humanoid / Chibi) -->
+          <div class="forge-section" id="groupThreeEquipment">
+            <label class="forge-label">Hero Equipment Slots</label>
+            <div class="three-equip-row">
+              <label>Weapon:</label>
+              <select id="selThreeWeapon" class="forge-select-sm">
+                <option value="sword" selected>⚔️ Broadsword</option>
+                <option value="staff">🧙 Arcane Staff</option>
+                <option value="none">🚫 Bare Hands</option>
+              </select>
+            </div>
+            <div class="three-equip-toggles">
+              <label class="toggle-pill">
+                <input type="checkbox" id="chkThreeShield" checked />
+                <span>🛡️ Shield</span>
+              </label>
+              <label class="toggle-pill">
+                <input type="checkbox" id="chkThreeHelmet" checked />
+                <span>🪖 Helmet</span>
+              </label>
+              <label class="toggle-pill">
+                <input type="checkbox" id="chkThreeTurntable" />
+                <span>🔄 Auto-Spin</span>
+              </label>
+            </div>
+          </div>
+
+          <!-- Primary Action CTA -->
+          <div class="forge-action-card">
+            <button id="btnThreeBakeStudio" class="btn btn-primary btn-glow" title="Bake 3D render into Canvas Studio for bone posing and pixel editing">
+              🔥 Bake 3D to Canvas Studio
+            </button>
+            <div class="forge-export-grid">
+              <button id="btnThreeExportPng" class="btn btn-sm">💾 PNG (1:1)</button>
+              <button id="btnThreeExportSheet" class="btn btn-sm">🎞️ Sprite Sheet</button>
+              <button id="btnThreeExportNormal" class="btn btn-sm">💡 Normal Map</button>
+              <button id="btnThreeExport4Way" class="btn btn-sm btn-primary" title="Export complete 4-direction RPG Spritesheet PNG (Down, Right, Up, Left rows)">🎮 4-Way Sheet</button>
+              <button id="btnThreeCopyJson" class="btn btn-sm">📋 Copy JSON</button>
+            </div>
+          </div>
+        </aside>
+
+        <!-- CENTER: DUAL-STAGE 3D & PIXEL-ART VIEWPORT -->
+        <section class="three3d-viewport">
+          <div class="forge-viewport-toolbar">
+            <div class="paperdoll-action-pills" id="threeActionPills">
+              <button class="action-pill active" data-three-action="walk">🚶 Walk (8f)</button>
+              <button class="action-pill" data-three-action="run">🏃 Run (6f)</button>
+              <button class="action-pill" data-three-action="attack">⚔️ Attack (6f)</button>
+              <button class="action-pill" data-three-action="idle">🧘 Idle (6f)</button>
+              <button class="action-pill" data-three-action="t_pose">🧍 T-Pose</button>
+              <button class="action-pill" data-three-action="open" style="display:none;" id="pillActionOpen">🔓 Open</button>
+            </div>
+
+            <div class="forge-playback-controls">
+              <button id="btnThreePlayAnim" class="btn btn-sm">⏸ Pause</button>
+              <select id="selThreeFps" class="btn-sm">
+                <option value="4">4 FPS</option>
+                <option value="6">6 FPS</option>
+                <option value="8" selected>8 FPS</option>
+                <option value="12">12 FPS</option>
+                <option value="16">16 FPS</option>
+              </select>
+              <span id="lblThreeFrameIndicator" class="forge-frame-indicator">Frame 1 / 8</span>
+            </div>
+
+            <div class="forge-overlay-controls">
+              <label class="toggle-pill">
+                <input type="checkbox" id="chkThreeShowNormals" />
+                <span>💡 3D Normals</span>
+              </label>
+              <select id="selThreeZoom" title="Preview Zoom">
+                <option value="4">4×</option>
+                <option value="6">6×</option>
+                <option value="8" selected>8×</option>
+                <option value="12">12×</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Dual Display Canvas Stage -->
+          <div class="three3d-dual-stage">
+            <!-- Stage 1: Interactive 3D WebGL Orbit Viewport -->
+            <div class="three3d-stage-card">
+              <div class="three3d-stage-header">
+                <span class="stage-tag">🌐 Interactive 3D Orbit Viewport</span>
+                <span class="stage-hint">🖱️ Drag to rotate • Wheel to zoom</span>
+              </div>
+              <div class="three3d-canvas-wrap">
+                <canvas id="threeOrbitCanvas"></canvas>
+              </div>
+            </div>
+
+            <!-- Stage 2: Low-Res Pixel-Art Quantized Preview -->
+            <div class="three3d-stage-card">
+              <div class="three3d-stage-header">
+                <span class="stage-tag">👾 Pixel-Art Quantized Render</span>
+                <span id="lblThreeResBadge" class="stage-badge">32×32 px</span>
+              </div>
+              <div class="three3d-pixel-wrap">
+                <canvas id="threePixelCanvas" width="256" height="256"></canvas>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- RIGHT: PIXEL-ART SHADING & LIGHTING -->
+        <aside class="three3d-sidebar-right">
+          <div class="forge-panel-title">
+            <span>🎨 Pixel Shading &amp; Light</span>
+            <span class="badge-type">Quantization</span>
+          </div>
+
+          <!-- Target Resolution -->
+          <div class="forge-section">
+            <label class="forge-label">Target Pixel Resolution</label>
+            <div class="segmented-control" id="threeResBtns">
+              <button class="seg-btn" data-three-res="16">16×16</button>
+              <button class="seg-btn" data-three-res="24">24×24</button>
+              <button class="seg-btn active" data-three-res="32">32×32</button>
+              <button class="seg-btn" data-three-res="48">48×48</button>
+              <button class="seg-btn" data-three-res="64">64×64</button>
+              <button class="seg-btn" data-three-res="128">128×128</button>
+            </div>
+          </div>
+
+          <!-- Cel-Shading Levels -->
+          <div class="forge-section">
+            <label class="forge-label">Cel-Shading Luminance Steps</label>
+            <div class="segmented-control" id="threeCelBtns">
+              <button class="seg-btn" data-three-cel="2">2 Tones</button>
+              <button class="seg-btn active" data-three-cel="3">3 Tones</button>
+              <button class="seg-btn" data-three-cel="4">4 Tones</button>
+              <button class="seg-btn" data-three-cel="6">6 Tones</button>
+              <button class="seg-btn" data-three-cel="0">Smooth</button>
+            </div>
+          </div>
+
+          <!-- Inverted-Hull Outlines -->
+          <div class="forge-section">
+            <label class="forge-label">Inverted-Hull Pixel Outlines</label>
+            <div class="three-equip-toggles" style="margin-bottom: 8px;">
+              <label class="toggle-pill">
+                <input type="checkbox" id="chkThreeOutlines" checked />
+                <span>✒️ Mesh Outlines</span>
+              </label>
+            </div>
+            <div class="slider-control-group">
+              <div class="slider-label-row">
+                <span>Outline Thickness:</span>
+                <span id="lblThreeOutlineThick">0.045</span>
+              </div>
+              <input type="range" id="sliderThreeOutlineThick" min="0.01" max="0.12" step="0.005" value="0.045" />
+            </div>
+            <div class="three-equip-row">
+              <label>Outline Tint:</label>
+              <select id="selThreeOutlineColor" class="forge-select-sm">
+                <option value="0x14182e" selected>Midnight Navy</option>
+                <option value="0x000000">Pure Black</option>
+                <option value="0x334155">Slate Charcoal</option>
+                <option value="0x451a03">Deep Umber</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Palette Snapping -->
+          <div class="forge-section">
+            <label class="forge-label">Color Palette Snapping</label>
+            <select id="selThreePalette" class="forge-select">
+              <option value="none" selected>Original 3D Cel Shading</option>
+              <option value="pico8">🎮 PICO-8 (16 Colors)</option>
+              <option value="db32">🎨 DawnBringer DB32 (32 Colors)</option>
+              <option value="gameboy">📟 Game Boy Classic (4 Greens)</option>
+            </select>
+          </div>
+
+          <!-- 3-Point Lighting Rig -->
+          <div class="forge-section">
+            <label class="forge-label">3-Point Lighting Rig</label>
+            <div class="slider-control-group">
+              <div class="slider-label-row">
+                <span>Sun Key Light Intensity:</span>
+                <span id="lblThreeSunIntensity">1.40</span>
+              </div>
+              <input type="range" id="sliderThreeSunIntensity" min="0.4" max="2.5" step="0.05" value="1.4" />
+            </div>
+
+            <div class="slider-control-group">
+              <div class="slider-label-row">
+                <span>Cool Ambient Fill:</span>
+                <span id="lblThreeAmbIntensity">0.75</span>
+              </div>
+              <input type="range" id="sliderThreeAmbIntensity" min="0.2" max="1.5" step="0.05" value="0.75" />
+            </div>
+
+            <div class="slider-control-group">
+              <div class="slider-label-row">
+                <span>Rim Contour Light:</span>
+                <span id="lblThreeRimIntensity">0.65</span>
+              </div>
+              <input type="range" id="sliderThreeRimIntensity" min="0.0" max="1.5" step="0.05" value="0.65" />
+            </div>
+          </div>
+        </aside>
+      </div>
+    </div>
+
   </main>
 
   <!-- Floating Toast Notifications Container -->
@@ -1315,6 +1612,8 @@ litMat.SetTexture("_NormalMap", normalTexture);</code></pre>
   </div>
 
   <!-- Scripts -->
+  <script src="vendor/three.min.js"></script>
+  <script src="three_renderer.js"></script>
   <script src="presets.js"></script>
   <script src="archetypes.js"></script>
   <script src="paperdoll.js"></script>

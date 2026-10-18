@@ -3618,6 +3618,422 @@ def process_spec(spec, base_dir, show_ansi=False, sync_web=True, export_normals=
         print("=" * 64)
 
 
+# ============================================================================
+# 3D Primitive Ray-Caster & Perspective Rasterizer Engine
+# ============================================================================
+
+class Primitive3D:
+    def intersect(self, ro, rd):
+        raise NotImplementedError
+
+
+class Sphere3D(Primitive3D):
+    def __init__(self, cx, cy, cz, radius, color):
+        self.cx, self.cy, self.cz = cx, cy, cz
+        self.radius = radius
+        self.color = color
+
+    def intersect(self, ro, rd):
+        ocx = ro[0] - self.cx
+        ocy = ro[1] - self.cy
+        ocz = ro[2] - self.cz
+        b = ocx * rd[0] + ocy * rd[1] + ocz * rd[2]
+        c = (ocx * ocx + ocy * ocy + ocz * ocz) - self.radius * self.radius
+        disc = b * b - c
+        if disc < 0:
+            return None
+        sq = math.sqrt(disc)
+        t = -b - sq
+        if t <= 0.001:
+            t = -b + sq
+        if t <= 0.001:
+            return None
+        hx = ro[0] + t * rd[0]
+        hy = ro[1] + t * rd[1]
+        hz = ro[2] + t * rd[2]
+        nx = (hx - self.cx) / self.radius
+        ny = (hy - self.cy) / self.radius
+        nz = (hz - self.cz) / self.radius
+        return (t, hx, hy, hz, nx, ny, nz, self.color)
+
+
+class Box3D(Primitive3D):
+    def __init__(self, cx, cy, cz, hx, hy, hz, color):
+        self.cx, self.cy, self.cz = cx, cy, cz
+        self.hx, self.hy, self.hz = hx * 0.5, hy * 0.5, hz * 0.5
+        self.color = color
+
+    def intersect(self, ro, rd):
+        ox = ro[0] - self.cx
+        oy = ro[1] - self.cy
+        oz = ro[2] - self.cz
+
+        # X slab
+        if abs(rd[0]) < 1e-6:
+            if abs(ox) > self.hx:
+                return None
+            tmin_x = -1e9
+            tmax_x = 1e9
+        else:
+            t1 = (-self.hx - ox) / rd[0]
+            t2 = (self.hx - ox) / rd[0]
+            tmin_x = min(t1, t2)
+            tmax_x = max(t1, t2)
+
+        # Y slab
+        if abs(rd[1]) < 1e-6:
+            if abs(oy) > self.hy:
+                return None
+            tmin_y = -1e9
+            tmax_y = 1e9
+        else:
+            t1 = (-self.hy - oy) / rd[1]
+            t2 = (self.hy - oy) / rd[1]
+            tmin_y = min(t1, t2)
+            tmax_y = max(t1, t2)
+
+        # Z slab
+        if abs(rd[2]) < 1e-6:
+            if abs(oz) > self.hz:
+                return None
+            tmin_z = -1e9
+            tmax_z = 1e9
+        else:
+            t1 = (-self.hz - oz) / rd[2]
+            t2 = (self.hz - oz) / rd[2]
+            tmin_z = min(t1, t2)
+            tmax_z = max(t1, t2)
+
+        t_enter = max(tmin_x, tmin_y, tmin_z)
+        t_exit = min(tmax_x, tmax_y, tmax_z)
+
+        if t_enter > t_exit or t_exit <= 0.001:
+            return None
+
+        t = t_enter if t_enter > 0.001 else t_exit
+        hx = ro[0] + t * rd[0]
+        hy = ro[1] + t * rd[1]
+        hz = ro[2] + t * rd[2]
+
+        px = hx - self.cx
+        py = hy - self.cy
+        pz = hz - self.cz
+        if abs(px) >= self.hx * 0.96:
+            nx = 1.0 if px > 0 else -1.0
+            ny = 0.0
+            nz = 0.0
+        elif abs(py) >= self.hy * 0.96:
+            nx = 0.0
+            ny = 1.0 if py > 0 else -1.0
+            nz = 0.0
+        else:
+            nx = 0.0
+            ny = 0.0
+            nz = 1.0 if pz > 0 else -1.0
+
+        return (t, hx, hy, hz, nx, ny, nz, self.color)
+
+
+class Cylinder3D(Primitive3D):
+    def __init__(self, cx, cy, cz, radius, height, color):
+        self.cx, self.cy, self.cz = cx, cy, cz
+        self.radius = radius
+        self.hh = height * 0.5
+        self.color = color
+
+    def intersect(self, ro, rd):
+        ox = ro[0] - self.cx
+        oy = ro[1] - self.cy
+        oz = ro[2] - self.cz
+
+        a = rd[0] * rd[0] + rd[2] * rd[2]
+        if a < 1e-6:
+            return None
+        b = ox * rd[0] + oz * rd[2]
+        c = (ox * ox + oz * oz) - self.radius * self.radius
+        disc = b * b - a * c
+        if disc < 0:
+            return None
+        sq = math.sqrt(disc)
+        t = (-b - sq) / a
+        if t > 0.001:
+            hy = oy + t * rd[1]
+            if -self.hh <= hy <= self.hh:
+                hx = ro[0] + t * rd[0]
+                hz = ro[2] + t * rd[2]
+                nx = (hx - self.cx) / self.radius
+                nz = (hz - self.cz) / self.radius
+                return (t, hx, ro[1] + t * rd[1], hz, nx, 0.0, nz, self.color)
+        return None
+
+
+def get_3d_primitives(model="humanoid"):
+    model = str(model).lower().strip()
+    prims = []
+
+    if model in ("humanoid", "chibi"):
+        is_chibi = (model == "chibi")
+        hs = 1.4 if is_chibi else 1.0
+        bs = 0.8 if is_chibi else 1.0
+        # Pelvis & Torso
+        prims.append(Box3D(0, 1.25 * bs, 0, 0.7 * bs, 0.45 * bs, 0.5 * bs, (29, 78, 216)))
+        prims.append(Cylinder3D(0, 1.7 * bs, 0, 0.28 * bs, 0.65 * bs, (37, 99, 235)))
+        # Chest Armor
+        prims.append(Box3D(0, 1.7 * bs, 0.16 * bs, 0.55 * bs, 0.5 * bs, 0.22 * bs, (226, 232, 240)))
+        # Head & Hair
+        prims.append(Sphere3D(0, 2.3 * hs, 0, 0.46 * hs, (255, 204, 170)))
+        prims.append(Sphere3D(0, 2.38 * hs, -0.06 * hs, 0.48 * hs, (69, 26, 3)))
+        # Helmet Crest
+        if not is_chibi:
+            prims.append(Box3D(0, 2.85 * hs, 0, 0.08, 0.35, 0.6, (250, 204, 21)))
+        # Arms
+        prims.append(Sphere3D(-0.55 * bs, 1.9 * bs, 0, 0.22 * bs, (226, 232, 240)))
+        prims.append(Cylinder3D(-0.55 * bs, 1.45 * bs, 0, 0.14 * bs, 0.65 * bs, (37, 99, 235)))
+        prims.append(Sphere3D(0.55 * bs, 1.9 * bs, 0, 0.22 * bs, (226, 232, 240)))
+        prims.append(Cylinder3D(0.55 * bs, 1.45 * bs, 0, 0.14 * bs, 0.65 * bs, (37, 99, 235)))
+        # Sword
+        prims.append(Box3D(0.55 * bs, 1.6 * bs, 0.5 * bs, 0.12, 1.1, 0.04, (226, 232, 240)))
+        prims.append(Box3D(0.55 * bs, 1.1 * bs, 0.5 * bs, 0.38, 0.08, 0.1, (250, 204, 21)))
+        # Shield
+        prims.append(Box3D(-0.75 * bs, 1.5 * bs, 0.2 * bs, 0.12, 0.85, 0.6, (226, 232, 240)))
+        # Legs
+        prims.append(Cylinder3D(-0.22 * bs, 0.7 * bs, 0, 0.16 * bs, 0.75 * bs, (29, 78, 216)))
+        prims.append(Box3D(-0.22 * bs, 0.2 * bs, 0.08 * bs, 0.2 * bs, 0.2 * bs, 0.4 * bs, (120, 53, 15)))
+        prims.append(Cylinder3D(0.22 * bs, 0.7 * bs, 0, 0.16 * bs, 0.75 * bs, (29, 78, 216)))
+        prims.append(Box3D(0.22 * bs, 0.2 * bs, 0.08 * bs, 0.2 * bs, 0.2 * bs, 0.4 * bs, (120, 53, 15)))
+
+    elif model == "dragon":
+        # Dragon Torso & Wings
+        prims.append(Sphere3D(0, 1.2, 0, 0.75, (220, 38, 38)))
+        prims.append(Cylinder3D(0, 1.8, 0.4, 0.32, 0.9, (220, 38, 38)))
+        prims.append(Box3D(0, 2.3, 0.6, 0.55, 0.42, 0.75, (220, 38, 38)))
+        # Horns
+        prims.append(Box3D(-0.22, 2.65, 0.4, 0.12, 0.45, 0.12, (241, 245, 249)))
+        prims.append(Box3D(0.22, 2.65, 0.4, 0.12, 0.45, 0.12, (241, 245, 249)))
+        # Wings
+        prims.append(Box3D(-1.1, 1.4, 0, 1.3, 0.06, 0.9, (249, 115, 22)))
+        prims.append(Box3D(1.1, 1.4, 0, 1.3, 0.06, 0.9, (249, 115, 22)))
+        # Tail
+        prims.append(Cylinder3D(0, 0.7, -0.6, 0.25, 1.1, (153, 27, 27)))
+
+    elif model == "golem":
+        # Torso & Rune
+        prims.append(Box3D(0, 1.5, 0, 1.5, 1.3, 0.9, (100, 116, 139)))
+        prims.append(Box3D(0, 1.5, 0.48, 0.42, 0.42, 0.1, (6, 182, 212)))
+        # Head
+        prims.append(Box3D(0, 2.35, 0, 0.65, 0.5, 0.6, (100, 116, 139)))
+        # Arms & Fists
+        prims.append(Sphere3D(-1.05, 1.75, 0, 0.42, (51, 65, 85)))
+        prims.append(Box3D(-1.05, 0.95, 0, 0.5, 0.7, 0.5, (100, 116, 139)))
+        prims.append(Sphere3D(1.05, 1.75, 0, 0.42, (51, 65, 85)))
+        prims.append(Box3D(1.05, 0.95, 0, 0.5, 0.7, 0.5, (100, 116, 139)))
+        # Legs
+        prims.append(Box3D(-0.45, 0.5, 0, 0.5, 0.95, 0.5, (51, 65, 85)))
+        prims.append(Box3D(0.45, 0.5, 0, 0.5, 0.95, 0.5, (51, 65, 85)))
+
+    elif model == "spider":
+        # Cephalothorax & Abdomen
+        prims.append(Sphere3D(0, 0.6, 0.2, 0.5, (15, 23, 42)))
+        prims.append(Sphere3D(0, 0.85, -0.9, 0.78, (30, 27, 75)))
+        # Eyes
+        for ex in (-0.2, -0.07, 0.07, 0.2):
+            prims.append(Sphere3D(ex, 0.68, 0.65, 0.06, (239, 68, 68)))
+        # Legs
+        for side in (-1, 1):
+            for l_idx in range(4):
+                lz = (l_idx - 1.5) * 0.35
+                prims.append(Cylinder3D(side * 0.7, 0.5, lz, 0.07, 0.8, (30, 27, 75)))
+
+    elif model == "chest":
+        # Box Base & Lid
+        prims.append(Box3D(0, 0.55, 0, 1.5, 0.75, 1.1, (133, 77, 14)))
+        prims.append(Box3D(0, 0.55, 0, 1.54, 0.78, 0.16, (51, 65, 85)))
+        prims.append(Box3D(0, 0.68, 0.58, 0.24, 0.26, 0.1, (250, 204, 21)))
+        prims.append(Box3D(0, 1.1, 0, 1.5, 0.42, 1.1, (133, 77, 14)))
+
+    elif model == "staff":
+        # Shaft & Crown
+        prims.append(Cylinder3D(0, 1.2, 0, 0.08, 2.3, (120, 53, 15)))
+        for ry in (0.4, 0.8, 1.2, 1.6, 2.0):
+            prims.append(Sphere3D(0, ry, 0, 0.12, (250, 204, 21)))
+        prims.append(Sphere3D(0, 2.45, 0, 0.28, (6, 182, 212)))
+
+    else:  # arms / sword_shield
+        # Shield
+        prims.append(Box3D(-0.65, 1.2, 0, 0.14, 1.3, 0.85, (37, 99, 235)))
+        prims.append(Box3D(-0.65, 1.2, 0.45, 0.16, 1.25, 0.1, (250, 204, 21)))
+        # Sword
+        prims.append(Box3D(0.65, 1.5, 0, 0.18, 1.6, 0.06, (226, 232, 240)))
+        prims.append(Box3D(0.65, 0.7, 0, 0.65, 0.1, 0.14, (250, 204, 21)))
+        prims.append(Cylinder3D(0.65, 0.4, 0, 0.07, 0.45, (120, 53, 15)))
+
+    return prims
+
+
+def render_3d_model_to_spec(model="humanoid", width=32, height=32, yaw=25.0, pitch=18.0, camera_mode="perspective"):
+    prims = get_3d_primitives(model)
+
+    yaw_rad = math.radians(yaw)
+    pitch_rad = math.radians(pitch)
+
+    dist = 6.2
+    target_y = 1.2
+
+    cx = dist * math.cos(pitch_rad) * math.sin(yaw_rad)
+    cy = dist * math.sin(pitch_rad) + target_y
+    cz = dist * math.cos(pitch_rad) * math.cos(yaw_rad)
+    cam_pos = (cx, cy, cz)
+
+    # Camera forward
+    fx = -cx
+    fy = target_y - cy
+    fz = -cz
+    f_len = math.sqrt(fx * fx + fy * fy + fz * fz) or 1.0
+    fx /= f_len
+    fy /= f_len
+    fz /= f_len
+
+    # Camera right (cross forward with world up [0,1,0])
+    rx = fz
+    ry = 0.0
+    rz = -fx
+    r_len = math.sqrt(rx * rx + rz * rz) or 1.0
+    rx /= r_len
+    rz /= r_len
+
+    # Camera up (cross right with forward)
+    ux = ry * fz - rz * fy
+    uy = rz * fx - rx * fz
+    uz = rx * fy - ry * fx
+
+    # Lighting setup
+    sun_dir = (0.577, 0.707, 0.408)
+    rim_dir = (-0.577, 0.577, -0.577)
+
+    pixels = []
+    normal_pixels = []
+    z_buffer = [[1e9] * width for _ in range(height)]
+    hit_grid = [[None] * width for _ in range(height)]
+
+    fov_rad = math.radians(42.0)
+    tan_half_fov = math.tan(fov_rad * 0.5)
+
+    for y in range(height):
+        row_hits = []
+        for x in range(width):
+            nx = (x + 0.5 - width * 0.5) / (width * 0.5)
+            ny = -(y + 0.5 - height * 0.5) / (height * 0.5)
+
+            if camera_mode == "orthographic":
+                ortho_size = 2.4
+                ro = (
+                    cam_pos[0] + (nx * ortho_size) * rx + (ny * ortho_size) * ux,
+                    cam_pos[1] + (nx * ortho_size) * ry + (ny * ortho_size) * uy,
+                    cam_pos[2] + (nx * ortho_size) * rz + (ny * ortho_size) * uz,
+                )
+                rd = (fx, fy, fz)
+            else:
+                rd = (
+                    fx + (nx * tan_half_fov) * rx + (ny * tan_half_fov) * ux,
+                    fy + (nx * tan_half_fov) * ry + (ny * tan_half_fov) * uy,
+                    fz + (nx * tan_half_fov) * rz + (ny * tan_half_fov) * uz,
+                )
+                rd_len = math.sqrt(rd[0] * rd[0] + rd[1] * rd[1] + rd[2] * rd[2]) or 1.0
+                rd = (rd[0] / rd_len, rd[1] / rd_len, rd[2] / rd_len)
+                ro = cam_pos
+
+            closest_hit = None
+            min_t = 1e9
+
+            for p in prims:
+                hit = p.intersect(ro, rd)
+                if hit and hit[0] < min_t:
+                    min_t = hit[0]
+                    closest_hit = hit
+
+            hit_grid[y][x] = closest_hit
+            z_buffer[y][x] = min_t if closest_hit else 1e9
+
+    palette_map = {".": "transparent"}
+    color_to_char = {}
+    hex_chars = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
+    char_idx = 0
+
+    grid_rows = []
+
+    for y in range(height):
+        row_str = ""
+        for x in range(width):
+            hit = hit_grid[y][x]
+            if not hit:
+                row_str += "."
+                continue
+
+            t, hx, hy, hz, nx, ny, nz, base_col = hit
+
+            # Detect silhouette edge / outline
+            is_edge = False
+            for dy, dx in ((-1, 0), (1, 0), (0, -1), (0, 1)):
+                ny_pos, nx_pos = y + dy, x + dx
+                if 0 <= ny_pos < height and 0 <= nx_pos < width:
+                    neighbor_hit = hit_grid[ny_pos][nx_pos]
+                    if not neighbor_hit or (z_buffer[ny_pos][nx_pos] - t) > 0.45:
+                        is_edge = True
+                        break
+
+            if is_edge:
+                out_hex = "#14182e"
+                if out_hex not in color_to_char:
+                    ch = hex_chars[char_idx % len(hex_chars)]
+                    char_idx += 1
+                    color_to_char[out_hex] = ch
+                    palette_map[ch] = out_hex
+                row_str += color_to_char[out_hex]
+                continue
+
+            # 3-point cel-shading lighting
+            n_dot_sun = max(0.0, nx * sun_dir[0] + ny * sun_dir[1] + nz * sun_dir[2])
+            n_dot_rim = max(0.0, nx * rim_dir[0] + ny * rim_dir[1] + nz * rim_dir[2])
+
+            lum = 0.35 + 1.25 * n_dot_sun + 0.5 * n_dot_rim
+            # 3 discrete cel-shading bands
+            if lum < 0.65:
+                lum_factor = 0.60
+            elif lum < 1.15:
+                lum_factor = 0.95
+            else:
+                lum_factor = 1.30
+
+            cr = min(255, max(0, int(round(base_col[0] * lum_factor))))
+            cg = min(255, max(0, int(round(base_col[1] * lum_factor))))
+            cb = min(255, max(0, int(round(base_col[2] * lum_factor))))
+            hex_val = f"#{cr:02x}{cg:02x}{cb:02x}"
+
+            if hex_val not in color_to_char:
+                ch = hex_chars[char_idx % len(hex_chars)]
+                char_idx += 1
+                color_to_char[hex_val] = ch
+                palette_map[ch] = hex_val
+
+            row_str += color_to_char[hex_val]
+
+        grid_rows.append(row_str)
+
+    return {
+        "name": f"3d_{model}_{width}x{height}",
+        "prompt": f"3D Projected {model} ({camera_mode}, yaw={yaw}°, pitch={pitch}°)",
+        "width": width,
+        "height": height,
+        "fps": 8,
+        "palette": palette_map,
+        "postProcess": {
+            "autoOutline": False,
+            "autoShading": False
+        },
+        "grid": grid_rows
+    }
+
+
 def main():
     parser = argparse.ArgumentParser(
         description="PixelDSL CLI v3.0 — Autonomous 2D Pixel-Art Mathematical Engine & Asset Compiler (8x8..128x128)."
@@ -3638,6 +4054,29 @@ def main():
         help=f"Generate a 100%% LLM-free procedural sprite by archetype ({', '.join(ARCHETYPE_LIST)})"
     )
     parser.add_argument(
+        "--render-3d",
+        dest="render_3d",
+        help="Render 3D volumetric primitive rig (humanoid, chibi, dragon, golem, spider, chest, staff, arms)"
+    )
+    parser.add_argument(
+        "--yaw",
+        type=float,
+        default=25.0,
+        help="Turntable yaw angle in degrees for --render-3d (default: 25.0)"
+    )
+    parser.add_argument(
+        "--pitch",
+        type=float,
+        default=18.0,
+        help="Turntable pitch angle in degrees for --render-3d (default: 18.0)"
+    )
+    parser.add_argument(
+        "--cam-mode",
+        choices=["perspective", "orthographic"],
+        default="perspective",
+        help="Camera projection for --render-3d (perspective or orthographic)"
+    )
+    parser.add_argument(
         "--mutate",
         dest="mutate_path",
         help="Mutate an existing sprite JSON file using evolutionary genome perturbation"
@@ -3651,7 +4090,7 @@ def main():
     parser.add_argument(
         "--size",
         default="32x32",
-        help="Canvas size WxH for --generate or --import-image (default: 32x32)"
+        help="Canvas size WxH for --generate, --render-3d, or --import-image (default: 32x32)"
     )
     parser.add_argument(
         "--import-image",
@@ -3675,6 +4114,18 @@ def main():
     size_parts = str(args.size).lower().split("x")
     gen_w = clamp_size(size_parts[0], 32)
     gen_h = clamp_size(size_parts[1] if len(size_parts) > 1 else size_parts[0], gen_w)
+
+    if args.render_3d:
+        spec = render_3d_model_to_spec(
+            args.render_3d,
+            width=gen_w,
+            height=gen_h,
+            yaw=args.yaw,
+            pitch=args.pitch,
+            camera_mode=args.cam_mode
+        )
+        process_spec(spec, base_dir, show_ansi=args.ansi, sync_web=not args.no_sync)
+        return
 
     if args.generate_arch:
         spec = generate_archetype(args.generate_arch, seed=args.seed, width=gen_w, height=gen_h)
