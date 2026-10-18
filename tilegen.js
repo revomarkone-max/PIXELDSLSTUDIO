@@ -229,6 +229,7 @@
   }
 
   function genWater(w, h, seed, frame, frames = 8) {
+    frame = mod(frame, frames);
     const g = makeGrid(w, h, "2");
     const bc = baseCells(w);
     const phase = frame / frames;

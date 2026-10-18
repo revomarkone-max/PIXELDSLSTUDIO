@@ -249,6 +249,7 @@ def _gen_stone(w, h, seed, frame):
 
 
 def _gen_water(w, h, seed, frame, frames=8):
+    frame = frame % frames
     g = [["2"] * w for _ in range(h)]
     bc = _base_cells(w)
     phase = frame / frames
