@@ -16,7 +16,7 @@ an orthographic game camera and turns it into crisp, outlined, toon-shaded sprit
   for tinting with the team colour) are also written as separate sheets/sprites
 - **props**: chests, barrels, crystals, trees, items (static, `bob`, `spin`)
 - **seamless tiles**: grass, dirt, sand, stone, water (animated), side-view ground
-- **export**: PNG sheets + JSON metadata, normal maps, GameMaker sprites, Godot `SpriteFrames`
+- **export**: PNG sheets + JSON metadata, normal maps, depth maps (per-pixel depth sorting, [Godot example](examples/godot_depth/)), GameMaker sprites, Godot `SpriteFrames`
 - **prototyping**: HTML player (`preview`), live rebuild on save (`watch`), `gallery` of everything
 
 Deterministic: the same JSON always produces the same pixels, so assets live in git

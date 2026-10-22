@@ -322,7 +322,7 @@ class Model:
     def loops(self, anim):
         return self.anims[anim][3]
 
-    def render_frame(self, view, anim, u, direction, scale=1.0, normals=False):
+    def render_frame(self, view, anim, u, direction, scale=1.0, normals=False, depth=False):
         v = VIEWS[view] if isinstance(view, str) else view
         size = int(math.ceil(CANVAS * scale))
         cam = engine.Camera(size, size, (ORIGIN[0] * scale, ORIGIN[1] * scale), v["elevation"], scale)
@@ -331,6 +331,7 @@ class Model:
         scene = engine.Scene(resolved, self.group_k)
         out = engine.render(scene, resolved, cam, self.materials, outline=self.outline, normals=normals)
         out["origin"] = cam.ox, cam.oy
+        out["depth_map"] = engine.depth_map(out["depth"], out["rgba"], scale) if depth else None
         # anchor points in pixels; "front" = not hidden behind the rendered model
         pts = {}
         for name, p in self.anchors(J).items():

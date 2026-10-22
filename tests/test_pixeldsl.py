@@ -189,6 +189,28 @@ class ExportTests(unittest.TestCase):
         self.assertIn("load_steps=%d" % (2 + frames * 2 + 1), tres)
         self.assertIn('&"attack_left"', tres)
 
+    def test_depth_map(self):
+        from pixeldsl import engine
+        m = model.Model.load(ROOT / "models/props/barrel.json")
+        r = m.render_frame("side", "idle", 0.0, 0, depth=True)
+        d = engine.decode_depth(r["depth_map"])
+        opaque = r["rgba"][:, :, 3] > 0
+        self.assertTrue(np.isfinite(d[opaque]).all())
+        self.assertTrue(np.isnan(d[~opaque]).all())
+        hit = np.isfinite(r["depth"])
+        self.assertLessEqual(np.abs(d[hit] - (r["depth"][hit] - 400.0)).max(), 0.5 / engine.DEPTH_UNITS + 1e-9)
+        # a barrel bulges toward the camera: its middle column is nearer than its rims
+        ys, xs = np.nonzero(hit)
+        row = int(np.median(ys))
+        cols = np.nonzero(hit[row])[0]
+        self.assertLess(d[row, cols[len(cols) // 2]], min(d[row, cols[0]], d[row, cols[-1]]))
+        with tempfile.TemporaryDirectory() as out:
+            meta = export.export_model(m, ["side"], ["idle"], out, depth=True, log=None)["side"]["meta"]
+            e = meta["anims"]["idle"]
+            from PIL import Image
+            with Image.open(Path(out) / e["depth"]) as dm, Image.open(Path(out) / e["file"]) as im:
+                self.assertEqual(dm.size, im.size)
+
     def test_gamemaker_sprites(self):
         with tempfile.TemporaryDirectory() as proj:
             proj = Path(proj)

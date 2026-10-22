@@ -73,7 +73,7 @@ def cmd_export(a):
         m = model_mod.Model.load(p)
         t = time.time()
         export.export_model(m, _csv(a.views), _csv(a.anims), a.out, a.scale, a.normals,
-                            a.gamemaker, a.gm_name, a.godot_res)
+                            a.gamemaker, a.gm_name, a.godot_res, depth=a.depth)
         print("  %s done in %.0fs" % (m.name, time.time() - t))
 
 
@@ -159,6 +159,7 @@ def main(argv=None):
         if name == "export":
             p.add_argument("--out", default="out")
             p.add_argument("--normals", action="store_true", help="also write normal-map sheets")
+            p.add_argument("--depth", action="store_true", help="also write depth-map sheets (per-pixel depth sorting)")
             p.add_argument("--gamemaker", help="GameMaker project folder to write sprites into")
             p.add_argument("--gm-name", default="spr_{name}_{view}_{anim}", help="sprite name pattern")
             p.add_argument("--godot-res", help="res:// folder of the sheets -> also write SpriteFrames .tres")

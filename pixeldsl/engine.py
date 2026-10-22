@@ -455,6 +455,37 @@ def render(scene, resolved, cam, materials, outline="#16121d", steps=120, normal
     return dict(rgba=rgba, normal=nrm, depth=depth, mat=matid, glow=glow, team=team)
 
 
+DEPTH_UNITS = 128.0  # depth map steps per pixel
+
+
+def depth_map(depth, rgba, scale):
+    """Per-pixel depth behind the origin plane (the plane through the model origin facing the camera), in output
+    pixels, positive away from the camera: 16 bits in R (high) and G (low) as 32768 + round(d * DEPTH_UNITS),
+    A = 255 where the sprite is opaque. Outline pixels (no hit) take the nearest depth of their 4-neighbours."""
+    d = np.where(np.isfinite(depth), (depth - 400.0) * scale, np.inf)
+    filled = rgba[:, :, 3] > 0
+    for _ in range(2):
+        hole = filled & ~np.isfinite(d)
+        if not hole.any():
+            break
+        pad = np.pad(d, 1, constant_values=np.inf)
+        neigh = np.minimum.reduce([pad[:-2, 1:-1], pad[2:, 1:-1], pad[1:-1, :-2], pad[1:-1, 2:]])
+        d = np.where(hole, neigh, d)
+    ok = filled & np.isfinite(d)
+    v = np.clip(np.round(np.where(ok, d, 0.0) * DEPTH_UNITS) + 32768, 0, 65535).astype(np.uint16)
+    out = np.zeros(rgba.shape[:2] + (4,), dtype=np.uint8)
+    out[:, :, 0] = np.where(ok, v >> 8, 0)
+    out[:, :, 1] = np.where(ok, v & 255, 0)
+    out[:, :, 3] = np.where(ok, 255, 0)
+    return out
+
+
+def decode_depth(img):
+    """Inverse of depth_map: float pixels (NaN where empty)."""
+    v = img[:, :, 0].astype(np.float64) * 256 + img[:, :, 1]
+    return np.where(img[:, :, 3] > 0, (v - 32768) / DEPTH_UNITS, np.nan)
+
+
 def _postprocess(rgba, depth, matid, materials, outline, scale=1.0):
     filled = rgba[:, :, 3] > 0
     out = rgba.copy()

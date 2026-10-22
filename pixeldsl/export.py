@@ -10,6 +10,8 @@ across a model's animations), then written as:
                                                 per-frame anchor points (weapon_tip, hand_R, hand_L,
                                                 head + model "anchors"): [x, y, in_front]
             <out>/<name>_<view>_<anim>_n.png    normal maps (--normals)
+            <out>/<name>_<view>_<anim>_d.png    depth maps (--depth): pixels behind the origin plane, 16 bits
+                                                in R/G (engine.depth_map), for per-pixel depth sorting
   gamemaker sprites in a GameMaker project, frames direction-major (dir * n + f)
   godot     <out>/<name>_<view>.tres            SpriteFrames, animations "<anim>_<dir>"
 """
@@ -29,12 +31,12 @@ _CACHE = {}
 
 def _job(args):
     """Worker: rebuild the model from its JSON (models hold lambdas, so they are not pickled)."""
-    data_json, view, anim, u, d, scale, normals = args
+    data_json, view, anim, u, d, scale, normals, depth = args
     m = _CACHE.get(data_json)
     if m is None:
         m = _CACHE[data_json] = Model(json.loads(data_json))
-    r = m.render_frame(view, anim, u, d, scale=scale, normals=normals)
-    return r["rgba"], r["normal"], r["origin"], r["anchors"], r["glow"], r["team"]
+    r = m.render_frame(view, anim, u, d, scale=scale, normals=normals, depth=depth)
+    return r["rgba"], r["normal"], r["origin"], r["anchors"], r["glow"], r["team"], r["depth_map"]
 
 
 def _src_hash():
@@ -58,12 +60,12 @@ def cache_dir():
     return d
 
 
-def _cache_path(data_json, view, anim, dirs, scale, normals):
+def _cache_path(data_json, view, anim, dirs, scale, normals, depth):
     import hashlib
     d = cache_dir()
     if d is None:
         return None
-    key = hashlib.sha1(("%s|%s|%s|%s|%s|%s|%s" % (SRC_HASH, data_json, view, anim, dirs, scale, normals)).encode()).hexdigest()
+    key = hashlib.sha1(("%s|%s|%s|%s|%s|%s|%s|%s" % (SRC_HASH, data_json, view, anim, dirs, scale, normals, depth)).encode()).hexdigest()
     return d / (key + ".npz")
 
 
@@ -87,17 +89,18 @@ def directions(model, view):
     return list(VIEWS[view]["dirs"])
 
 
-def render_view(model, view, anims, scale=1.0, normals=False, progress=None):
+def render_view(model, view, anims, scale=1.0, normals=False, progress=None, depth=False):
     """-> dict(anim -> {"frames": [[rgba per frame] per dir], "normals": ...}), crop box, origin."""
     dirs = directions(model, view)
     data_json = json.dumps(model.data, sort_keys=True)
     raw, origin, todo = {}, None, []
     for anim in anims:
-        cp = _cache_path(data_json, view, anim, dirs, scale, normals)
+        cp = _cache_path(data_json, view, anim, dirs, scale, normals, depth)
         if cp is not None and cp.exists():
             z = np.load(cp)
             raw[anim] = {"frames": [list(r) for r in z["frames"]],
                          "normals": [list(r) for r in z["normals"]] if normals else None,
+                         "depth": [list(r) for r in z["depth"]] if depth else None,
                          "points": json.loads(str(z["points"])),
                          "glow": [list(r) for r in z["glow"]], "team": [list(r) for r in z["team"]]}
             origin = tuple(z["origin"])
@@ -109,7 +112,7 @@ def render_view(model, view, anims, scale=1.0, normals=False, progress=None):
         for di, d in enumerate(dirs):
             for f in range(n):
                 u = f / n if model.loops(anim) else (f / (n - 1) if n > 1 else 0.0)
-                jobs.append((data_json, view, anim, u, d, scale, normals))
+                jobs.append((data_json, view, anim, u, d, scale, normals, depth))
                 keys.append((anim, di, f))
     if jobs:
         nw = min(workers(), len(jobs))
@@ -121,16 +124,19 @@ def render_view(model, view, anims, scale=1.0, normals=False, progress=None):
         for anim, _ in todo:
             raw[anim] = {"frames": [[None] * model.frames(anim) for _ in dirs],
                          "normals": [[None] * model.frames(anim) for _ in dirs] if normals else None,
+                         "depth": [[None] * model.frames(anim) for _ in dirs] if depth else None,
                          "points": {},
                          "glow": [[None] * model.frames(anim) for _ in dirs],
                          "team": [[None] * model.frames(anim) for _ in dirs]}
         origin = results[0][2]
-        for (anim, di, f), (rgba, nrm, _, pts, glw, tm) in zip(keys, results):
+        for (anim, di, f), (rgba, nrm, _, pts, glw, tm, dep) in zip(keys, results):
             raw[anim]["frames"][di][f] = rgba
             raw[anim]["glow"][di][f] = glw
             raw[anim]["team"][di][f] = tm
             if normals:
                 raw[anim]["normals"][di][f] = nrm
+            if depth:
+                raw[anim]["depth"][di][f] = dep
             for name, p in pts.items():
                 per_dir = raw[anim]["points"].setdefault(name, [[None] * model.frames(anim) for _ in dirs])
                 per_dir[di][f] = list(p)
@@ -138,6 +144,7 @@ def render_view(model, view, anims, scale=1.0, normals=False, progress=None):
             if cp is not None:
                 np.savez_compressed(cp, frames=np.array(raw[anim]["frames"]), origin=np.array(origin),
                                     normals=np.array(raw[anim]["normals"]) if normals else np.zeros(1),
+                                    depth=np.array(raw[anim]["depth"]) if depth else np.zeros(1),
                                     points=np.array(json.dumps(raw[anim]["points"])),
                                     glow=np.array(raw[anim]["glow"]), team=np.array(raw[anim]["team"]))
     raw = {a: raw[a] for a in anims}
@@ -158,7 +165,7 @@ def render_view(model, view, anims, scale=1.0, normals=False, progress=None):
     x0, x1 = ox - half, ox + half
     box = (int(x0), int(y0), int(x1), int(max(y1, oy + 1)))
     for a in raw.values():
-        for key in ("frames", "normals", "glow", "team"):
+        for key in ("frames", "normals", "depth", "glow", "team"):
             if a[key] is None:
                 continue
             a[key] = [[img[box[1]:box[3], box[0]:box[2]] for img in row] for row in a[key]]
@@ -201,6 +208,10 @@ def write_generic(model, view, raw, dirs, origin, size, out_dir, scale):
             nfn = "%s_%s_%s_n.png" % (model.name, view, anim)
             Image.fromarray(sheet(a["normals"]), "RGBA").save(out_dir / nfn)
             entry["normal"] = nfn
+        if a.get("depth") is not None:
+            dfn = "%s_%s_%s_d.png" % (model.name, view, anim)
+            Image.fromarray(sheet(a["depth"]), "RGBA").save(out_dir / dfn)
+            entry["depth"] = dfn
         meta["anims"][anim] = entry
     (out_dir / ("%s_%s.json" % (model.name, view))).write_text(json.dumps(meta, indent=2), encoding="utf-8")
     return meta
@@ -311,13 +322,13 @@ def write_godot(model, view, meta, dirs, out_dir, res_path):
 
 
 def export_model(model, views=None, anims=None, out_dir="out", scale=1.0, normals=False,
-                 gamemaker=None, gm_name="spr_{name}_{view}_{anim}", godot_res=None, log=print):
+                 gamemaker=None, gm_name="spr_{name}_{view}_{anim}", godot_res=None, log=print, depth=False):
     views = views or model.default_views
     anims = anims or model.default_anims
     results = {}
     for view in views:
         use = [a for a in anims if a in model.anims]
-        raw, dirs, origin, size = render_view(model, view, use, scale, normals)
+        raw, dirs, origin, size = render_view(model, view, use, scale, normals, depth=depth)
         meta = write_generic(model, view, raw, dirs, origin, size, out_dir, scale)
         res = {"meta": meta}
         if gamemaker:

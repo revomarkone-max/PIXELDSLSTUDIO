@@ -1,0 +1,30 @@
+{
+  "name": "tree",
+  "view": "topdown",
+  "scale": 1.0,
+  "frame": {
+    "w": 40,
+    "h": 57
+  },
+  "origin": {
+    "x": 20,
+    "y": 52
+  },
+  "dirs": [
+    {
+      "deg": 270,
+      "name": "down"
+    }
+  ],
+  "layout": "rows = dirs (in order), columns = frames",
+  "anims": {
+    "idle": {
+      "file": "tree_topdown_idle.png",
+      "frames": 1,
+      "fps": 1,
+      "loop": true,
+      "points": {},
+      "depth": "tree_topdown_idle_d.png"
+    }
+  }
+}
